@@ -1,23 +1,23 @@
 import { Badge } from '../ui/Badge'
 import { EmptyState } from '../ui/EmptyState'
-
-type Conversation = {
-  id: string
-  customerName: string | null
-  customerPhone: string
-  status: string
-  assignedUserId?: string | null
-}
+import { MockConversation } from '../../mocks/conversations'
 
 type ConversationDetailsProps = {
-  conversation: Conversation | null
+  conversation: MockConversation | null
 }
 
 function mapStatus(status: string): 'success' | 'warning' | 'muted' | 'default' {
-  if (status === 'open') return 'success'
-  if (status === 'pending') return 'warning'
-  if (status === 'closed') return 'muted'
+  if (status === 'ativo') return 'success'
+  if (status === 'pendente') return 'warning'
+  if (status === 'encerrado') return 'muted'
   return 'default'
+}
+
+function labelStatus(status: string): string {
+  if (status === 'ativo') return 'Atendimento ativo'
+  if (status === 'pendente') return 'Atendimento pendente'
+  if (status === 'encerrado') return 'Atendimento encerrado'
+  return status
 }
 
 export function ConversationDetails({ conversation }: ConversationDetailsProps) {
@@ -32,20 +32,30 @@ export function ConversationDetails({ conversation }: ConversationDetailsProps) 
   return (
     <div className="space-y-4 p-4 text-sm">
       <div>
-        <p className="mb-1 text-xs uppercase tracking-wide text-slate-400">customerName</p>
-        <p className="text-slate-900">{conversation.customerName || '-'}</p>
+        <p className="mb-1 text-xs uppercase tracking-wide text-slate-400">Nome</p>
+        <p className="text-slate-900">{conversation.name}</p>
       </div>
       <div>
-        <p className="mb-1 text-xs uppercase tracking-wide text-slate-400">customerPhone</p>
-        <p className="text-slate-900">{conversation.customerPhone}</p>
+        <p className="mb-1 text-xs uppercase tracking-wide text-slate-400">Telefone</p>
+        <p className="text-slate-900">{conversation.phone}</p>
       </div>
       <div>
-        <p className="mb-1 text-xs uppercase tracking-wide text-slate-400">status</p>
-        <Badge variant={mapStatus(conversation.status)}>{conversation.status}</Badge>
+        <p className="mb-1 text-xs uppercase tracking-wide text-slate-400">Responsavel</p>
+        <p className="text-slate-900">{conversation.assignedTo}</p>
       </div>
       <div>
-        <p className="mb-1 text-xs uppercase tracking-wide text-slate-400">assignedUserId</p>
-        <p className="text-slate-900">{conversation.assignedUserId || '-'}</p>
+        <p className="mb-1 text-xs uppercase tracking-wide text-slate-400">Status</p>
+        <Badge variant={mapStatus(conversation.status)}>{labelStatus(conversation.status)}</Badge>
+      </div>
+      <div>
+        <p className="mb-1 text-xs uppercase tracking-wide text-slate-400">Tags</p>
+        <div className="flex flex-wrap gap-2">
+          {conversation.tags.map((tag) => (
+            <Badge key={tag} variant="default">
+              {tag}
+            </Badge>
+          ))}
+        </div>
       </div>
     </div>
   )

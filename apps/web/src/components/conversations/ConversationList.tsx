@@ -1,15 +1,9 @@
 import { ConversationItem } from './ConversationItem'
 import { EmptyState } from '../ui/EmptyState'
-
-type Conversation = {
-  id: string
-  customerName: string | null
-  customerPhone: string
-  status: string
-}
+import { MockConversation } from '../../mocks/conversations'
 
 type ConversationListProps = {
-  conversations: Conversation[]
+  conversations: MockConversation[]
   selectedConversationId: string | null
   loading?: boolean
   error?: string | null

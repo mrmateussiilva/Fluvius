@@ -1,23 +1,9 @@
-import { Badge } from '../ui/Badge'
-
-type Conversation = {
-  id: string
-  customerName: string | null
-  customerPhone: string
-  status: string
-}
+import { MockConversation } from '../../mocks/conversations'
 
 type ConversationItemProps = {
-  conversation: Conversation
+  conversation: MockConversation
   selected: boolean
   onSelect: (id: string) => void
-}
-
-function mapStatus(status: string): 'success' | 'warning' | 'muted' | 'default' {
-  if (status === 'open') return 'success'
-  if (status === 'pending') return 'warning'
-  if (status === 'closed') return 'muted'
-  return 'default'
 }
 
 export function ConversationItem({ conversation, selected, onSelect }: ConversationItemProps) {
@@ -30,12 +16,10 @@ export function ConversationItem({ conversation, selected, onSelect }: Conversat
       }`}
     >
       <div className="mb-1 flex items-start justify-between gap-3">
-        <p className="truncate text-sm font-medium text-slate-900">
-          {conversation.customerName || conversation.customerPhone}
-        </p>
-        <Badge variant={mapStatus(conversation.status)}>{conversation.status}</Badge>
+        <p className="truncate text-sm font-medium text-slate-900">{conversation.name}</p>
+        <p className="shrink-0 text-xs text-slate-500">{conversation.time}</p>
       </div>
-      <p className="text-xs text-slate-500">{conversation.customerPhone}</p>
+      <p className="truncate text-xs text-slate-500">{conversation.lastMessage}</p>
     </button>
   )
 }

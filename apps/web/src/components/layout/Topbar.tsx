@@ -8,7 +8,14 @@ type TopbarConfig = {
 
 const routeConfig: Record<string, TopbarConfig> = {
   '/': { title: 'Dashboard', description: 'Visão geral da operação' },
-  '/conversations': { title: 'Conversas', description: 'Atendimento e histórico de mensagens' },
+  '/conversations': {
+    title: 'Painel de Atendimento',
+    description: 'Visão geral da equipe comercial e do andamento dos atendimentos',
+  },
+  '/team-board': {
+    title: 'Painel de Atendimento',
+    description: 'Visão geral da equipe comercial e do andamento dos atendimentos',
+  },
   '/services': { title: 'Serviços', description: 'Cadastro e manutenção de serviços' },
   '/appointments': { title: 'Agendamentos', description: 'Agenda de clientes' },
 }

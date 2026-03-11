@@ -1,48 +1,24 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { conversationApi, messageApi } from '../lib/api'
 import { Card } from '../components/ui/Card'
 import { ConversationList } from '../components/conversations/ConversationList'
 import { ChatWindow } from '../components/conversations/ChatWindow'
 import { ConversationDetails } from '../components/conversations/ConversationDetails'
-
-type Conversation = {
-  id: string
-  clinicId: string
-  customerName: string | null
-  customerPhone: string
-  status: string
-  assignedUser: { id: string; name: string } | null
-}
-
-type Message = {
-  id: string
-  conversationId: string
-  direction: string
-  content: string
-  createdAt: string
-}
+import { mockedConversations } from '../mocks/conversations'
+import { mockedMessages } from '../mocks/messages'
 
 export function ConversationsPage() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
 
-  const conversationsQuery = useQuery({
-    queryKey: ['conversations'],
-    queryFn: () => conversationApi.list(),
-  })
-
-  const messagesQuery = useQuery({
-    queryKey: ['messages', selectedConversationId],
-    queryFn: () => messageApi.list(selectedConversationId as string),
-    enabled: !!selectedConversationId,
-  })
-
-  const conversations = (conversationsQuery.data || []) as Conversation[]
-  const messages = (messagesQuery.data || []) as Message[]
+  const conversations = mockedConversations
 
   const selectedConversation = useMemo(() => {
     return conversations.find((conversation) => conversation.id === selectedConversationId) || null
   }, [conversations, selectedConversationId])
+
+  const messages = useMemo(() => {
+    if (!selectedConversationId) return []
+    return mockedMessages.find((entry) => entry.conversationId === selectedConversationId)?.messages || []
+  }, [selectedConversationId])
 
   return (
     <section>
@@ -54,8 +30,6 @@ export function ConversationsPage() {
           <ConversationList
             conversations={conversations}
             selectedConversationId={selectedConversationId}
-            loading={conversationsQuery.isLoading}
-            error={conversationsQuery.isError ? 'Erro ao carregar conversas.' : null}
             onSelect={setSelectedConversationId}
           />
         </Card>
@@ -68,8 +42,6 @@ export function ConversationsPage() {
             <ChatWindow
               messages={messages}
               hasConversationSelected={!!selectedConversationId}
-              loading={messagesQuery.isLoading}
-              error={messagesQuery.isError ? 'Erro ao carregar mensagens.' : null}
             />
           </div>
         </Card>
@@ -78,19 +50,7 @@ export function ConversationsPage() {
           <div className="border-b border-slate-200 px-3 py-2">
             <p className="text-sm font-medium text-slate-900">Detalhes</p>
           </div>
-          <ConversationDetails
-            conversation={
-              selectedConversation
-                ? {
-                    id: selectedConversation.id,
-                    customerName: selectedConversation.customerName,
-                    customerPhone: selectedConversation.customerPhone,
-                    status: selectedConversation.status,
-                    assignedUserId: selectedConversation.assignedUser?.id || null,
-                  }
-                : null
-            }
-          />
+          <ConversationDetails conversation={selectedConversation} />
         </Card>
       </div>
     </section>

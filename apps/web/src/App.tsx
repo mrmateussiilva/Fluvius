@@ -1,10 +1,10 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { AppShell } from './components/layout/AppShell'
 import { AppointmentsPage } from './pages/AppointmentsPage'
-import { ConversationsPage } from './pages/ConversationsPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { ServicesPage } from './pages/ServicesPage'
+import { TeamBoardPage } from './pages/TeamBoardPage'
 
 function ProtectedRoute() {
   const token = localStorage.getItem('token')
@@ -26,7 +26,8 @@ export function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
             <Route path="/" element={<DashboardPage />} />
-            <Route path="/conversations" element={<ConversationsPage />} />
+            <Route path="/conversations" element={<TeamBoardPage />} />
+            <Route path="/team-board" element={<TeamBoardPage />} />
             <Route path="/services" element={<ServicesPage />} />
             <Route path="/appointments" element={<AppointmentsPage />} />
           </Route>

@@ -1,15 +1,9 @@
 import { EmptyState } from '../ui/EmptyState'
 import { MessageBubble } from './MessageBubble'
-
-type Message = {
-  id: string
-  direction: string
-  content: string
-  createdAt: string
-}
+import { MockMessage } from '../../mocks/messages'
 
 type ChatWindowProps = {
-  messages: Message[]
+  messages: MockMessage[]
   loading?: boolean
   error?: string | null
   hasConversationSelected: boolean
@@ -19,7 +13,7 @@ export function ChatWindow({ messages, loading, error, hasConversationSelected }
   if (!hasConversationSelected) {
     return (
       <div className="p-4">
-        <EmptyState title="Selecione uma conversa" description="Escolha um item na lista para visualizar as mensagens." />
+        <EmptyState title="Selecione uma conversa para visualizar as mensagens." />
       </div>
     )
   }
