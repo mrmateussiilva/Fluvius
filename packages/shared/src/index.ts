@@ -10,3 +10,7 @@ export { createServiceSchema, type CreateServiceInput } from './schemas/service.
 export { createConversationSchema, type CreateConversationInput } from './schemas/conversation.js'
 export { createMessageSchema, type CreateMessageInput } from './schemas/message.js'
 export { createAppointmentSchema, type CreateAppointmentInput } from './schemas/appointment.js'
+export {
+  createWhatsAppInstanceSchema,
+  type CreateWhatsAppInstanceInput,
+} from './schemas/whatsapp.js'
