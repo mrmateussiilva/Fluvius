@@ -8,6 +8,7 @@ import { serviceRoutes } from './modules/services/route.js'
 import { conversationRoutes } from './modules/conversations/route.js'
 import { messageRoutes } from './modules/messages/route.js'
 import { appointmentRoutes } from './modules/appointments/route.js'
+import { whatsappInstanceRoutes } from './modules/whatsapp-instances/route.js'
 
 export async function buildApp() {
   const app = Fastify({
@@ -26,6 +27,7 @@ export async function buildApp() {
   await app.register(conversationRoutes)
   await app.register(messageRoutes)
   await app.register(appointmentRoutes)
+  await app.register(whatsappInstanceRoutes)
 
   return app
 }
