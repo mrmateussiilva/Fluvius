@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authApi } from '../lib/api'
+import { Button } from '../components/ui/Button'
+import { Card } from '../components/ui/Card'
+import { Input } from '../components/ui/Input'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -9,8 +12,8 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
     setError('')
     setLoading(true)
 
@@ -20,72 +23,45 @@ export function LoginPage() {
       localStorage.setItem('user', JSON.stringify(response.user))
       navigate('/')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      setError(err instanceof Error ? err.message : 'Falha no login')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className="bg-primary-600 p-8 text-center">
-          <h1 className="text-3xl font-bold text-white">Fluvius</h1>
-          <p className="text-primary-100 mt-2">Sistema de Gestão para Clínicas</p>
+    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
+      <Card className="w-full max-w-sm p-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-slate-900">Fluvius</h1>
+          <p className="mt-1 text-sm text-slate-500">Acesse o painel interno para continuar.</p>
         </div>
-        
-        <form onSubmit={handleSubmit} className="p-8 space-y-6">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-              placeholder="seu@email.com"
-              required
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Senha</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-          
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Entrando...
-              </span>
-            ) : 'Entrar'}
-          </button>
+
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <Input
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="seu@email.com"
+            required
+          />
+          <Input
+            label="Senha"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="••••••••"
+            required
+          />
+
+          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
+          <Button className="w-full" type="submit" disabled={loading}>
+            {loading ? 'Entrando...' : 'Entrar'}
+          </Button>
         </form>
-        
-        <div className="bg-gray-50 px-8 py-4 text-center">
-          <p className="text-sm text-gray-500">Sistema de gestão de clínicas e agendamentos</p>
-        </div>
-      </div>
+      </Card>
     </div>
   )
 }
