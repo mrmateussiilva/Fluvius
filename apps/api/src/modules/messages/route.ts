@@ -1,10 +1,10 @@
-import { createMessageSchema } from '@fluvius/shared'
-import { prisma } from '../../lib/prisma.js'
 import type { FastifyInstance } from 'fastify'
+import { messageSchemas } from './schema.js'
+import { messageService } from './service.js'
 
 export async function messageRoutes(app: FastifyInstance) {
   app.post('/messages', async (request, reply) => {
-    const parsed = createMessageSchema.safeParse(request.body)
+    const parsed = messageSchemas.create.safeParse(request.body)
 
     if (!parsed.success) {
       return reply.status(400).send({
@@ -13,10 +13,7 @@ export async function messageRoutes(app: FastifyInstance) {
       })
     }
 
-    const message = await prisma.message.create({
-      data: parsed.data,
-    })
-
+    const message = await messageService.create(parsed.data)
     return message
   })
 
@@ -27,10 +24,6 @@ export async function messageRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'conversationId is required' })
     }
 
-    const messages = await prisma.message.findMany({
-      where: { conversationId },
-      orderBy: { createdAt: 'asc' },
-    })
-    return messages
+    return messageService.findByConversationId(conversationId)
   })
 }

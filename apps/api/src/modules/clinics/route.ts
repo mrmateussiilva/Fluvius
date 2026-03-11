@@ -1,10 +1,10 @@
-import { createClinicSchema } from '@fluvius/shared'
-import { prisma } from '../../lib/prisma.js'
 import type { FastifyInstance } from 'fastify'
+import { clinicSchemas } from './schema.js'
+import { clinicService } from './service.js'
 
 export async function clinicRoutes(app: FastifyInstance) {
   app.post('/clinics', async (request, reply) => {
-    const parsed = createClinicSchema.safeParse(request.body)
+    const parsed = clinicSchemas.create.safeParse(request.body)
 
     if (!parsed.success) {
       return reply.status(400).send({
@@ -13,25 +13,17 @@ export async function clinicRoutes(app: FastifyInstance) {
       })
     }
 
-    const clinic = await prisma.clinic.create({
-      data: parsed.data,
-    })
-
+    const clinic = await clinicService.create(parsed.data)
     return clinic
   })
 
   app.get('/clinics', async () => {
-    const clinics = await prisma.clinic.findMany({
-      orderBy: { createdAt: 'desc' },
-    })
-    return clinics
+    return clinicService.findMany()
   })
 
   app.get('/clinics/:id', async (request, reply) => {
     const { id } = request.params as { id: string }
-    const clinic = await prisma.clinic.findUnique({
-      where: { id },
-    })
+    const clinic = await clinicService.findById(id)
 
     if (!clinic) {
       return reply.status(404).send({ error: 'Clinic not found' })

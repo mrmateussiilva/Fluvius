@@ -1,10 +1,10 @@
-import { createAppointmentSchema } from '@fluvius/shared'
-import { prisma } from '../../lib/prisma.js'
 import type { FastifyInstance } from 'fastify'
+import { appointmentSchemas } from './schema.js'
+import { appointmentService } from './service.js'
 
 export async function appointmentRoutes(app: FastifyInstance) {
   app.post('/appointments', async (request, reply) => {
-    const parsed = createAppointmentSchema.safeParse(request.body)
+    const parsed = appointmentSchemas.create.safeParse(request.body)
 
     if (!parsed.success) {
       return reply.status(400).send({
@@ -15,11 +15,9 @@ export async function appointmentRoutes(app: FastifyInstance) {
 
     const { date, ...data } = parsed.data
 
-    const appointment = await prisma.appointment.create({
-      data: {
-        ...data,
-        date: new Date(date),
-      },
+    const appointment = await appointmentService.create({
+      ...data,
+      date: new Date(date),
     })
 
     return appointment
@@ -27,25 +25,12 @@ export async function appointmentRoutes(app: FastifyInstance) {
 
   app.get('/appointments', async (request) => {
     const { clinicId } = request.query as { clinicId?: string }
-    
-    const appointments = await prisma.appointment.findMany({
-      where: clinicId ? { clinicId } : undefined,
-      orderBy: { date: 'asc' },
-      include: {
-        service: true,
-      },
-    })
-    return appointments
+    return appointmentService.findMany(clinicId)
   })
 
   app.get('/appointments/:id', async (request, reply) => {
     const { id } = request.params as { id: string }
-    const appointment = await prisma.appointment.findUnique({
-      where: { id },
-      include: {
-        service: true,
-      },
-    })
+    const appointment = await appointmentService.findById(id)
 
     if (!appointment) {
       return reply.status(404).send({ error: 'Appointment not found' })

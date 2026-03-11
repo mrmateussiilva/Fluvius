@@ -1,6 +1,6 @@
 # Fluvius
 
-Monorepo MVP SaaS para sistema de clínicas.
+Monorepo MVP SaaS para sistema de clínicas com gestão de conversas, mensagens e agendamentos.
 
 ## Estrutura
 
@@ -22,21 +22,31 @@ fluvius/
 - **Database**: PostgreSQL
 - **Package Manager**: pnpm
 
+## Domínio do Fluvius
+
+O sistema gerencia clínicas com as seguintes entidades:
+
+- **Clinics** - Clínicas que usam o sistema
+- **Users** - Atendentes e administradores das clínicas
+- **Services** - Serviços oferecidos pelas clínicas (cortes, tratamentos, etc.)
+- **Conversations** - Conversas com clientes (iniciadas via WhatsApp)
+- **Messages** - Mensagens trocadas nas conversas
+- **Appointments** - Agendamentos de serviços
+
 ## Módulos Implementados
 
-### Backend (apps/api)
+### Backend (apps/api/src/modules)
 
-- **clinics** - Gerenciamento de clínicas
-- **users** - Usuários/atendentes
-- **services** - Serviços oferecidos
-- **conversations** - Conversas com clientes
-- **messages** - Mensagens das conversas
-- **appointments** - Agendamentos
+Cada módulo segue a estrutura:
+- `route.ts` - Rotas Fastify
+- `schema.ts` - Schemas Zod
+- `service.ts` - Lógica de acesso ao banco
 
 ### Shared (packages/shared)
 
-- Enums: Role, ConversationStatus, MessageDirection, AppointmentStatus
-- Schemas Zod para criação de entidades
+- **Enums**: UserRole, ConversationStatus, MessageDirection, AppointmentStatus
+- **Schemas Zod**: createClinicSchema, createUserSchema, createServiceSchema, createConversationSchema, createMessageSchema, createAppointmentSchema
+- **Types**: Tipos inferidos dos schemas
 
 ## Instalação
 
@@ -48,7 +58,7 @@ pnpm install
 
 ### Banco de Dados
 
-Copie o arquivo `.env.example` e configure as` para `.env variáveis:
+Copie o arquivo `.env.example` para `.env`:
 
 ```bash
 cp apps/api/.env.example apps/api/.env
@@ -60,14 +70,14 @@ Edite o `DATABASE_URL` com suas credenciais do PostgreSQL.
 
 ```bash
 cd apps/api
-pnpm db:generate
+pnpm prisma:generate
 ```
 
 ### Criar Migration
 
 ```bash
 cd apps/api
-pnpm db:migrate
+pnpm prisma:migrate
 ```
 
 ## Rodar o Projeto
@@ -109,35 +119,44 @@ Backend disponível em: http://localhost:3001
 
 ### Users
 - `POST /users` - Criar usuário
-- `GET /users` - Listar usuários
+- `GET /users` - Listar usuários (filtro opcional: ?clinicId=)
 - `GET /users/:id` - Buscar usuário
 
 ### Services
 - `POST /services` - Criar serviço
-- `GET /services` - Listar serviços
+- `GET /services` - Listar serviços (filtro opcional: ?clinicId=)
 - `GET /services/:id` - Buscar serviço
 
 ### Conversations
 - `POST /conversations` - Criar conversa
-- `GET /conversations` - Listar conversas
+- `GET /conversations` - Listar conversas (filtros opcionais: ?clinicId=, ?status=)
 - `GET /conversations/:id` - Buscar conversa
 
 ### Messages
 - `POST /messages` - Criar mensagem
-- `GET /messages?conversationId=` - Listar mensagens
+- `GET /messages?conversationId=` - Listar mensagens de uma conversa
 
 ### Appointments
 - `POST /appointments` - Criar agendamento
-- `GET /appointments` - Listar agendamentos
+- `GET /appointments` - Listar agendamentos (filtro opcional: ?clinicId=)
 - `GET /appointments/:id` - Buscar agendamento
 
 ## Scripts
 
-- `pnpm dev` - Roda frontend e backend
-- `pnpm dev:web` - Roda apenas frontend
-- `pnpm dev:api` - Roda apenas backend
-- `pnpm build` - Build de todos os packages
-- `pnpm typecheck` - Verifica tipos TypeScript
-- `pnpm db:generate` - Gera Prisma Client
-- `pnpm db:migrate` - Cria migrations
-- `pnpm db:push` - Push schema para banco
+```bash
+# Desenvolvimento
+pnpm dev              # Roda frontend e backend
+pnpm dev:web         # Roda apenas frontend
+pnpm dev:api         # Roda apenas backend
+
+# Build e typecheck
+pnpm build           # Build de todos os packages
+pnpm typecheck       # Verifica tipos TypeScript
+
+# Prisma
+cd apps/api
+pnpm prisma:generate    # Gera Prisma Client
+pnpm prisma:migrate     # Cria migrations
+pnpm prisma:push        # Push schema para banco
+pnpm prisma:studio      # Abre Prisma Studio
+```

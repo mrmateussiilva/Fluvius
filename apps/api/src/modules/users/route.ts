@@ -1,10 +1,10 @@
-import { createUserSchema } from '@fluvius/shared'
-import { prisma } from '../../lib/prisma.js'
 import type { FastifyInstance } from 'fastify'
+import { userSchemas } from './schema.js'
+import { userService } from './service.js'
 
 export async function userRoutes(app: FastifyInstance) {
   app.post('/users', async (request, reply) => {
-    const parsed = createUserSchema.safeParse(request.body)
+    const parsed = userSchemas.create.safeParse(request.body)
 
     if (!parsed.success) {
       return reply.status(400).send({
@@ -15,11 +15,9 @@ export async function userRoutes(app: FastifyInstance) {
 
     const { password, ...data } = parsed.data
 
-    const user = await prisma.user.create({
-      data: {
-        ...data,
-        passwordHash: password,
-      },
+    const user = await userService.create({
+      ...data,
+      passwordHash: password,
     })
 
     return user
@@ -27,19 +25,12 @@ export async function userRoutes(app: FastifyInstance) {
 
   app.get('/users', async (request) => {
     const { clinicId } = request.query as { clinicId?: string }
-    
-    const users = await prisma.user.findMany({
-      where: clinicId ? { clinicId } : undefined,
-      orderBy: { createdAt: 'desc' },
-    })
-    return users
+    return userService.findMany(clinicId)
   })
 
   app.get('/users/:id', async (request, reply) => {
     const { id } = request.params as { id: string }
-    const user = await prisma.user.findUnique({
-      where: { id },
-    })
+    const user = await userService.findById(id)
 
     if (!user) {
       return reply.status(404).send({ error: 'User not found' })

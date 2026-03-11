@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const createMessageSchema = z.object({
-  conversationId: z.string().uuid(),
+  conversationId: z.string().cuid(),
   direction: z.enum(['inbound', 'outbound']),
   content: z.string().min(1),
 })
