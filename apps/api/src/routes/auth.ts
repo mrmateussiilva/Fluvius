@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { loginSchema } from '@fluvius/shared'
+import { prisma } from '../lib/prisma.js'
 
 export async function authRoutes(app: FastifyInstance) {
   app.post('/auth/login', async (request, reply) => {
@@ -12,12 +13,28 @@ export async function authRoutes(app: FastifyInstance) {
       })
     }
 
-    const { email, password: _password } = parsed.data
+    const { email } = parsed.data
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+    })
+
+    if (!user) {
+      return reply.status(401).send({
+        error: 'Invalid credentials',
+      })
+    }
+
+    const token = `fake-token-${user.id}-${Date.now()}`
 
     return {
-      message: 'Login successful',
+      token,
       user: {
-        email,
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        clinicId: user.clinicId,
       },
     }
   })
