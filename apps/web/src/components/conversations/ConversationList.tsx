@@ -1,9 +1,9 @@
 import { ConversationItem } from './ConversationItem'
 import { EmptyState } from '../ui/EmptyState'
-import { MockConversation } from '../../mocks/conversations'
+import { ConversationResponse } from '@fluvius/shared'
 
 type ConversationListProps = {
-  conversations: MockConversation[]
+  conversations: ConversationResponse[]
   selectedConversationId: string | null
   loading?: boolean
   error?: string | null

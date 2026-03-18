@@ -23,6 +23,11 @@ export async function userRoutes(app: FastifyInstance) {
     return user
   })
 
+  app.get('/users/attendants/stats', async (request) => {
+    const { clinicId } = request.query as { clinicId?: string }
+    return userService.getAttendantsStats(clinicId)
+  })
+
   app.get('/users', async (request) => {
     const { clinicId } = request.query as { clinicId?: string }
     return userService.findMany(clinicId)

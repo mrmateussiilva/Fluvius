@@ -42,6 +42,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const data = await response.json().catch(() => ({}))
 
   if (!response.ok) {
+    const errorBody = await response.text().catch(() => 'No body')
+    console.error(`Evolution API error response: ${errorBody}`)
     throw new Error(`Evolution API error: ${response.status} ${response.statusText}`)
   }
 
@@ -54,7 +56,11 @@ export const evolutionClient = {
 
     const data = await request<unknown>('/instance/create', {
       method: 'POST',
-      body: JSON.stringify({ instanceName: parsed.instanceName }),
+      body: JSON.stringify({
+        instanceName: parsed.instanceName,
+        integration: 'WHATSAPP-BAILEYS',
+        qrcode: true
+      }),
     })
 
     const raw = ensureObject(data)
@@ -81,11 +87,14 @@ export const evolutionClient = {
 
   async getInstanceQrCode(instanceName: string): Promise<EvolutionQrCodeResponse> {
     const data = await request<unknown>(`/instance/connect/${instanceName}`)
+    console.log(`Evolution API QR response:`, JSON.stringify(data))
     const raw = ensureObject(data)
     const payload = ensureObject(raw.instance || raw.data || raw)
 
     return {
-      qrCode: extractString(payload, ['qrcode', 'base64', 'qr']) || extractString(raw, ['qrcode', 'base64', 'qr']),
+      qrCode:
+        extractString(payload, ['base64', 'qrcode', 'qr', 'code']) ||
+        extractString(raw, ['base64', 'qrcode', 'qr', 'code']),
       raw: data,
     }
   },

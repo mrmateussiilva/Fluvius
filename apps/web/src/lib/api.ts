@@ -1,3 +1,10 @@
+import {
+  type ConversationResponse,
+  type MessageResponse,
+  type UserResponse,
+  type AttendantStatsResponse
+} from '@fluvius/shared'
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || ''
 
 function getAuthHeaders(): Record<string, string> {
@@ -11,7 +18,7 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     'Content-Type': 'application/json',
     ...getAuthHeaders(),
   }
-  
+
   const response = await fetch(url, {
     ...options,
     headers: {
@@ -57,7 +64,8 @@ export const clinicApi = {
 }
 
 export const userApi = {
-  list: (clinicId?: string) => api.get<Array<{ id: string; name: string; email: string; role: string; clinicId: string }>>(`/users${clinicId ? `?clinicId=${clinicId}` : ''}`),
+  list: (clinicId?: string) => api.get<Array<UserResponse>>(`/users${clinicId ? `?clinicId=${clinicId}` : ''}`),
+  getAttendantsStats: (clinicId?: string) => api.get<Array<AttendantStatsResponse>>(`/users/attendants/stats${clinicId ? `?clinicId=${clinicId}` : ''}`),
 }
 
 export const serviceApi = {
@@ -72,17 +80,21 @@ export const conversationApi = {
     if (clinicId) params.append('clinicId', clinicId)
     if (status) params.append('status', status)
     const query = params.toString() ? `?${params.toString()}` : ''
-    return api.get<Array<{ id: string; clinicId: string; customerName: string | null; customerPhone: string; status: string; assignedUser: { id: string; name: string } | null }>>(`/conversations${query}`)
+    return api.get<Array<ConversationResponse>>(`/conversations${query}`)
   },
-  get: (id: string) => api.get<{ id: string; clinicId: string; customerName: string | null; customerPhone: string; status: string }>(`/conversations/${id}`),
+  get: (id: string) => api.get<ConversationResponse>(`/conversations/${id}`),
 }
 
 export const messageApi = {
-  list: (conversationId: string) => api.get<Array<{ id: string; conversationId: string; direction: string; content: string; createdAt: string }>>(`/messages?conversationId=${conversationId}`),
+  list: (conversationId: string) => api.get<Array<MessageResponse>>(`/messages?conversationId=${conversationId}`),
   create: (data: { conversationId: string; direction: 'inbound' | 'outbound'; content: string }) =>
-    api.post<{ id: string; conversationId: string; direction: string; content: string; createdAt: string }>('/messages', data),
+    api.post<MessageResponse>('/messages', data),
 }
 
 export const appointmentApi = {
   list: (clinicId?: string) => api.get<Array<{ id: string; clinicId: string; customerName: string; customerPhone: string; date: string; status: string; service: { id: string; name: string; price: number } }>>(`/appointments${clinicId ? `?clinicId=${clinicId}` : ''}`),
+}
+
+export const dashboardApi = {
+  getStats: (clinicId?: string) => api.get<{ conversations: number; services: number; appointments: number }>(`/dashboard/stats${clinicId ? `?clinicId=${clinicId}` : ''}`),
 }
