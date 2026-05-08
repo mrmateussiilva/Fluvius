@@ -9,6 +9,9 @@ export type WSEvent = {
 export const useWebSocket = (token: string | null, onEvent: (event: WSEvent) => void) => {
   const socketRef = useRef<WebSocket | null>(null);
   const onEventRef = useRef(onEvent);
+  const connectTimeoutRef = useRef<number | null>(null);
+  const reconnectTimeoutRef = useRef<number | null>(null);
+  const shouldReconnectRef = useRef(false);
 
   useEffect(() => {
     onEventRef.current = onEvent;
@@ -17,12 +20,27 @@ export const useWebSocket = (token: string | null, onEvent: (event: WSEvent) => 
   const connect = useCallback(() => {
     if (!token) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = 'localhost:8000'; 
-    const url = `${protocol}//${host}/ws?token=${token}`;
+    if (reconnectTimeoutRef.current) {
+      window.clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
 
-    console.log('Connecting to WebSocket...');
-    const ws = new WebSocket(url);
+    if (
+      socketRef.current &&
+      (socketRef.current.readyState === WebSocket.CONNECTING ||
+        socketRef.current.readyState === WebSocket.OPEN)
+    ) {
+      return;
+    }
+
+    const configuredWsUrl = import.meta.env.VITE_WS_URL;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = new URL(configuredWsUrl || `${protocol}//localhost:8000/ws`);
+    wsUrl.searchParams.set('token', token);
+
+    console.log(`Connecting to WebSocket: ${wsUrl.origin}${wsUrl.pathname}`);
+    const ws = new WebSocket(wsUrl.toString());
+    socketRef.current = ws;
 
     ws.onopen = () => {
       console.log('WebSocket connected');
@@ -41,6 +59,9 @@ export const useWebSocket = (token: string | null, onEvent: (event: WSEvent) => 
 
     ws.onclose = (event) => {
       if (event.code === 1008) {
+        if (socketRef.current === ws) {
+          socketRef.current = null;
+        }
         console.error('WebSocket Authentication failed.');
         return;
       }
@@ -50,24 +71,44 @@ export const useWebSocket = (token: string | null, onEvent: (event: WSEvent) => 
         console.log('Old WebSocket intentionally closed.');
         return;
       }
+
+      socketRef.current = null;
+      if (!shouldReconnectRef.current) {
+        console.log('WebSocket closed.');
+        return;
+      }
       
       console.log('WebSocket disconnected. Reconnecting in 3s...');
-      setTimeout(connect, 3000);
+      reconnectTimeoutRef.current = window.setTimeout(() => {
+        reconnectTimeoutRef.current = null;
+        connect();
+      }, 3000);
     };
 
     ws.onerror = (err) => {
       console.error('WebSocket error:', err);
       ws.close();
     };
-
-    socketRef.current = ws;
   }, [token]);
 
   useEffect(() => {
+    shouldReconnectRef.current = Boolean(token);
     if (token) {
-      connect();
+      connectTimeoutRef.current = window.setTimeout(() => {
+        connectTimeoutRef.current = null;
+        connect();
+      }, 100);
     }
     return () => {
+      shouldReconnectRef.current = false;
+      if (connectTimeoutRef.current) {
+        window.clearTimeout(connectTimeoutRef.current);
+        connectTimeoutRef.current = null;
+      }
+      if (reconnectTimeoutRef.current) {
+        window.clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
       if (socketRef.current) {
         const ws = socketRef.current;
         socketRef.current = null;

@@ -11,6 +11,18 @@ logger = logging.getLogger(__name__)
 
 class WebhookService:
     @staticmethod
+    async def _send_conversation_event(conversation: Conversation, message: dict):
+        if conversation.assignee_id:
+            await socket_manager.send_personal_message(
+                message,
+                conversation.workspace_id,
+                conversation.assignee_id,
+            )
+            return
+
+        await socket_manager.broadcast(message)
+
+    @staticmethod
     async def process_webhook(db: Session, connection_id: str, payload: dict) -> WebhookEvent:
         # Save raw payload
         event = WebhookEvent(
@@ -171,23 +183,27 @@ class WebhookService:
 
             # BROADCAST WS EVENTS
             # 1. New Message
-            await socket_manager.broadcast({
+            await WebhookService._send_conversation_event(conversation, {
                 "type": "NEW_MESSAGE",
                 "workspace_id": connection.workspace_id,
                 "data": {
                     "id": msg.id,
+                    "workspace_id": msg.workspace_id,
                     "conversation_id": msg.conversation_id,
+                    "contact_id": msg.contact_id,
                     "direction": msg.direction,
                     "message_type": msg.message_type,
                     "content": msg.content,
                     "media_url": msg.media_url,
                     "mime_type": msg.mime_type,
+                    "external_message_id": msg.external_message_id,
+                    "status": msg.status,
                     "created_at": msg.created_at.isoformat()
                 }
             })
 
             # 2. Conversation Updated (for the list)
-            await socket_manager.broadcast({
+            await WebhookService._send_conversation_event(conversation, {
                 "type": "CONVERSATION_UPDATED",
                 "workspace_id": connection.workspace_id,
                 "data": {

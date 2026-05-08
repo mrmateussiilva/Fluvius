@@ -66,7 +66,7 @@ async def create_connection(
             provider="evolution_api",
             instance_name=instance_name,
             status="disconnected",
-            base_url=settings.EVOLUTION_API_URL,
+            base_url=settings.evolution_base_url,
             api_key=settings.EVOLUTION_API_KEY
         )
         db.add(new_conn)
@@ -74,7 +74,7 @@ async def create_connection(
         db.refresh(new_conn)
         
         # 3. Set Webhook in Evolution API
-        webhook_url = f"{settings.BACKEND_URL}/webhooks/evolution/{new_conn.id}"
+        webhook_url = f"{settings.webhook_public_base_url.rstrip('/')}/webhooks/evolution/{new_conn.id}"
         await EvolutionService.set_webhook(instance_name=instance_name, webhook_url=webhook_url)
         
         return new_conn

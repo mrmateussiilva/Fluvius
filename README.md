@@ -65,7 +65,7 @@ Consulte o [README do Backend](backend/README.md) para detalhes de instalação 
    ```
 3. Inicie o servidor dev:
    ```bash
-   uv run fastapi dev app/main.py
+   uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
    ```
 
 ## Configuração do Frontend
@@ -81,3 +81,42 @@ Consulte o [README do Frontend](frontend/README.md) para detalhes. Resumo:
    ```bash
    pnpm dev
    ```
+
+## URLs no Ambiente Local
+
+Use URLs diferentes conforme quem está fazendo a chamada:
+
+- Browser/frontend -> backend FastAPI:
+  - REST: `http://localhost:8000/api`
+  - WebSocket: `ws://localhost:8000/ws?token=...`
+- Evolution API container -> backend no host:
+  - Webhook: `http://host.docker.internal:8000/webhooks/evolution/{connection_id}`
+  - Fallback Linux, se `host.docker.internal` não resolver: `http://172.17.0.1:8000/webhooks/evolution/{connection_id}`
+- Backend no host -> Evolution API:
+  - `http://localhost:8080`
+- Postgres/Redis entre containers:
+  - use os nomes dos services Docker, como `postgres_evolution` e `redis_evolution`, nunca `localhost`.
+
+O `docker-compose.yml` já inclui:
+
+```yaml
+extra_hosts:
+  - "host.docker.internal:host-gateway"
+```
+
+No frontend local, mantenha:
+
+```env
+VITE_API_URL=http://localhost:8000/api
+VITE_WS_URL=ws://localhost:8000/ws
+```
+
+No backend local, mantenha:
+
+```env
+FRONTEND_ORIGIN=http://localhost:5173
+PUBLIC_API_BASE_URL=http://localhost:8000
+WEBHOOK_PUBLIC_BASE_URL=http://host.docker.internal:8000
+EVOLUTION_BASE_URL=http://localhost:8080
+EVOLUTION_API_KEY=...
+```

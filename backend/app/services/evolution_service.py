@@ -101,7 +101,7 @@ class EvolutionService:
     @staticmethod
     async def create_instance(instance_name: str) -> dict:
         from app.core.config import settings
-        url = f"{settings.EVOLUTION_API_URL.rstrip('/')}/instance/create"
+        url = f"{settings.evolution_base_url.rstrip('/')}/instance/create"
         headers = {
             "apikey": settings.EVOLUTION_API_KEY,
             "Content-Type": "application/json"
@@ -125,7 +125,7 @@ class EvolutionService:
     @staticmethod
     async def set_webhook(instance_name: str, webhook_url: str) -> dict:
         from app.core.config import settings
-        url = f"{settings.EVOLUTION_API_URL.rstrip('/')}/webhook/set/{instance_name}"
+        url = f"{settings.evolution_base_url.rstrip('/')}/webhook/set/{instance_name}"
         headers = {
             "apikey": settings.EVOLUTION_API_KEY,
             "Content-Type": "application/json"

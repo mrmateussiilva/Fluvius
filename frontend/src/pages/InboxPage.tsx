@@ -16,6 +16,7 @@ type TabFilter = 'all' | 'pending' | 'mine' | 'resolved';
 export const InboxPage: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [activeTab, setActiveTab] = useState<TabFilter>('pending');
   const { currentAgent } = useAgent();
@@ -35,10 +36,16 @@ export const InboxPage: React.FC = () => {
         ? data.filter(c => c.assignee_id === currentAgent.id)
         : data;
       setConversations(filtered);
+      if (selectedConversationId) {
+        const selected = data.find(c => c.id === selectedConversationId);
+        if (selected) {
+          setSelectedConversation(selected);
+        }
+      }
     } catch (err) {
       console.error(err);
     }
-  }, [activeTab, currentAgent]);
+  }, [activeTab, currentAgent, selectedConversationId]);
 
   const loadMessages = useCallback(async () => {
     if (!selectedConversationId) return;
@@ -73,10 +80,10 @@ export const InboxPage: React.FC = () => {
         // 1. If this message is for the currently open chat, add it
         if (newMsg.conversation_id === selectedConversationId) {
           setMessages(prev => {
-            // Avoid duplicates
             if (prev.some(m => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
+            return [...prev, newMsg as Message];
           });
+          loadMessages();
           // Mark as read immediately if it's inbound
           if (newMsg.direction === 'inbound') {
              markAsRead(newMsg.conversation_id).catch(console.error);
@@ -91,7 +98,7 @@ export const InboxPage: React.FC = () => {
         loadConversations();
         // If the updated conversation is the one we have open, we might need to refresh it
         if (event.data.id === selectedConversationId) {
-          // Instead of full reload, we could just update the selected conversation object if we had it in state
+          setSelectedConversation(prev => prev ? { ...prev, ...event.data } : prev);
         }
         break;
 
@@ -103,7 +110,7 @@ export const InboxPage: React.FC = () => {
         }
         break;
     }
-  }, [selectedConversationId, loadConversations]);
+  }, [selectedConversationId, loadConversations, loadMessages]);
 
   // Connect WebSocket
   useWebSocket(token, handleWSEvent);
@@ -157,6 +164,7 @@ export const InboxPage: React.FC = () => {
   const handleSelectConversation = async (id: string) => {
     setSelectedConversationId(id);
     const conv = conversations.find(c => c.id === id);
+    setSelectedConversation(conv || null);
     if (conv && conv.unread_count > 0) {
       try {
         await markAsRead(id);
@@ -167,8 +175,6 @@ export const InboxPage: React.FC = () => {
       }
     }
   };
-
-  const selectedConversation = conversations.find(c => c.id === selectedConversationId);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-white text-slate-800">
