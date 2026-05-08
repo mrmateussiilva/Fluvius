@@ -1,0 +1,6 @@
+.env*
+!.env.evolution.example
+.idea/
+.vscode/
+.DS_Store
+.codex
