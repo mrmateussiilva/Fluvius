@@ -249,3 +249,10 @@ export const restartConnection = async (connectionId: string): Promise<any> => {
   return response.json();
 };
 
+export const syncConnection = async (connectionId: string): Promise<any> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/connections/${connectionId}/sync`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to sync connection');
+  return response.json();
+};

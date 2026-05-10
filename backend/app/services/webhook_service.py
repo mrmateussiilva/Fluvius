@@ -5,7 +5,9 @@ from app.models.contact import Contact
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.core.socket_manager import socket_manager
+from app.services.sync_service import SyncService
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -360,3 +362,7 @@ class WebhookService:
                     "status": connection.status
                 }
             })
+            
+            if new_status == "connected":
+                # Trigger historical sync in the background
+                asyncio.create_task(SyncService.sync_connection(connection.id))

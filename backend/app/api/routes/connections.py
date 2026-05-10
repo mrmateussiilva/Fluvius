@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
@@ -9,6 +9,7 @@ from app.models.connection import Connection
 from app.models.agent import Agent
 from app.schemas.connection import ConnectionRead
 from app.services.evolution_service import EvolutionService
+from app.services.sync_service import SyncService
 
 router = APIRouter(prefix="/api/connections", tags=["connections"])
 
@@ -209,4 +210,25 @@ async def restart_connection(
         return {"status": "restarted"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{connection_id}/sync")
+async def sync_connection(
+    connection_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent)
+):
+    connection = db.query(Connection).filter(
+        Connection.id == connection_id,
+        Connection.workspace_id == current_agent.workspace_id
+    ).first()
+    
+    if not connection:
+        raise HTTPException(status_code=404, detail="Connection not found")
+        
+    # Run sync in background
+    background_tasks.add_task(SyncService.sync_connection, connection_id)
+    
+    return {"status": "sync_started", "message": "Synchronization started in background"}
 

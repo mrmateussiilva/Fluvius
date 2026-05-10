@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchConnections, fetchConnectionQR, fetchConnectionStatus, deleteConnection, logoutConnection, restartConnection } from '../api/client';
+import { fetchConnections, fetchConnectionQR, fetchConnectionStatus, deleteConnection, logoutConnection, restartConnection, syncConnection } from '../api/client';
 import type { Connection } from '../api/client';
 import {
   Settings, Plus, RefreshCw, Wifi, WifiOff, QrCode, X,
-  ArrowLeft, User, CheckCircle, Loader2, Trash2, LogOut, RotateCcw,
+  ArrowLeft, User, CheckCircle, Loader2, Trash2, LogOut, RotateCcw, DownloadCloud
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -92,6 +92,16 @@ export const SettingsPage: React.FC = () => {
     } catch (err) {
       console.error(err);
       alert('Erro ao reconectar.');
+    }
+  };
+
+  const handleSync = async (conn: Connection) => {
+    try {
+      await syncConnection(conn.id);
+      alert('Sincronização iniciada! Os chats e mensagens aparecerão em alguns instantes no seu Inbox.');
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao iniciar sincronização');
     }
   };
 
@@ -240,10 +250,16 @@ export const SettingsPage: React.FC = () => {
                       <RefreshCw size={18} />
                     </button>
                     {conn.status === 'open' ? (
-                      <button onClick={() => handleLogout(conn)} className="flex items-center gap-1.5 text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-[12px] text-sm font-medium hover:bg-amber-100 transition-colors" title="Desconectar">
-                        <LogOut size={15} />
-                        Desconectar
-                      </button>
+                      <>
+                        <button onClick={() => handleSync(conn)} className="flex items-center gap-1.5 text-blue-600 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-[12px] text-sm font-medium hover:bg-blue-100 transition-colors" title="Sincronizar Histórico">
+                          <DownloadCloud size={15} />
+                          Sincronizar
+                        </button>
+                        <button onClick={() => handleLogout(conn)} className="flex items-center gap-1.5 text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-[12px] text-sm font-medium hover:bg-amber-100 transition-colors" title="Desconectar">
+                          <LogOut size={15} />
+                          Desconectar
+                        </button>
+                      </>
                     ) : (
                       <button onClick={() => handleRestart(conn)} className="flex items-center gap-1.5 text-fluvius-blue-main bg-fluvius-blue-main/10 border border-fluvius-blue-main/20 px-3 py-1.5 rounded-[12px] text-sm font-medium hover:bg-fluvius-blue-main/20 transition-colors">
                         <RotateCcw size={15} />

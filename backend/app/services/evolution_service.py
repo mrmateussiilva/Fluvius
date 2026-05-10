@@ -164,6 +164,52 @@ class EvolutionService:
             raise
 
     @staticmethod
+    async def fetch_chats(base_url: str, api_key: str, instance_name: str) -> list:
+        url = f"{base_url.rstrip('/')}/chat/findChats/{instance_name}"
+        headers = {"apikey": api_key, "Content-Type": "application/json"}
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, headers=headers, json={}, timeout=20.0)
+                response.raise_for_status()
+                return response.json()
+        except Exception as e:
+            logger.error(f"Failed to fetch chats from Evolution API: {e}")
+            return []
+
+    @staticmethod
+    async def fetch_messages(base_url: str, api_key: str, instance_name: str, remote_jid: str, limit: int = 30) -> list:
+        url = f"{base_url.rstrip('/')}/chat/findMessages/{instance_name}"
+        headers = {"apikey": api_key, "Content-Type": "application/json"}
+        payload = {
+            "where": {
+                "key": {
+                    "remoteJid": remote_jid
+                }
+            },
+            "limit": limit
+        }
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, headers=headers, json=payload, timeout=20.0)
+                response.raise_for_status()
+                data = response.json()
+                
+                # The API returns {"messages": {"records": [...]}} or just [...] depending on version
+                if isinstance(data, dict) and "messages" in data:
+                    msgs = data["messages"]
+                    if isinstance(msgs, dict) and "records" in msgs:
+                        return msgs["records"]
+                    return msgs
+                elif isinstance(data, list):
+                    return data
+                return []
+        except Exception as e:
+            logger.error(f"Failed to fetch messages for {remote_jid}: {e}")
+            return []
+
+    @staticmethod
     async def create_instance(instance_name: str) -> dict:
         from app.core.config import settings
         url = f"{settings.evolution_base_url.rstrip('/')}/instance/create"

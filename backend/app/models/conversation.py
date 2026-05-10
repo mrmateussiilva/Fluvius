@@ -11,6 +11,7 @@ class Conversation(Base):
     inbox_id = Column(String, ForeignKey("inboxes.id"), nullable=False, index=True)
     contact_id = Column(String, ForeignKey("contacts.id"), nullable=False, index=True)
     assignee_id = Column(String, ForeignKey("agents.id"), nullable=True, index=True)
+    external_id = Column(String, nullable=True, index=True)
     status = Column(String, nullable=False, default="pending")  # pending, open, resolved
     unread_count = Column(Integer, default=0, nullable=False)
     last_message_at = Column(DateTime, nullable=True)
