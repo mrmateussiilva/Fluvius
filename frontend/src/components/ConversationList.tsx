@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { Conversation } from '../api/client';
-import { User, MessageCircle, Clock, Settings as SettingsIcon, Inbox, CheckCircle, AlertCircle, LogOut } from 'lucide-react';
+import { User, MessageCircle, Clock, Settings as SettingsIcon, Inbox, CheckCircle, AlertCircle, LogOut, Shield } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { clsx, type ClassValue } from 'clsx';
@@ -38,39 +38,42 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   const { logout } = useAuth();
 
   return (
-    <div className="w-[360px] flex flex-col bg-white border-r border-slate-200 shrink-0 h-full">
+    <div className="w-[360px] flex flex-col bg-white border-r border-fluvius-border shrink-0 h-full">
       {/* Header */}
-      <div className="h-16 flex items-center px-4 bg-slate-50 border-b border-slate-200 shrink-0">
-        <h1 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-          <MessageCircle className="text-emerald-500" />
+      <div className="h-16 flex items-center px-4 bg-white border-b border-fluvius-border shrink-0">
+        <h1 className="text-xl font-semibold text-fluvius-text-main flex items-center gap-2">
+          <img src="/logo.png" alt="Fluvius Logo" className="h-8 object-contain" />
           Fluvius
         </h1>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 bg-white shrink-0 overflow-x-auto">
+      <div className="flex p-2 gap-1 border-b border-fluvius-border bg-white shrink-0 overflow-x-auto">
         {TABS.map(tab => (
           <button
             key={tab.key}
             onClick={() => onTabChange(tab.key)}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium whitespace-nowrap transition-colors border-b-2 -mb-px",
+              "flex items-center justify-center flex-1 gap-1.5 px-4 py-2.5 text-[13px] font-semibold whitespace-nowrap transition-colors relative",
               activeTab === tab.key
-                ? "border-emerald-500 text-emerald-600"
-                : "border-transparent text-slate-500 hover:text-slate-700"
+                ? "bg-[#EFF6FF] text-[#0F5CC0] rounded-[10px]"
+                : "text-fluvius-text-sec hover:text-fluvius-text-main hover:bg-[#F8FAFC] rounded-[10px]"
             )}
           >
             {tab.icon}
             {tab.label}
+            {activeTab === tab.key && (
+              <div className="absolute bottom-0 left-4 right-4 h-[3px] rounded-t-full bg-fluvius-gradient" />
+            )}
           </button>
         ))}
       </div>
 
       {/* Conversation List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto fluvius-scroll">
         {conversations.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 flex flex-col items-center gap-3">
-            <Clock size={32} className="text-slate-300" />
+          <div className="p-8 text-center text-fluvius-text-sec flex flex-col items-center gap-3">
+            <Clock size={32} className="text-fluvius-border" />
             <p className="text-sm">Nenhuma conversa nesta fila.</p>
           </div>
         ) : (
@@ -89,7 +92,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
             const statusColor: Record<string, string> = {
               pending: 'bg-amber-400',
-              open: 'bg-emerald-500',
+              open: 'bg-fluvius-blue-main',
               resolved: 'bg-slate-300',
             };
 
@@ -98,17 +101,17 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 key={conv.id}
                 onClick={() => onSelect(conv.id)}
                 className={cn(
-                  "flex items-center gap-3 p-3 cursor-pointer transition-colors border-b border-slate-100",
-                  isSelected ? "bg-slate-100" : "hover:bg-slate-50"
+                  "flex items-center gap-3 px-4 py-3 min-h-[72px] cursor-pointer transition-all border-b border-fluvius-border/50",
+                  isSelected ? "bg-[#EEF8FF] border-l-[3px] border-l-[#1EA7FF] shadow-[0_2px_8px_rgba(30,167,255,0.08)]" : "border-l-[3px] border-l-transparent hover:bg-[#F8FAFC]"
                 )}
               >
                 {/* Avatar */}
                 <div className="relative shrink-0">
-                  <div className="w-11 h-11 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 overflow-hidden">
+                  <div className="w-12 h-12 rounded-full bg-fluvius-bg flex items-center justify-center text-fluvius-text-sec overflow-hidden shadow-sm border border-fluvius-border/50">
                     {conv.contact?.avatar_url ? (
                       <img src={conv.contact.avatar_url} alt={contactName} className="w-full h-full object-cover" />
                     ) : (
-                      <User size={22} />
+                      <User size={24} />
                     )}
                   </div>
                   <span className={cn("absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white", statusColor[conv.status] || 'bg-slate-300')} />
@@ -116,16 +119,16 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-baseline mb-0.5">
-                    <h3 className="font-medium text-slate-900 truncate pr-2 text-sm">{contactName}</h3>
-                    {timeStr && <span className="text-xs text-slate-400 whitespace-nowrap">{timeStr}</span>}
+                  <div className="flex justify-between items-baseline mb-1">
+                    <h3 className={cn("font-semibold truncate pr-2 text-[15px]", isSelected ? "text-[#0F172A]" : "text-fluvius-text-main")}>{contactName}</h3>
+                    {timeStr && <span className="text-[11px] text-fluvius-text-sec whitespace-nowrap font-medium">{timeStr}</span>}
                   </div>
                   <div className="flex justify-between items-center">
-                    <div className="text-xs text-slate-500 truncate">
+                    <div className="text-xs text-fluvius-text-sec truncate">
                       {conv.assignee ? `👤 ${conv.assignee.name}` : 'Sem agente'}
                     </div>
                     {conv.unread_count > 0 && (
-                      <span className="bg-emerald-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                      <span className="bg-fluvius-gradient text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
                         {conv.unread_count}
                       </span>
                     )}
@@ -138,20 +141,23 @@ export const ConversationList: React.FC<ConversationListProps> = ({
       </div>
 
       {/* Sidebar Footer */}
-      <div className="border-t border-slate-200 shrink-0">
+      <div className="border-t border-fluvius-border shrink-0">
         {/* Current Agent Badge */}
         {currentAgent && (
           <Link
             to="/settings"
-            className="flex items-center gap-3 px-4 py-3 hover:bg-slate-100 transition-colors border-b border-slate-100"
+            className="flex items-center gap-3 px-4 py-3 hover:bg-[#F8FAFC] transition-colors border-b border-fluvius-border"
             title="Trocar agente em Configurações"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-xs shrink-0">
+            <div 
+              className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-sm"
+              style={{ background: 'linear-gradient(135deg, #1EA7FF, #34D399)' }}
+            >
               {currentAgent.name.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-slate-700 truncate">{currentAgent.name}</p>
-              <p className="text-xs text-slate-400 truncate">{currentAgent.email}</p>
+              <p className="text-xs font-semibold text-fluvius-text-main truncate">{currentAgent.name}</p>
+              <p className="text-xs text-fluvius-text-sec truncate">{currentAgent.email}</p>
             </div>
           </Link>
         )}
@@ -160,12 +166,24 @@ export const ConversationList: React.FC<ConversationListProps> = ({
             to="/settings"
             className={cn(
               "flex items-center gap-3 w-full p-2 rounded-lg transition-colors font-medium text-sm",
-              location.pathname === '/settings' ? "bg-indigo-100 text-indigo-700" : "text-slate-600 hover:bg-slate-200"
+              location.pathname === '/settings' ? "bg-[#EFF6FF] text-[#1EA7FF]" : "text-fluvius-text-sec hover:bg-[#F8FAFC]"
             )}
           >
             <SettingsIcon size={18} />
             Configurações
           </Link>
+          {currentAgent?.role === 'admin' && (
+            <Link
+              to="/admin"
+              className={cn(
+                "flex items-center gap-3 w-full p-2 mt-1 rounded-lg transition-colors font-medium text-sm",
+                location.pathname.startsWith('/admin') ? "bg-[#EFF6FF] text-[#1EA7FF]" : "text-fluvius-text-sec hover:bg-[#F8FAFC]"
+              )}
+            >
+              <Shield size={18} />
+              Painel Admin
+            </Link>
+          )}
           <button
             onClick={logout}
             className="flex items-center gap-3 w-full p-2 mt-1 rounded-lg transition-colors font-medium text-sm text-rose-600 hover:bg-rose-50"

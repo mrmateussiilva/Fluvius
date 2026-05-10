@@ -1,5 +1,6 @@
 .env*
 !.env.evolution.example
+!frontend/.env.example
 .idea/
 .vscode/
 .DS_Store

@@ -1,15 +1,12 @@
-export const API_BASE_URL = "http://localhost:8000/api";
-
-const getAuthHeader = () => {
-  const token = localStorage.getItem('fluvius_token');
-  return token ? { 'Authorization': `Bearer ${token}` } : {};
-};
+export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-  const headers = {
-    ...getAuthHeader(),
-    ...options.headers,
-  };
+  const headers = new Headers(options.headers);
+  const token = localStorage.getItem('fluvius_token');
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
   const response = await fetch(url, { ...options, headers });
   if (response.status === 401) {
     // Handle unauthorized - maybe redirect or clear storage
@@ -27,6 +24,7 @@ export interface Agent {
   email: string;
   avatar_url: string | null;
   is_online: boolean;
+  role: string;
   created_at: string;
 }
 
@@ -67,6 +65,8 @@ export interface Message {
   external_message_id: string | null;
   status: string;
   created_at: string;
+  quoted_message_id?: string | null;
+  quoted_content?: string | null;
 }
 
 export interface Connection {
@@ -98,13 +98,13 @@ export const fetchMessages = async (conversationId: string): Promise<Message[]> 
   }
   return response.json();
 };
-export const sendMessage = async (conversationId: string, content: string): Promise<Message> => {
+export const sendMessage = async (conversationId: string, content: string, quotedMessageId?: string): Promise<Message> => {
   const response = await fetchWithAuth(`${API_BASE_URL}/conversations/${conversationId}/messages`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content, quoted_message_id: quotedMessageId }),
   });
   if (!response.ok) {
     throw new Error('Failed to send message');
@@ -112,11 +112,11 @@ export const sendMessage = async (conversationId: string, content: string): Prom
   return response.json();
 };
 
-export const sendMediaMessage = async (conversationId: string, media: string, mediaType: string, mimetype: string, caption?: string): Promise<Message> => {
+export const sendMediaMessage = async (conversationId: string, media: string, mediaType: string, mimetype: string, caption?: string, quotedMessageId?: string): Promise<Message> => {
   const response = await fetchWithAuth(`${API_BASE_URL}/conversations/${conversationId}/messages/media`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ media, media_type: mediaType, mimetype, caption }),
+    body: JSON.stringify({ media, media_type: mediaType, mimetype, caption, quoted_message_id: quotedMessageId }),
   });
   if (!response.ok) throw new Error('Failed to send media message');
   return response.json();

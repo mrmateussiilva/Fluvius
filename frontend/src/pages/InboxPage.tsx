@@ -19,6 +19,8 @@ export const InboxPage: React.FC = () => {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [activeTab, setActiveTab] = useState<TabFilter>('pending');
+  const [connectionStatus, setConnectionStatus] = useState<string>('connected');
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const { currentAgent } = useAgent();
   const { token } = useAuth();
 
@@ -109,6 +111,10 @@ export const InboxPage: React.FC = () => {
           ));
         }
         break;
+
+      case 'CONNECTION_STATUS_UPDATED':
+        setConnectionStatus(event.data.status);
+        break;
     }
   }, [selectedConversationId, loadConversations, loadMessages]);
 
@@ -119,7 +125,8 @@ export const InboxPage: React.FC = () => {
   const handleSendMessage = async (content: string) => {
     if (!selectedConversationId) return;
     try {
-      await sendMessage(selectedConversationId, content);
+      await sendMessage(selectedConversationId, content, replyingTo?.id);
+      setReplyingTo(null);
     } catch (err) {
       console.error(err);
     }
@@ -128,7 +135,8 @@ export const InboxPage: React.FC = () => {
   const handleSendMedia = async (media: string, mediaType: string, mimetype: string, caption?: string) => {
     if (!selectedConversationId) return;
     try {
-      await sendMediaMessage(selectedConversationId, media, mediaType, mimetype, caption);
+      await sendMediaMessage(selectedConversationId, media, mediaType, mimetype, caption, replyingTo?.id);
+      setReplyingTo(null);
     } catch (err) {
       console.error(err);
     }
@@ -163,6 +171,7 @@ export const InboxPage: React.FC = () => {
 
   const handleSelectConversation = async (id: string) => {
     setSelectedConversationId(id);
+    setReplyingTo(null); // Clear reply state when changing conversation
     const conv = conversations.find(c => c.id === id);
     setSelectedConversation(conv || null);
     if (conv && conv.unread_count > 0) {
@@ -177,9 +186,15 @@ export const InboxPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-white text-slate-800">
-      <ConversationList
-        conversations={conversations}
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-fluvius-bg text-fluvius-text-main">
+      {connectionStatus === 'disconnected' && (
+        <div className="bg-red-500 text-white text-center py-2 text-sm font-medium shrink-0 flex items-center justify-center gap-2">
+          <span>⚠️ Atenção: O WhatsApp foi desconectado. Verifique a Evolution API.</span>
+        </div>
+      )}
+      <div className="flex flex-1 overflow-hidden">
+        <ConversationList
+          conversations={conversations}
         selectedId={selectedConversationId}
         onSelect={handleSelectConversation}
         activeTab={activeTab}
@@ -194,18 +209,21 @@ export const InboxPage: React.FC = () => {
           onAssign={() => handleAssign(selectedConversation.id)}
           onResolve={() => handleResolve(selectedConversation.id)}
           onPending={() => handlePending(selectedConversation.id)}
+          replyingTo={replyingTo}
+          onSetReplyingTo={setReplyingTo}
         />
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 border-l border-slate-200">
-          <div className="bg-white p-6 rounded-full shadow-sm mb-6">
-            <MessageSquare size={48} className="text-emerald-500" />
+        <div className="flex-1 flex flex-col items-center justify-center bg-fluvius-surface border-l border-fluvius-border">
+          <div className="bg-white p-6 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-6">
+            <MessageSquare size={48} className="text-fluvius-blue-main" />
           </div>
-          <h2 className="text-2xl font-light text-slate-700 mb-2">Fluvius Inbox</h2>
-          <p className="text-slate-500 max-w-md text-center">
+          <h2 className="text-2xl font-semibold text-fluvius-text-main mb-2">Fluvius Inbox</h2>
+          <p className="text-fluvius-text-sec max-w-md text-center">
             Selecione uma conversa para começar a atender.
           </p>
         </div>
       )}
+      </div>
     </div>
   );
 };

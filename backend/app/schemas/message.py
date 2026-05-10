@@ -6,13 +6,14 @@ class MessageBase(BaseModel):
     content: str
 
 class MessageCreate(MessageBase):
-    pass
+    quoted_message_id: Optional[str] = None
 
 class MediaMessageCreate(BaseModel):
     media: str  # Base64 or URL
     media_type: str  # image, audio, video, document
     mimetype: str  # image/jpeg, etc.
     caption: Optional[str] = ""
+    quoted_message_id: Optional[str] = None
 
 class MessageResponse(BaseModel):
     id: str
@@ -27,5 +28,7 @@ class MessageResponse(BaseModel):
     external_message_id: Optional[str]
     status: str
     created_at: datetime
+    quoted_message_id: Optional[str] = None
+    quoted_content: Optional[str] = None
 
     model_config = {"from_attributes": True}

@@ -131,31 +131,31 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 bg-slate-50 min-h-screen p-8 overflow-y-auto">
+    <div className="flex-1 bg-fluvius-bg min-h-screen p-8 overflow-y-auto">
       <div className="max-w-4xl mx-auto space-y-8">
 
         {/* Back */}
         <div>
-          <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-slate-600 transition-colors mb-6 group w-fit">
+          <Link to="/" className="flex items-center gap-2 text-fluvius-text-sec hover:text-fluvius-text-main transition-colors mb-6 group w-fit">
             <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
             Voltar para o Chat
           </Link>
-          <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
-            <Settings className="text-slate-400" />
+          <h1 className="text-3xl font-bold text-fluvius-text-main flex items-center gap-3">
+            <Settings className="text-fluvius-blue-main" />
             Configurações
           </h1>
         </div>
 
         {/* AGENTS SECTION */}
-        <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-            <h2 className="font-semibold text-slate-700 text-lg flex items-center gap-2">
-              <User size={18} className="text-slate-400" />
+        <section className="bg-white rounded-[16px] shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-fluvius-border overflow-hidden">
+          <div className="px-6 py-4 border-b border-fluvius-border bg-fluvius-surface flex justify-between items-center">
+            <h2 className="font-semibold text-fluvius-text-main text-lg flex items-center gap-2">
+              <User size={18} className="text-fluvius-blue-deep" />
               Agentes
             </h2>
             <button
               onClick={() => setShowCreateAgent(!showCreateAgent)}
-              className="flex items-center gap-2 text-sm bg-emerald-500 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-600 transition-colors font-medium"
+              className="flex items-center gap-2 text-sm bg-fluvius-gradient text-white px-3 py-1.5 rounded-[12px] hover:opacity-90 transition-all shadow-sm font-medium"
             >
               <Plus size={16} />
               Novo Agente
@@ -164,7 +164,7 @@ export const SettingsPage: React.FC = () => {
 
           {/* Create form */}
           {showCreateAgent && (
-            <form onSubmit={handleCreateAgent} className="p-6 border-b border-slate-100 bg-slate-50/30">
+            <form onSubmit={handleCreateAgent} className="p-6 border-b border-fluvius-border bg-white">
               <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="text"
@@ -172,7 +172,7 @@ export const SettingsPage: React.FC = () => {
                   value={agentName}
                   onChange={e => setAgentName(e.target.value)}
                   required
-                  className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+                  className="flex-1 border border-fluvius-border rounded-[12px] px-3 py-2 text-sm text-fluvius-text-main outline-none focus:border-fluvius-blue-main focus:ring-2 focus:ring-fluvius-blue-main/10"
                 />
                 <input
                   type="email"
@@ -180,12 +180,12 @@ export const SettingsPage: React.FC = () => {
                   value={agentEmail}
                   onChange={e => setAgentEmail(e.target.value)}
                   required
-                  className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+                  className="flex-1 border border-fluvius-border rounded-[12px] px-3 py-2 text-sm text-fluvius-text-main outline-none focus:border-fluvius-blue-main focus:ring-2 focus:ring-fluvius-blue-main/10"
                 />
                 <button
                   type="submit"
                   disabled={creating}
-                  className="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors flex items-center gap-2 disabled:opacity-60"
+                  className="bg-fluvius-gradient text-white px-4 py-2 rounded-[12px] text-sm font-medium hover:opacity-90 transition-colors flex items-center gap-2 disabled:opacity-60 shadow-sm"
                 >
                   {creating ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
                   Criar
@@ -193,7 +193,7 @@ export const SettingsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowCreateAgent(false)}
-                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                  className="text-fluvius-text-sec hover:text-fluvius-text-main transition-colors"
                 >
                   <X size={20} />
                 </button>
@@ -203,38 +203,38 @@ export const SettingsPage: React.FC = () => {
           )}
 
           {/* Agents list */}
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-fluvius-border">
             {agents.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-sm">Nenhum agente cadastrado.</div>
+              <div className="p-8 text-center text-fluvius-text-sec text-sm">Nenhum agente cadastrado.</div>
             ) : (
               agents.map(agent => {
                 const isActive = currentAgent?.id === agent.id;
                 return (
-                  <div key={agent.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50/50 transition-colors">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                  <div key={agent.id} className="flex items-center gap-4 px-6 py-4 hover:bg-fluvius-bg transition-colors">
+                    <div className="w-10 h-10 rounded-full bg-fluvius-gradient flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-sm">
                       {agent.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-slate-800">{agent.name}</p>
+                        <p className="font-medium text-fluvius-text-main">{agent.name}</p>
                         {isActive && (
-                          <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">
+                          <span className="text-xs bg-fluvius-green-water/20 text-fluvius-green-emerald px-2 py-0.5 rounded-full font-medium">
                             Você
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-slate-400 truncate">{agent.email}</p>
+                      <p className="text-sm text-fluvius-text-sec truncate">{agent.email}</p>
                     </div>
                     {!isActive && (
                       <button
                         onClick={() => setCurrentAgent(agent)}
-                        className="text-sm text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors font-medium"
+                        className="text-sm text-fluvius-blue-main border border-fluvius-blue-main/30 px-3 py-1.5 rounded-[12px] hover:bg-fluvius-surface transition-colors font-medium"
                       >
                         Trocar para este
                       </button>
                     )}
                     {isActive && (
-                      <CheckCircle size={20} className="text-emerald-500 shrink-0" />
+                      <CheckCircle size={20} className="text-fluvius-green-water shrink-0" />
                     )}
                   </div>
                 );
@@ -244,21 +244,21 @@ export const SettingsPage: React.FC = () => {
         </section>
 
         {/* CONNECTIONS SECTION */}
-        <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-            <h2 className="font-semibold text-slate-700 text-lg flex items-center gap-2">
-              <Wifi size={18} className="text-slate-400" />
+        <section className="bg-white rounded-[16px] shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-fluvius-border overflow-hidden">
+          <div className="px-6 py-4 border-b border-fluvius-border bg-fluvius-surface flex justify-between items-center">
+            <h2 className="font-semibold text-fluvius-text-main text-lg flex items-center gap-2">
+              <Wifi size={18} className="text-fluvius-blue-deep" />
               Conexões WhatsApp
             </h2>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowCreateConn(!showCreateConn)}
-                className="flex items-center gap-2 text-sm bg-emerald-500 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-600 transition-colors font-medium"
+                className="flex items-center gap-2 text-sm bg-fluvius-gradient text-white px-3 py-1.5 rounded-[12px] hover:opacity-90 transition-all shadow-sm font-medium"
               >
                 <Plus size={16} />
                 Nova Conexão
               </button>
-              <button onClick={loadConnections} className="text-slate-400 hover:text-slate-600 transition-colors">
+              <button onClick={loadConnections} className="text-fluvius-text-sec hover:text-fluvius-text-main transition-colors">
                 <RefreshCw size={18} />
               </button>
             </div>
@@ -266,7 +266,7 @@ export const SettingsPage: React.FC = () => {
 
           {/* Create Connection Form */}
           {showCreateConn && (
-            <form onSubmit={handleCreateConnection} className="p-6 border-b border-slate-100 bg-slate-50/30">
+            <form onSubmit={handleCreateConnection} className="p-6 border-b border-fluvius-border bg-white">
               <div className="flex gap-3">
                 <input
                   type="text"
@@ -274,12 +274,12 @@ export const SettingsPage: React.FC = () => {
                   value={connName}
                   onChange={e => setConnName(e.target.value)}
                   required
-                  className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+                  className="flex-1 border border-fluvius-border rounded-[12px] px-3 py-2 text-sm text-fluvius-text-main outline-none focus:border-fluvius-blue-main focus:ring-2 focus:ring-fluvius-blue-main/10"
                 />
                 <button
                   type="submit"
                   disabled={creatingConn}
-                  className="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors flex items-center gap-2 disabled:opacity-60"
+                  className="bg-fluvius-gradient text-white px-4 py-2 rounded-[12px] text-sm font-medium hover:opacity-90 transition-all shadow-sm flex items-center gap-2 disabled:opacity-60"
                 >
                   {creatingConn ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
                   Criar
@@ -287,7 +287,7 @@ export const SettingsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowCreateConn(false)}
-                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                  className="text-fluvius-text-sec hover:text-fluvius-text-main transition-colors"
                 >
                   <X size={20} />
                 </button>
@@ -295,34 +295,34 @@ export const SettingsPage: React.FC = () => {
             </form>
           )}
 
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-fluvius-border">
             {connLoading ? (
-              <div className="p-12 text-center text-slate-400">Carregando conexões...</div>
+              <div className="p-12 text-center text-fluvius-text-sec">Carregando conexões...</div>
             ) : connections.length === 0 ? (
-              <div className="p-12 text-center text-slate-400">Nenhuma conexão configurada.</div>
+              <div className="p-12 text-center text-fluvius-text-sec">Nenhuma conexão configurada.</div>
             ) : (
               connections.map((conn) => (
-                <div key={conn.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                <div key={conn.id} className="p-6 flex items-center justify-between hover:bg-fluvius-bg transition-colors">
                   <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${conn.status === 'open' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm border border-white ${conn.status === 'open' ? 'bg-fluvius-green-water text-white' : 'bg-fluvius-surface text-fluvius-text-sec'}`}>
                       {conn.status === 'open' ? <Wifi size={24} /> : <WifiOff size={24} />}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-slate-800">{conn.name}</h3>
+                      <h3 className="font-semibold text-fluvius-text-main">{conn.name}</h3>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium uppercase ${conn.status === 'open' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium uppercase ${conn.status === 'open' ? 'bg-fluvius-green-water/20 text-fluvius-green-emerald' : 'bg-fluvius-surface text-fluvius-text-sec'}`}>
                           {conn.status === 'open' ? 'Conectado' : 'Desconectado'}
                         </span>
-                        <span className="text-xs text-slate-400 font-mono">{conn.instance_name}</span>
+                        <span className="text-xs text-fluvius-text-sec font-mono">{conn.instance_name}</span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <button onClick={() => handleRefreshStatus(conn)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-all" title="Atualizar Status">
+                    <button onClick={() => handleRefreshStatus(conn)} className="p-2 text-fluvius-text-sec hover:text-fluvius-text-main hover:bg-fluvius-surface rounded-full transition-all" title="Atualizar Status">
                       <RefreshCw size={20} />
                     </button>
                     {conn.status !== 'open' && (
-                      <button onClick={() => handleConnect(conn)} className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-lg font-medium flex items-center gap-2 hover:bg-indigo-100 transition-colors">
+                      <button onClick={() => handleConnect(conn)} className="bg-fluvius-blue-main/10 text-fluvius-blue-main px-4 py-2 rounded-[12px] font-medium flex items-center gap-2 hover:bg-fluvius-surface transition-colors border border-fluvius-blue-main/20">
                         <QrCode size={18} />
                         Conectar
                       </button>
@@ -337,34 +337,34 @@ export const SettingsPage: React.FC = () => {
 
       {/* QR Code Modal */}
       {selectedConnection && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-              <h3 className="font-bold text-slate-800 text-lg">Conectar WhatsApp</h3>
-              <button onClick={() => setSelectedConnection(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
+        <div className="fixed inset-0 bg-fluvius-text-main/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[24px] shadow-2xl max-w-sm w-full overflow-hidden border border-fluvius-border">
+            <div className="p-6 border-b border-fluvius-border flex justify-between items-center bg-fluvius-surface">
+              <h3 className="font-bold text-fluvius-text-main text-lg">Conectar WhatsApp</h3>
+              <button onClick={() => setSelectedConnection(null)} className="text-fluvius-text-sec hover:text-fluvius-text-main transition-colors">
                 <X size={24} />
               </button>
             </div>
-            <div className="p-8 flex flex-col items-center text-center">
-              <p className="text-slate-600 mb-6">Escaneie o QR Code abaixo com o seu WhatsApp.</p>
-              <div className="w-64 h-64 bg-slate-100 rounded-xl flex items-center justify-center border-2 border-dashed border-slate-200 overflow-hidden">
+            <div className="p-8 flex flex-col items-center text-center bg-white">
+              <p className="text-fluvius-text-sec mb-6">Escaneie o QR Code abaixo com o seu WhatsApp.</p>
+              <div className="w-64 h-64 bg-fluvius-bg rounded-[16px] flex items-center justify-center border-2 border-dashed border-fluvius-border overflow-hidden">
                 {qrLoading ? (
                   <div className="flex flex-col items-center gap-3">
-                    <RefreshCw className="animate-spin text-indigo-500" size={32} />
-                    <span className="text-sm text-slate-400">Gerando QR...</span>
+                    <RefreshCw className="animate-spin text-fluvius-blue-main" size={32} />
+                    <span className="text-sm text-fluvius-text-sec">Gerando QR...</span>
                   </div>
                 ) : qrCode ? (
                   <img src={qrCode} alt="WhatsApp QR Code" className="w-full h-full object-contain" />
                 ) : (
-                  <div className="text-slate-400 text-sm">Erro ao gerar QR Code</div>
+                  <div className="text-fluvius-text-sec text-sm">Erro ao gerar QR Code</div>
                 )}
               </div>
-              <div className="mt-6 text-xs text-slate-400">
-                Instância: <span className="font-mono text-slate-600">{selectedConnection.instance_name}</span>
+              <div className="mt-6 text-xs text-fluvius-text-sec">
+                Instância: <span className="font-mono text-fluvius-text-main">{selectedConnection.instance_name}</span>
               </div>
             </div>
-            <div className="p-4 bg-slate-50 text-center">
-              <button onClick={() => setSelectedConnection(null)} className="text-slate-500 font-medium hover:text-slate-700 transition-colors text-sm">
+            <div className="p-4 bg-fluvius-surface text-center border-t border-fluvius-border">
+              <button onClick={() => setSelectedConnection(null)} className="text-fluvius-text-sec font-medium hover:text-fluvius-text-main transition-colors text-sm">
                 Fechar
               </button>
             </div>

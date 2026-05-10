@@ -36,9 +36,13 @@ class WebhookService:
         db.refresh(event)
 
         try:
-            # Process only message upserts
-            if event.event_type == "messages.upsert":
+            # Route events to handlers
+            if event.event_type in ["messages.upsert", "send.message"]:
                 await WebhookService._handle_message_upsert(db, connection_id, payload)
+            elif event.event_type == "messages.update":
+                await WebhookService._handle_message_update(db, connection_id, payload)
+            elif event.event_type == "connection.update":
+                await WebhookService._handle_connection_update(db, connection_id, payload)
             else:
                 logger.debug(f"Ignoring event type: {event.event_type}")
             
@@ -87,8 +91,6 @@ class WebhookService:
             content = img.get("caption", "")
             message_type = "image"
             mime_type = img.get("mimetype", "image/jpeg")
-            # In Evolution API v2, the media URL might be in 'mediaUrl' or we use a placeholder
-            # For now, we store what we find or use a flag to fetch it later
             media_url = data.get("mediaUrl") or img.get("url")
         elif "audioMessage" in message_info:
             aud = message_info["audioMessage"]
@@ -107,7 +109,58 @@ class WebhookService:
             message_type = "document"
             mime_type = doc.get("mimetype", "application/pdf")
             media_url = data.get("mediaUrl") or doc.get("url")
+            
+        # Handle Base64 media directly from Evolution API
+        base64_data = message_info.get("base64") or data.get("base64")
+        from app.utils.media import save_base64_to_disk, download_media
+        if base64_data and mime_type:
+            try:
+                media_url = save_base64_to_disk(base64_data, mime_type)
+            except Exception as e:
+                logger.error(f"Failed to save incoming base64 media: {e}")
+        elif media_url and mime_type and ("localhost" in media_url or "host.docker.internal" in media_url or "/message/download" in media_url):
+            # If it's an Evolution API download URL, download it locally
+            try:
+                media_url = await download_media(media_url, connection.api_key, mime_type)
+            except Exception as e:
+                logger.error(f"Failed to download inbound media: {e}")
+            
+        # Check contextInfo for quoted message
+        context_info = message_info.get("extendedTextMessage", {}).get("contextInfo", {})
+        if not context_info:
+            for msg_type in ["imageMessage", "videoMessage", "audioMessage", "documentMessage"]:
+                if msg_type in message_info and "contextInfo" in message_info[msg_type]:
+                    context_info = message_info[msg_type]["contextInfo"]
+                    break
+        if not context_info:
+            context_info = data.get("contextInfo", {}) or message_info.get("contextInfo", {})
 
+        quoted_external_id = context_info.get("stanzaId")
+        quoted_message_id = None
+        quoted_content = None
+
+        if quoted_external_id:
+            quoted_msg = db.query(Message).filter(Message.external_message_id == quoted_external_id).first()
+            if quoted_msg:
+                quoted_message_id = quoted_msg.id
+            
+            q_message = context_info.get("quotedMessage", {})
+            if "conversation" in q_message:
+                quoted_content = q_message["conversation"]
+            elif "extendedTextMessage" in q_message:
+                quoted_content = q_message["extendedTextMessage"].get("text", "Mensagem")
+            elif "imageMessage" in q_message:
+                quoted_content = q_message["imageMessage"].get("caption", "Imagem")
+            elif "audioMessage" in q_message:
+                quoted_content = "Áudio"
+            elif "videoMessage" in q_message:
+                quoted_content = "Vídeo"
+            elif "documentMessage" in q_message:
+                quoted_content = "Documento"
+
+        # Handle Base64 media directly from Evolution API
+        # (REMOVED OLD DUPLICATE BLOCK HERE)
+        
         push_name = data.get("pushName", phone)
         external_id = key.get("id", "")
         
@@ -149,8 +202,8 @@ class WebhookService:
             db.refresh(conversation)
             
         # Create message if it doesn't exist
-        existing_msg = db.query(Message).filter(Message.external_message_id == external_id).first()
-        if not existing_msg:
+        msg = db.query(Message).filter(Message.external_message_id == external_id).first()
+        if not msg:
             msg = Message(
                 workspace_id=connection.workspace_id,
                 conversation_id=conversation.id,
@@ -162,6 +215,8 @@ class WebhookService:
                 mime_type=mime_type,
                 external_message_id=external_id,
                 status="delivered" if direction == "inbound" else "sent",
+                quoted_message_id=quoted_message_id,
+                quoted_content=quoted_content,
                 raw_payload=payload
             )
             db.add(msg)
@@ -198,7 +253,9 @@ class WebhookService:
                     "mime_type": msg.mime_type,
                     "external_message_id": msg.external_message_id,
                     "status": msg.status,
-                    "created_at": msg.created_at.isoformat()
+                    "created_at": msg.created_at.isoformat(),
+                    "quoted_message_id": msg.quoted_message_id,
+                    "quoted_content": msg.quoted_content
                 }
             })
 
@@ -212,5 +269,94 @@ class WebhookService:
                     "unread_count": conversation.unread_count,
                     "last_message_at": conversation.last_message_at.isoformat() if conversation.last_message_at else None,
                     "assignee_id": conversation.assignee_id
+                }
+            })
+
+    @staticmethod
+    async def _handle_message_update(db: Session, connection_id: str, payload: dict):
+        connection = db.query(Connection).filter(Connection.id == connection_id).first()
+        if not connection:
+            return
+
+        data = payload.get("data", {})
+        # Evolution structure for messages.update is often an array or single object
+        if isinstance(data, list) and len(data) > 0:
+            update_data = data[0]
+        else:
+            update_data = data
+            
+        key = update_data.get("key", {})
+        external_id = update_data.get("keyId") or key.get("id")
+        
+        update_info = update_data.get("update", {})
+        new_status_raw = update_data.get("status") or update_info.get("status")
+        
+        if not external_id or not new_status_raw:
+            return
+
+        # Evolution status maps: 2=SERVER_ACK, 3=DELIVERY_ACK, 4=READ
+        # Or it might send string "PENDING", "SERVER_ACK", "DELIVERY_ACK", "READ", "PLAYED"
+        status_map = {
+            "SERVER_ACK": "sent",
+            "DELIVERY_ACK": "delivered",
+            "READ": "read",
+            "PLAYED": "read",
+            "2": "sent",
+            "3": "delivered",
+            "4": "read"
+        }
+        
+        new_status = status_map.get(str(new_status_raw).upper())
+        
+        if not new_status:
+             return
+             
+        message = db.query(Message).filter(Message.external_message_id == external_id).first()
+        if not message:
+            return
+            
+        message.status = new_status
+        db.commit()
+        
+        await socket_manager.broadcast({
+            "type": "MESSAGE_STATUS_UPDATED",
+            "workspace_id": message.workspace_id,
+            "data": {
+                "id": message.id,
+                "conversation_id": message.conversation_id,
+                "status": message.status
+            }
+        })
+
+    @staticmethod
+    async def _handle_connection_update(db: Session, connection_id: str, payload: dict):
+        connection = db.query(Connection).filter(Connection.id == connection_id).first()
+        if not connection:
+            return
+
+        data = payload.get("data", {})
+        state = data.get("state")
+        
+        if not state:
+            return
+            
+        status_map = {
+            "open": "connected",
+            "connecting": "connecting",
+            "close": "disconnected",
+            "qr": "qrcode"
+        }
+        
+        new_status = status_map.get(state.lower())
+        if new_status:
+            connection.status = new_status
+            db.commit()
+            
+            await socket_manager.broadcast({
+                "type": "CONNECTION_STATUS_UPDATED",
+                "workspace_id": connection.workspace_id,
+                "data": {
+                    "id": connection.id,
+                    "status": connection.status
                 }
             })

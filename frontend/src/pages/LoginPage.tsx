@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { LogIn, Mail, Lock, Loader2, Sparkles } from 'lucide-react';
+import { LogIn, Mail, Lock, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
@@ -17,7 +17,8 @@ export const LoginPage: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/login', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+      const response = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -38,51 +39,48 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-fluvius-bg flex items-center justify-center p-4 relative overflow-hidden font-sans">
       {/* Background Orbs - Softer for Light Mode */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-500/5 blur-[120px] rounded-full" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/5 blur-[120px] rounded-full" />
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-fluvius-blue-main/5 blur-[120px] rounded-full" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-fluvius-green-water/5 blur-[120px] rounded-full" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md relative z-10"
       >
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-tr from-emerald-500 to-emerald-400 rounded-2xl shadow-lg mb-4 rotate-3 transform hover:rotate-0 transition-transform duration-300">
-            <Sparkles className="text-white" size={32} />
-          </div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Fluvius</h1>
-          <p className="text-slate-500 mt-2">Painel de Atendimento Multi-Agente</p>
+        <div className="text-center mb-8 flex flex-col items-center">
+          <img src="/logo.png" alt="Fluvius Logo" className="h-24 mb-4 object-contain" />
+          <p className="text-fluvius-text-sec mt-2">Painel de Atendimento Multi-Agente</p>
         </div>
 
-        <div className="bg-white border border-slate-200 p-8 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.05)]">
+        <div className="bg-white border border-fluvius-border p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">E-mail corporativo</label>
+              <label className="block text-sm font-medium text-fluvius-text-sec mb-1.5 ml-1">E-mail corporativo</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-fluvius-text-sec" size={18} />
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-slate-900 placeholder-slate-400 outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all"
+                  className="w-full bg-white border border-fluvius-border rounded-[12px] py-3 pl-10 pr-4 text-fluvius-text-main placeholder-fluvius-border outline-none focus:border-fluvius-blue-main focus:ring-4 focus:ring-fluvius-blue-main/10 transition-all shadow-sm"
                   placeholder="exemplo@fluvius.dev"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5 ml-1">Senha</label>
+              <label className="block text-sm font-medium text-fluvius-text-sec mb-1.5 ml-1">Senha</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-fluvius-text-sec" size={18} />
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-slate-900 placeholder-slate-400 outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all"
+                  className="w-full bg-white border border-fluvius-border rounded-[12px] py-3 pl-10 pr-4 text-fluvius-text-main placeholder-fluvius-border outline-none focus:border-fluvius-blue-main focus:ring-4 focus:ring-fluvius-blue-main/10 transition-all shadow-sm"
                   placeholder="••••••••"
                 />
               </div>
@@ -101,7 +99,7 @@ export const LoginPage: React.FC = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3.5 rounded-xl shadow-lg shadow-slate-200 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-70"
+              className="w-full bg-fluvius-gradient hover:opacity-95 text-white font-semibold py-3.5 rounded-[12px] shadow-lg shadow-fluvius-blue-main/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-70"
             >
               {isSubmitting ? (
                 <Loader2 className="animate-spin" size={20} />
@@ -114,14 +112,14 @@ export const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-            <p className="text-sm text-slate-500 mb-4">
+          <div className="mt-8 pt-6 border-t border-fluvius-border text-center">
+            <p className="text-sm text-fluvius-text-sec mb-4">
               Não tem uma conta?{' '}
-              <Link to="/signup" className="text-emerald-600 font-medium hover:text-emerald-700 hover:underline">
+              <Link to="/signup" className="text-fluvius-blue-main font-medium hover:text-fluvius-blue-deep hover:underline">
                 Cadastre-se
               </Link>
             </p>
-            <p className="text-slate-400 text-[10px] uppercase tracking-[0.2em] font-bold">
+            <p className="text-fluvius-border text-[10px] uppercase tracking-[0.2em] font-bold">
               Powered by Fluvius OS
             </p>
           </div>

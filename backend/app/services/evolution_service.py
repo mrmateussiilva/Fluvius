@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 
 class EvolutionService:
     @staticmethod
-    async def send_text_message(base_url: str, api_key: str, instance_name: str, phone: str, text: str) -> dict:
+    async def send_text_message(base_url: str, api_key: str, instance_name: str, phone: str, text: str, quoted_external_id: str = None) -> dict:
         url = f"{base_url.rstrip('/')}/message/sendText/{instance_name}"
         headers = {
             "apikey": api_key,
@@ -16,9 +16,20 @@ class EvolutionService:
             "text": text
         }
         
+        if quoted_external_id:
+            payload["options"] = {
+                "quoted": {
+                    "key": {
+                        "id": quoted_external_id
+                    }
+                }
+            }
+        
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(url, headers=headers, json=payload, timeout=10.0)
+                if response.status_code >= 400:
+                    logger.error(f"Evolution API Error ({response.status_code}): {response.text}")
                 response.raise_for_status()
                 return response.json()
         except Exception as e:
@@ -26,7 +37,7 @@ class EvolutionService:
             raise
 
     @staticmethod
-    async def send_media_message(base_url: str, api_key: str, instance_name: str, phone: str, media: str, media_type: str, mimetype: str, caption: str = "") -> dict:
+    async def send_media_message(base_url: str, api_key: str, instance_name: str, phone: str, media: str, media_type: str, mimetype: str, caption: str = "", quoted_external_id: str = None) -> dict:
         """
         media: base64 string or URL
         media_type: image, audio, video, document
@@ -52,8 +63,16 @@ class EvolutionService:
             "media": media
         }
         
-        logger.info(f"Sending media to Evolution API: {url} | Payload keys: {list(payload.keys())}")
-        # logger.debug(f"Full payload: {payload}") # Cuidado com base64 gigante no log
+        if quoted_external_id:
+            payload["options"] = {
+                "quoted": {
+                    "key": {
+                        "id": quoted_external_id
+                    }
+                }
+            }
+        
+        logger.info(f"Sending media to Evolution API: {url} | type={media_type} | Payload keys: {list(payload.keys())}")
         
         try:
             async with httpx.AsyncClient() as client:
@@ -64,6 +83,52 @@ class EvolutionService:
                 return response.json()
         except Exception as e:
             logger.error(f"Failed to send media message to Evolution API: {e}")
+            raise
+    @staticmethod
+    async def send_audio_message(base_url: str, api_key: str, instance_name: str, phone: str, audio_base64: str, mimetype: str = "audio/ogg", quoted_external_id: str = None) -> dict:
+        """
+        Sends audio as WhatsApp PTT (Push-to-Talk) using the dedicated endpoint.
+        audio_base64: pure base64 string (no data: prefix)
+        """
+        url = f"{base_url.rstrip('/')}/message/sendWhatsAppAudio/{instance_name}"
+        headers = {
+            "apikey": api_key,
+            "Content-Type": "application/json"
+        }
+        
+        # Clean base64 prefix if present
+        if audio_base64.startswith("data:"):
+            try:
+                audio_base64 = audio_base64.split(",")[1]
+            except IndexError:
+                pass
+        
+        payload = {
+            "number": phone,
+            "audio": audio_base64,
+            "encoding": True
+        }
+        
+        if quoted_external_id:
+            payload["options"] = {
+                "quoted": {
+                    "key": {
+                        "id": quoted_external_id
+                    }
+                }
+            }
+        
+        logger.info(f"Sending PTT audio to Evolution API: {url}")
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, headers=headers, json=payload, timeout=30.0)
+                if response.status_code >= 400:
+                    logger.error(f"Evolution API Error ({response.status_code}): {response.text}")
+                response.raise_for_status()
+                return response.json()
+        except Exception as e:
+            logger.error(f"Failed to send audio message to Evolution API: {e}")
             raise
 
     @staticmethod

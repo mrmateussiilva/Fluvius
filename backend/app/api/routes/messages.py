@@ -35,7 +35,7 @@ def get_messages(
     messages = MessageService.get_messages_by_conversation(db, conversation_id)
     return messages
 
-async def send_message_task(message_id: str, conversation_id: str, text: str, workspace_id: str):
+async def send_message_task(message_id: str, conversation_id: str, text: str, workspace_id: str, quoted_external_id: str = None):
     with SessionLocal() as db:
         conversation = ConversationService.get_conversation_by_id(db, conversation_id)
         if not conversation:
@@ -50,14 +50,20 @@ async def send_message_task(message_id: str, conversation_id: str, text: str, wo
             return
         
         try:
-            await EvolutionService.send_text_message(
+            result = await EvolutionService.send_text_message(
                 base_url=connection.base_url,
                 api_key=connection.api_key,
                 instance_name=connection.instance_name,
                 phone=contact.phone,
-                text=text
+                text=text,
+                quoted_external_id=quoted_external_id
             )
-            MessageService.update_message_status(db, message_id, "sent")
+            
+            external_id = None
+            if result and isinstance(result, dict):
+                external_id = result.get("key", {}).get("id")
+                
+            MessageService.update_message_status(db, message_id, "sent", external_message_id=external_id)
             
             await socket_manager.broadcast({
                 "type": "MESSAGE_STATUS_UPDATED",
@@ -107,6 +113,15 @@ async def create_message(
         "status": "pending"
     }
     
+    quoted_external_id = None
+    if message_in.quoted_message_id:
+        from app.models.message import Message
+        quoted_msg = db.query(Message).filter(Message.id == message_in.quoted_message_id).first()
+        if quoted_msg:
+            quoted_external_id = quoted_msg.external_message_id
+            message_data["quoted_message_id"] = quoted_msg.id
+            message_data["quoted_content"] = quoted_msg.content or "Mídia"
+    
     message = MessageService.create_message(db, message_data)
     conversation.last_message_at = utcnow()
     db.commit()
@@ -121,15 +136,17 @@ async def create_message(
             "direction": message.direction,
             "content": message.content,
             "created_at": message.created_at.isoformat(),
-            "status": message.status
+            "status": message.status,
+            "quoted_message_id": message.quoted_message_id,
+            "quoted_content": message.quoted_content
         }
     })
 
-    background_tasks.add_task(send_message_task, message.id, conversation.id, message_in.content, current_agent.workspace_id)
+    background_tasks.add_task(send_message_task, message.id, conversation.id, message_in.content, current_agent.workspace_id, quoted_external_id)
     return message
 
 
-async def send_media_task(message_id: str, conversation_id: str, media: str, media_type: str, mimetype: str, caption: str, workspace_id: str):
+async def send_media_task(message_id: str, conversation_id: str, media: str, media_type: str, mimetype: str, caption: str, workspace_id: str, quoted_external_id: str = None):
     with SessionLocal() as db:
         conversation = ConversationService.get_conversation_by_id(db, conversation_id)
         if not conversation:
@@ -144,17 +161,34 @@ async def send_media_task(message_id: str, conversation_id: str, media: str, med
             return
             
         try:
-            await EvolutionService.send_media_message(
-                base_url=connection.base_url,
-                api_key=connection.api_key,
-                instance_name=connection.instance_name,
-                phone=contact.phone,
-                media=media,
-                media_type=media_type,
-                mimetype=mimetype,
-                caption=caption
-            )
-            MessageService.update_message_status(db, message_id, "sent")
+            if media_type == 'audio':
+                result = await EvolutionService.send_audio_message(
+                    base_url=connection.base_url,
+                    api_key=connection.api_key,
+                    instance_name=connection.instance_name,
+                    phone=contact.phone,
+                    audio_base64=media,
+                    mimetype=mimetype,
+                    quoted_external_id=quoted_external_id
+                )
+            else:
+                result = await EvolutionService.send_media_message(
+                    base_url=connection.base_url,
+                    api_key=connection.api_key,
+                    instance_name=connection.instance_name,
+                    phone=contact.phone,
+                    media=media,
+                    media_type=media_type,
+                    mimetype=mimetype,
+                    caption=caption,
+                    quoted_external_id=quoted_external_id
+                )
+            
+            external_id = None
+            if result and isinstance(result, dict):
+                external_id = result.get("key", {}).get("id")
+                
+            MessageService.update_message_status(db, message_id, "sent", external_message_id=external_id)
             await socket_manager.broadcast({
                 "type": "MESSAGE_STATUS_UPDATED",
                 "workspace_id": workspace_id,
@@ -186,6 +220,15 @@ async def create_media_message(
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
         
+    from app.utils.media import save_base64_to_disk
+    
+    local_media_url = media_in.media
+    if media_in.media.startswith("data:") or len(media_in.media) > 1000:
+        try:
+            local_media_url = save_base64_to_disk(media_in.media, media_in.mimetype)
+        except Exception as e:
+            logger.error(f"Failed to save outbound media: {e}")
+
     message_data = {
         "workspace_id": current_agent.workspace_id,
         "conversation_id": conversation.id,
@@ -193,10 +236,19 @@ async def create_media_message(
         "direction": "outbound",
         "message_type": media_in.media_type,
         "content": media_in.caption,
-        "media_url": media_in.media,
+        "media_url": local_media_url,
         "mime_type": media_in.mimetype,
         "status": "pending"
     }
+    
+    quoted_external_id = None
+    if media_in.quoted_message_id:
+        from app.models.message import Message
+        quoted_msg = db.query(Message).filter(Message.id == media_in.quoted_message_id).first()
+        if quoted_msg:
+            quoted_external_id = quoted_msg.external_message_id
+            message_data["quoted_message_id"] = quoted_msg.id
+            message_data["quoted_content"] = quoted_msg.content or "Mídia"
     
     message = MessageService.create_message(db, message_data)
     conversation.last_message_at = utcnow()
@@ -215,9 +267,11 @@ async def create_media_message(
             "media_url": message.media_url,
             "mime_type": message.mime_type,
             "created_at": message.created_at.isoformat(),
-            "status": message.status
+            "status": message.status,
+            "quoted_message_id": message.quoted_message_id,
+            "quoted_content": message.quoted_content
         }
     })
 
-    background_tasks.add_task(send_media_task, message.id, conversation.id, media_in.media, media_in.media_type, media_in.mimetype, media_in.caption, current_agent.workspace_id)
+    background_tasks.add_task(send_media_task, message.id, conversation.id, media_in.media, media_in.media_type, media_in.mimetype, media_in.caption, current_agent.workspace_id, quoted_external_id)
     return message

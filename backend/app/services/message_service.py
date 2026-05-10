@@ -16,10 +16,12 @@ class MessageService:
         return message
         
     @staticmethod
-    def update_message_status(db: Session, message_id: str, status: str) -> Optional[Message]:
+    def update_message_status(db: Session, message_id: str, status: str, external_message_id: Optional[str] = None) -> Optional[Message]:
         message = db.query(Message).filter(Message.id == message_id).first()
         if message:
             message.status = status
+            if external_message_id:
+                message.external_message_id = external_message_id
             db.commit()
             db.refresh(message)
         return message

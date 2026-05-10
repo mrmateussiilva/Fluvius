@@ -1,5 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from jose import jwt
 import os
@@ -46,6 +47,10 @@ app.include_router(webhooks_router)
 app.include_router(connections_router)
 app.include_router(agents_router)
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
+
+# Create uploads dir if it doesn't exist
+os.makedirs("uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 @app.websocket("/ws")

@@ -4,7 +4,8 @@ import { SettingsPage } from './pages/SettingsPage';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { AgentProvider } from './context/AgentContext';
+import { AgentProvider, useAgent } from './context/AgentContext';
+import { AdminPage } from './pages/AdminPage';
 
 import './index.css';
 
@@ -13,14 +14,26 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-fluvius-bg flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-fluvius-blue-main border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!token) {
     return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { currentAgent } = useAgent();
+
+
+
+  if (!currentAgent || currentAgent.role !== 'admin') {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
@@ -46,6 +59,16 @@ const AppContent = () => {
         <Route path="/settings" element={
           <ProtectedRoute>
             <SettingsPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/admin" element={
+          <ProtectedRoute>
+            <AgentProvider>
+              <AdminRoute>
+                <AdminPage />
+              </AdminRoute>
+            </AgentProvider>
           </ProtectedRoute>
         } />
       </Routes>

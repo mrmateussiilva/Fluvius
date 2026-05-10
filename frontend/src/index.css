@@ -5,31 +5,67 @@
   --color-whatsapp-dark: #075e54;
   --color-whatsapp-bg: #e5ddd5;
   
+  --color-fluvius-blue-main: #1EA7FF;
+  --color-fluvius-blue-deep: #0F5CC0;
+  --color-fluvius-blue-dark: #0B2E6B;
+  --color-fluvius-green-water: #34D399;
+  --color-fluvius-green-emerald: #10B981;
+  --color-fluvius-bg: #F8FAFC;
+  --color-fluvius-surface: #FFFFFF;
+  --color-fluvius-border: #DCE7F0;
+  --color-fluvius-text-sec: #64748B;
+  --color-fluvius-text-main: #0F172A;
+
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
+@utility bg-fluvius-gradient {
+  background-image: linear-gradient(135deg, var(--color-fluvius-blue-main) 0%, var(--color-fluvius-blue-deep) 45%, var(--color-fluvius-green-water) 100%);
+}
+
+@utility text-fluvius-gradient {
+  background-image: linear-gradient(135deg, var(--color-fluvius-blue-main) 0%, var(--color-fluvius-blue-deep) 45%, var(--color-fluvius-green-water) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 body {
-  @apply antialiased text-slate-800 bg-slate-100;
+  @apply antialiased text-fluvius-text-main bg-fluvius-bg;
   margin: 0;
   padding: 0;
   overflow: hidden;
 }
 
 /* Custom scrollbar for modern feel */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+.fluvius-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 92, 192, 0.22) transparent;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent; 
-}
- 
-::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,0.2); 
-  border-radius: 10px;
+.fluvius-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(0,0,0,0.3); 
+.fluvius-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.fluvius-scroll::-webkit-scrollbar-thumb {
+  background: rgba(15, 92, 192, 0.10);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: background 0.3s ease;
+}
+
+.fluvius-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(15, 92, 192, 0.22);
+}
+
+.fluvius-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #1EA7FF 0%, #34D399 100%);
+  border: 2px solid transparent;
+  background-clip: content-box;
 }

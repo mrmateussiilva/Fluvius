@@ -19,5 +19,8 @@ class Message(Base):
     media_url = Column(String, nullable=True)
     mime_type = Column(String, nullable=True)
     
+    quoted_message_id = Column(String, ForeignKey("messages.id"), nullable=True, index=True)
+    quoted_content = Column(String, nullable=True)
+    
     raw_payload = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=utcnow, nullable=False)
