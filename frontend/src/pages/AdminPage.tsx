@@ -3,11 +3,12 @@ import { Users, MessageSquare, LayoutDashboard, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AgentList } from '../components/Admin/AgentList';
 import { GlobalConversations } from '../components/Admin/GlobalConversations';
+import { KanbanBoard } from '../components/Admin/KanbanBoard';
 
-type AdminTab = 'dashboard' | 'agents' | 'conversations';
+type AdminTab = 'dashboard' | 'agents' | 'conversations' | 'kanban';
 
 export const AdminPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<AdminTab>('agents');
+  const [activeTab, setActiveTab] = useState<AdminTab>('kanban');
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-fluvius-bg text-fluvius-text-main">
@@ -30,6 +31,15 @@ export const AdminPage: React.FC = () => {
             >
               <LayoutDashboard size={18} />
               Visão Geral
+            </button>
+            <button
+              onClick={() => setActiveTab('kanban')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm font-medium transition-colors ${
+                activeTab === 'kanban' ? 'bg-fluvius-blue-main/10 text-fluvius-blue-main' : 'text-fluvius-text-sec hover:bg-slate-50'
+              }`}
+            >
+              <LayoutDashboard size={18} />
+              Quadro Kanban
             </button>
             <button
               onClick={() => setActiveTab('agents')}
@@ -61,6 +71,7 @@ export const AdminPage: React.FC = () => {
             <p className="text-slate-500">Dashboard em construção...</p>
           </div>
         )}
+        {activeTab === 'kanban' && <KanbanBoard />}
         {activeTab === 'agents' && <AgentList />}
         {activeTab === 'conversations' && <GlobalConversations />}
       </div>

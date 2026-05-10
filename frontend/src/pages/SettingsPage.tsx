@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchConnections, fetchConnectionQR, fetchConnectionStatus } from '../api/client';
+import { fetchConnections, fetchConnectionQR, fetchConnectionStatus, deleteConnection, logoutConnection, restartConnection } from '../api/client';
 import type { Connection } from '../api/client';
 import {
   Settings, Plus, RefreshCw, Wifi, WifiOff, QrCode, X,
-  ArrowLeft, User, CheckCircle, Loader2,
+  ArrowLeft, User, CheckCircle, Loader2, Trash2, LogOut, RotateCcw,
 } from 'lucide-react';
-import { useAgent } from '../context/AgentContext';
+
+import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../api/client';
 
 export const SettingsPage: React.FC = () => {
-  const { agents, currentAgent, setCurrentAgent, reloadAgents } = useAgent();
+  const { user } = useAuth();
 
   // Connection state
   const [connections, setConnections] = useState<Connection[]>([]);
@@ -21,13 +22,6 @@ export const SettingsPage: React.FC = () => {
   const [showCreateConn, setShowCreateConn] = useState(false);
   const [connName, setConnName] = useState('');
   const [creatingConn, setCreatingConn] = useState(false);
-
-  // Agent creation state
-  const [showCreateAgent, setShowCreateAgent] = useState(false);
-  const [agentName, setAgentName] = useState('');
-  const [agentEmail, setAgentEmail] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState('');
 
   const loadConnections = async () => {
     try {
@@ -67,40 +61,37 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
-  const handleCreateAgent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreating(true);
-    setCreateError('');
-    try {
-      const workspaceId = agents[0]?.workspace_id || connections[0]?.workspace_id;
-      if (!workspaceId) {
-        setCreateError('Workspace não encontrado.');
-        return;
-      }
-      
-      const token = localStorage.getItem('fluvius_token');
-      const res = await fetch(`${API_BASE_URL}/agents`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ name: agentName, email: agentEmail, workspace_id: workspaceId }),
-      });
 
-      if (!res.ok) {
-        const data = await res.json();
-        setCreateError(data.detail || 'Erro ao criar agente.');
-        return;
-      }
-      setAgentName('');
-      setAgentEmail('');
-      setShowCreateAgent(false);
-      await reloadAgents();
+  const handleDelete = async (conn: Connection) => {
+    if (!confirm(`Remover a conexão "${conn.name}"? Esta ação irá desconectar e apagar a instância.`)) return;
+    try {
+      await deleteConnection(conn.id);
+      loadConnections();
     } catch (err) {
-      setCreateError('Erro de conexão.');
-    } finally {
-      setCreating(false);
+      console.error(err);
+      alert('Erro ao remover conexão.');
+    }
+  };
+
+  const handleLogout = async (conn: Connection) => {
+    if (!confirm(`Desconectar "${conn.name}" sem apagar a instância?`)) return;
+    try {
+      await logoutConnection(conn.id);
+      loadConnections();
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao desconectar.');
+    }
+  };
+
+  const handleRestart = async (conn: Connection) => {
+    try {
+      await restartConnection(conn.id);
+      // After restart, open QR modal
+      handleConnect(conn);
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao reconectar.');
     }
   };
 
@@ -146,100 +137,27 @@ export const SettingsPage: React.FC = () => {
           </h1>
         </div>
 
-        {/* AGENTS SECTION */}
+        {/* PROFILE SECTION */}
         <section className="bg-white rounded-[16px] shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-fluvius-border overflow-hidden">
           <div className="px-6 py-4 border-b border-fluvius-border bg-fluvius-surface flex justify-between items-center">
             <h2 className="font-semibold text-fluvius-text-main text-lg flex items-center gap-2">
               <User size={18} className="text-fluvius-blue-deep" />
-              Agentes
+              Meu Perfil
             </h2>
-            <button
-              onClick={() => setShowCreateAgent(!showCreateAgent)}
-              className="flex items-center gap-2 text-sm bg-fluvius-gradient text-white px-3 py-1.5 rounded-[12px] hover:opacity-90 transition-all shadow-sm font-medium"
-            >
-              <Plus size={16} />
-              Novo Agente
-            </button>
           </div>
-
-          {/* Create form */}
-          {showCreateAgent && (
-            <form onSubmit={handleCreateAgent} className="p-6 border-b border-fluvius-border bg-white">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <input
-                  type="text"
-                  placeholder="Nome do agente"
-                  value={agentName}
-                  onChange={e => setAgentName(e.target.value)}
-                  required
-                  className="flex-1 border border-fluvius-border rounded-[12px] px-3 py-2 text-sm text-fluvius-text-main outline-none focus:border-fluvius-blue-main focus:ring-2 focus:ring-fluvius-blue-main/10"
-                />
-                <input
-                  type="email"
-                  placeholder="Email do agente"
-                  value={agentEmail}
-                  onChange={e => setAgentEmail(e.target.value)}
-                  required
-                  className="flex-1 border border-fluvius-border rounded-[12px] px-3 py-2 text-sm text-fluvius-text-main outline-none focus:border-fluvius-blue-main focus:ring-2 focus:ring-fluvius-blue-main/10"
-                />
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="bg-fluvius-gradient text-white px-4 py-2 rounded-[12px] text-sm font-medium hover:opacity-90 transition-colors flex items-center gap-2 disabled:opacity-60 shadow-sm"
-                >
-                  {creating ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                  Criar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateAgent(false)}
-                  className="text-fluvius-text-sec hover:text-fluvius-text-main transition-colors"
-                >
-                  <X size={20} />
-                </button>
+          <div className="p-6 space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-fluvius-gradient flex items-center justify-center text-white font-bold text-xl shadow-sm">
+                {user?.name.charAt(0).toUpperCase()}
               </div>
-              {createError && <p className="text-red-500 text-sm mt-2">{createError}</p>}
-            </form>
-          )}
-
-          {/* Agents list */}
-          <div className="divide-y divide-fluvius-border">
-            {agents.length === 0 ? (
-              <div className="p-8 text-center text-fluvius-text-sec text-sm">Nenhum agente cadastrado.</div>
-            ) : (
-              agents.map(agent => {
-                const isActive = currentAgent?.id === agent.id;
-                return (
-                  <div key={agent.id} className="flex items-center gap-4 px-6 py-4 hover:bg-fluvius-bg transition-colors">
-                    <div className="w-10 h-10 rounded-full bg-fluvius-gradient flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-sm">
-                      {agent.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-fluvius-text-main">{agent.name}</p>
-                        {isActive && (
-                          <span className="text-xs bg-fluvius-green-water/20 text-fluvius-green-emerald px-2 py-0.5 rounded-full font-medium">
-                            Você
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-fluvius-text-sec truncate">{agent.email}</p>
-                    </div>
-                    {!isActive && (
-                      <button
-                        onClick={() => setCurrentAgent(agent)}
-                        className="text-sm text-fluvius-blue-main border border-fluvius-blue-main/30 px-3 py-1.5 rounded-[12px] hover:bg-fluvius-surface transition-colors font-medium"
-                      >
-                        Trocar para este
-                      </button>
-                    )}
-                    {isActive && (
-                      <CheckCircle size={20} className="text-fluvius-green-water shrink-0" />
-                    )}
-                  </div>
-                );
-              })
-            )}
+              <div>
+                <h3 className="text-xl font-bold text-fluvius-text-main">{user?.name}</h3>
+                <p className="text-fluvius-text-sec">{user?.email}</p>
+                <span className="inline-block mt-1 text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                  {user?.role === 'admin' ? 'Administrador' : 'Operador'}
+                </span>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -317,16 +235,30 @@ export const SettingsPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <button onClick={() => handleRefreshStatus(conn)} className="p-2 text-fluvius-text-sec hover:text-fluvius-text-main hover:bg-fluvius-surface rounded-full transition-all" title="Atualizar Status">
-                      <RefreshCw size={20} />
+                      <RefreshCw size={18} />
                     </button>
-                    {conn.status !== 'open' && (
-                      <button onClick={() => handleConnect(conn)} className="bg-fluvius-blue-main/10 text-fluvius-blue-main px-4 py-2 rounded-[12px] font-medium flex items-center gap-2 hover:bg-fluvius-surface transition-colors border border-fluvius-blue-main/20">
-                        <QrCode size={18} />
-                        Conectar
+                    {conn.status === 'open' ? (
+                      <button onClick={() => handleLogout(conn)} className="flex items-center gap-1.5 text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-[12px] text-sm font-medium hover:bg-amber-100 transition-colors" title="Desconectar">
+                        <LogOut size={15} />
+                        Desconectar
+                      </button>
+                    ) : (
+                      <button onClick={() => handleRestart(conn)} className="flex items-center gap-1.5 text-fluvius-blue-main bg-fluvius-blue-main/10 border border-fluvius-blue-main/20 px-3 py-1.5 rounded-[12px] text-sm font-medium hover:bg-fluvius-blue-main/20 transition-colors">
+                        <RotateCcw size={15} />
+                        Reconectar
                       </button>
                     )}
+                    {conn.status !== 'open' && (
+                      <button onClick={() => handleConnect(conn)} className="flex items-center gap-1.5 text-white bg-fluvius-gradient px-3 py-1.5 rounded-[12px] text-sm font-medium shadow-sm">
+                        <QrCode size={15} />
+                        QR Code
+                      </button>
+                    )}
+                    <button onClick={() => handleDelete(conn)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all" title="Remover conexão">
+                      <Trash2 size={18} />
+                    </button>
                   </div>
                 </div>
               ))

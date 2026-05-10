@@ -34,3 +34,12 @@ class ConversationResponse(ConversationBase):
     assignee: Optional[AgentRead] = None
 
     model_config = {"from_attributes": True}
+
+class AgentKanbanData(BaseModel):
+    agent: AgentRead
+    open: list[ConversationResponse]
+    resolved: list[ConversationResponse]
+
+class KanbanResponse(BaseModel):
+    queue: list[ConversationResponse]
+    by_agent: list[AgentKanbanData]

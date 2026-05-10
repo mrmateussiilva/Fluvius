@@ -173,8 +173,8 @@ class EvolutionService:
         }
         payload = {
             "instanceName": instance_name,
-            "token": settings.EVOLUTION_API_KEY, # Using same key for instance token for simplicity in MVP
-            "qrcode": True
+            "qrcode": True,
+            "integration": "WHATSAPP-BAILEYS",  # Required in Evolution API v2
         }
         
         try:
@@ -185,6 +185,48 @@ class EvolutionService:
                 return data
         except Exception as e:
             logger.error(f"Failed to create instance in Evolution API: {e}")
+            raise
+
+    @staticmethod
+    async def delete_instance(instance_name: str) -> dict:
+        from app.core.config import settings
+        url = f"{settings.evolution_base_url.rstrip('/')}/instance/delete/{instance_name}"
+        headers = {"apikey": settings.EVOLUTION_API_KEY}
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.delete(url, headers=headers, timeout=15.0)
+                response.raise_for_status()
+                return response.json()
+        except Exception as e:
+            logger.error(f"Failed to delete instance in Evolution API: {e}")
+            raise
+
+    @staticmethod
+    async def logout_instance(instance_name: str) -> dict:
+        from app.core.config import settings
+        url = f"{settings.evolution_base_url.rstrip('/')}/instance/logout/{instance_name}"
+        headers = {"apikey": settings.EVOLUTION_API_KEY}
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.delete(url, headers=headers, timeout=15.0)
+                response.raise_for_status()
+                return response.json()
+        except Exception as e:
+            logger.error(f"Failed to logout instance in Evolution API: {e}")
+            raise
+
+    @staticmethod
+    async def restart_instance(instance_name: str) -> dict:
+        from app.core.config import settings
+        url = f"{settings.evolution_base_url.rstrip('/')}/instance/restart/{instance_name}"
+        headers = {"apikey": settings.EVOLUTION_API_KEY}
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.put(url, headers=headers, timeout=15.0)
+                response.raise_for_status()
+                return response.json()
+        except Exception as e:
+            logger.error(f"Failed to restart instance in Evolution API: {e}")
             raise
 
     @staticmethod

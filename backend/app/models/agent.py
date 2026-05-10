@@ -11,7 +11,7 @@ class Agent(Base):
     name = Column(String, nullable=False)
     email = Column(String, nullable=False, unique=True, index=True)
     hashed_password = Column(String, nullable=True)  # Nullable for now to support existing agents
-    role = Column(String, default="agent", nullable=False) # admin, agent
+    role = Column(String, default="operator", nullable=False) # admin, operator
     avatar_url = Column(String, nullable=True)
     is_online = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=utcnow, nullable=False)

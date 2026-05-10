@@ -54,7 +54,7 @@ async def create_connection(
         # Actually, in this model, Connection belongs to an Inbox.
         # Let's create an Inbox first or simplify.
         from app.models.inbox import Inbox
-        inbox = Inbox(workspace_id=current_agent.workspace_id, name=body.name)
+        inbox = Inbox(workspace_id=current_agent.workspace_id, name=body.name, channel_type="whatsapp")
         db.add(inbox)
         db.commit()
         db.refresh(inbox)
@@ -136,3 +136,77 @@ async def get_connection_status(
         return state_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{connection_id}")
+async def delete_connection(
+    connection_id: str,
+    db: Session = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent)
+):
+    connection = db.query(Connection).filter(
+        Connection.id == connection_id,
+        Connection.workspace_id == current_agent.workspace_id
+    ).first()
+    if not connection:
+        raise HTTPException(status_code=404, detail="Connection not found")
+    
+    try:
+        # Try to delete from Evolution API (best-effort, don't fail if already gone)
+        try:
+            await EvolutionService.delete_instance(instance_name=connection.instance_name)
+        except Exception:
+            pass
+        
+        db.delete(connection)
+        db.commit()
+        return {"status": "deleted"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{connection_id}/logout")
+async def logout_connection(
+    connection_id: str,
+    db: Session = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent)
+):
+    connection = db.query(Connection).filter(
+        Connection.id == connection_id,
+        Connection.workspace_id == current_agent.workspace_id
+    ).first()
+    if not connection:
+        raise HTTPException(status_code=404, detail="Connection not found")
+    
+    try:
+        await EvolutionService.logout_instance(instance_name=connection.instance_name)
+        connection.status = "disconnected"
+        db.commit()
+        return {"status": "logged_out"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{connection_id}/restart")
+async def restart_connection(
+    connection_id: str,
+    db: Session = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent)
+):
+    """Restart instance to generate a fresh QR Code for reconnection."""
+    connection = db.query(Connection).filter(
+        Connection.id == connection_id,
+        Connection.workspace_id == current_agent.workspace_id
+    ).first()
+    if not connection:
+        raise HTTPException(status_code=404, detail="Connection not found")
+    
+    try:
+        await EvolutionService.restart_instance(instance_name=connection.instance_name)
+        connection.status = "disconnected"
+        db.commit()
+        return {"status": "restarted"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

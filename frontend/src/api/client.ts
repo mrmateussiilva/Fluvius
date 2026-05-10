@@ -1,6 +1,6 @@
 export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
-const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   const headers = new Headers(options.headers);
   const token = localStorage.getItem('fluvius_token');
   if (token) {
@@ -22,10 +22,21 @@ export interface Agent {
   workspace_id: string;
   name: string;
   email: string;
-  avatar_url: string | null;
+  role: 'admin' | 'operator';
   is_online: boolean;
-  role: string;
+  avatar_url?: string;
   created_at: string;
+}
+
+export interface AgentKanbanData {
+  agent: Agent;
+  open: Conversation[];
+  resolved: Conversation[];
+}
+
+export interface KanbanResponse {
+  queue: Conversation[];
+  by_agent: AgentKanbanData[];
 }
 
 export interface Contact {
@@ -140,6 +151,35 @@ export const resolveConversation = async (conversationId: string): Promise<Conve
   return response.json();
 };
 
+export const fetchKanban = async (): Promise<KanbanResponse> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/conversations/admin/kanban`);
+  return response.json();
+};
+
+export const updateAgent = async (agentId: string, data: any): Promise<Agent> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/agents/${agentId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return response.json();
+};
+
+export const deleteAgent = async (agentId: string): Promise<void> => {
+  await fetchWithAuth(`${API_BASE_URL}/agents/${agentId}`, {
+    method: 'DELETE',
+  });
+};
+
+export const inviteAgent = async (data: any): Promise<Agent> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/agents`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return response.json();
+};
+
 export const pendingConversation = async (conversationId: string): Promise<Conversation> => {
   const response = await fetchWithAuth(`${API_BASE_URL}/conversations/${conversationId}/pending`, {
     method: 'PATCH',
@@ -185,3 +225,27 @@ export const fetchConnectionStatus = async (connectionId: string): Promise<any> 
   }
   return response.json();
 };
+
+export const deleteConnection = async (connectionId: string): Promise<void> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/connections/${connectionId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete connection');
+};
+
+export const logoutConnection = async (connectionId: string): Promise<any> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/connections/${connectionId}/logout`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to logout connection');
+  return response.json();
+};
+
+export const restartConnection = async (connectionId: string): Promise<any> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/connections/${connectionId}/restart`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to restart connection');
+  return response.json();
+};
+

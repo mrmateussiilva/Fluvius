@@ -5,8 +5,9 @@ from typing import List, Optional
 from pydantic import BaseModel
 from app.core.database import get_db
 from app.core.auth import get_current_agent
-from app.schemas.conversation import ConversationResponse
+from app.schemas.conversation import ConversationResponse, KanbanResponse, AgentKanbanData
 from app.services.conversation_service import ConversationService
+from app.schemas.agent import AgentRead
 from app.models.contact import Contact
 from app.models.agent import Agent
 from app.models.conversation import Conversation
@@ -215,3 +216,58 @@ async def pending_conversation(
     conversation.contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
     conversation.assignee = None
     return conversation
+
+@router.get("/admin/kanban", response_model=KanbanResponse)
+def get_kanban(
+    db: Session = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent)
+):
+    if current_agent.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can access Kanban")
+
+    workspace_id = current_agent.workspace_id
+    
+    # 1. Queue (Pending, no assignee)
+    queue_conversations = db.query(Conversation).filter(
+        Conversation.workspace_id == workspace_id,
+        Conversation.status == "pending",
+        Conversation.assignee_id == None
+    ).all()
+    
+    for conv in queue_conversations:
+        conv.contact = db.query(Contact).filter(Contact.id == conv.contact_id).first()
+        conv.assignee = None
+
+    # 2. By Agent
+    agents = db.query(Agent).filter(Agent.workspace_id == workspace_id).all()
+    by_agent = []
+    
+    for agent in agents:
+        agent_open = db.query(Conversation).filter(
+            Conversation.workspace_id == workspace_id,
+            Conversation.assignee_id == agent.id,
+            Conversation.status == "open"
+        ).all()
+        for conv in agent_open:
+            conv.contact = db.query(Contact).filter(Contact.id == conv.contact_id).first()
+            conv.assignee = agent
+            
+        agent_resolved = db.query(Conversation).filter(
+            Conversation.workspace_id == workspace_id,
+            Conversation.assignee_id == agent.id,
+            Conversation.status == "resolved"
+        ).all()
+        for conv in agent_resolved:
+            conv.contact = db.query(Contact).filter(Contact.id == conv.contact_id).first()
+            conv.assignee = agent
+            
+        by_agent.append(AgentKanbanData(
+            agent=AgentRead.model_validate(agent),
+            open=agent_open,
+            resolved=agent_resolved
+        ))
+        
+    return KanbanResponse(
+        queue=queue_conversations,
+        by_agent=by_agent
+    )
