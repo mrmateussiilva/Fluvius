@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Smile, Paperclip, Image as ImageIcon, Music, FileText, Camera, Mic, Square, AlertCircle, X } from 'lucide-react';
-import type { Message } from '../api/client';
+import { Send, Smile, Paperclip, Image as ImageIcon, Music, FileText, Camera, Mic, Square, AlertCircle, X, Sparkles, Loader2 } from 'lucide-react';
+import { suggestReply, type Message } from '../api/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MediaPreviewModal } from './MediaPreviewModal';
 import { clsx, type ClassValue } from 'clsx';
@@ -17,11 +17,13 @@ interface MessageInputProps {
   onSendMedia: (media: string, mediaType: string, mimetype: string, caption?: string) => Promise<void> | void;
   replyingTo?: Message | null;
   onCancelReply?: () => void;
+  conversationId?: string;
 }
 
-export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia, replyingTo, onCancelReply }) => {
+export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia, replyingTo, onCancelReply, conversationId }) => {
   const [text, setText] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
   const [previewFile, setPreviewFile] = useState<{ file: File; preview: string; type: string } | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -78,6 +80,21 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
       } catch (err) {
         showError(err instanceof Error ? err.message : 'Erro ao enviar mensagem');
       }
+    }
+  };
+
+  const handleSuggestReply = async () => {
+    if (!conversationId || isGeneratingSuggestion) return;
+    
+    setIsGeneratingSuggestion(true);
+    try {
+      const suggestion = await suggestReply(conversationId);
+      setText(suggestion);
+      inputRef.current?.focus();
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Erro ao gerar sugestão');
+    } finally {
+      setIsGeneratingSuggestion(false);
     }
   };
 
@@ -166,6 +183,34 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
     if (e.key === 'Enter') {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].kind === 'file') {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault(); // Stop text paste
+
+          if (file.size > MAX_FILE_SIZE) {
+            showError(`Arquivo muito grande! O limite é ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
+            return;
+          }
+
+          let type = 'document';
+          if (file.type.startsWith('image/')) type = 'image';
+          else if (file.type.startsWith('audio/')) type = 'audio';
+          else if (file.type.startsWith('video/')) type = 'video';
+
+          const preview = URL.createObjectURL(file);
+          setPreviewFile({ file, preview, type });
+          return; // Process only the first file
+        }
+      }
     }
   };
 
@@ -271,6 +316,19 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
               className="hidden"
             />
 
+            <button
+              type="button"
+              onClick={handleSuggestReply}
+              disabled={isGeneratingSuggestion || !conversationId}
+              className={cn(
+                "p-2 transition-all rounded-full",
+                isGeneratingSuggestion ? "text-fluvius-blue-main animate-pulse" : "text-amber-500 hover:text-amber-600 hover:bg-amber-50"
+              )}
+              title="Sugerir resposta com IA"
+            >
+              {isGeneratingSuggestion ? <Loader2 size={24} className="animate-spin" /> : <Sparkles size={24} />}
+            </button>
+            
             <button type="button" className="p-2 text-[#64748B] hover:text-[#1EA7FF] transition-colors rounded-full hover:bg-[#F8FAFC]">
               <Smile size={24} />
             </button>
@@ -282,6 +340,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
                 placeholder="Digite uma mensagem..."
                 className="w-full bg-transparent outline-none px-4 py-3 text-[#0F172A] placeholder-[#64748B] text-[15px]"
               />

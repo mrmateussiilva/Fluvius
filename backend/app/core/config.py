@@ -30,6 +30,10 @@ class Settings(BaseSettings):
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]
+    
+    # AI Integration
+    GEMINI_API_KEY: str | None = None
+
 
     @property
     def evolution_base_url(self) -> str:

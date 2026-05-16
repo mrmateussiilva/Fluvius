@@ -419,3 +419,15 @@ export const syncConnection = async (connectionId: string): Promise<any> => {
   if (!response.ok) throw new Error('Failed to sync connection');
   return response.json();
 };
+
+export const suggestReply = async (conversationId: string): Promise<string> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/conversations/${conversationId}/suggest-reply`, {
+    method: 'POST',
+  });
+  if (!response.ok) {
+    const errorMsg = await getErrorMessage(response, 'Falha ao gerar sugestão de IA');
+    throw new Error(errorMsg);
+  }
+  const data = await response.json();
+  return data.suggestion;
+};

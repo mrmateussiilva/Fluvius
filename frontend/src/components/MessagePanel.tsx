@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { updateContactTags, type Message, type Conversation, type Contact } from '../api/client';
+import { updateContactTags, suggestReply, type Message, type Conversation, type Contact } from '../api/client';
 import { MessageInput } from './MessageInput';
-import { User, Check, CheckCheck, Clock, UserCheck, CheckCircle2, RotateCcw, Upload, Reply, Play, Pause, Plus, X } from 'lucide-react';
+import { User, Check, CheckCheck, Clock, UserCheck, CheckCircle2, RotateCcw, Upload, Reply, Play, Pause, Plus, X, Eye } from 'lucide-react';
+import { useAgent } from '../context/AgentContext';
 import { MediaPreviewModal } from './MediaPreviewModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
@@ -108,6 +109,9 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
   replyingTo,
   onSetReplyingTo,
 }) => {
+  const { currentAgent } = useAgent();
+  const isSpectator = !!(conversation.assignee_id && currentAgent && conversation.assignee_id !== currentAgent.id);
+  
   const [isDragging, setIsDragging] = useState(false);
   const [previewFile, setPreviewFile] = useState<{ file: File; preview: string; type: string } | null>(null);
   const [newTag, setNewTag] = useState('');
@@ -201,6 +205,18 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
   };
 
   const renderActionBar = () => {
+    if (isSpectator) {
+      return (
+        <button
+          onClick={onAssign}
+          className="flex items-center gap-2 px-4 py-1.5 bg-fluvius-gradient text-white rounded-[12px] text-sm font-medium hover:opacity-90 transition-all shadow-sm"
+        >
+          <UserCheck size={16} />
+          Assumir Atendimento
+        </button>
+      );
+    }
+
     switch (conversation.status) {
       case 'pending':
         return (
@@ -335,7 +351,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                   </button>
                 </span>
               ))}
-              {conversation.contact && (
+              {conversation.contact && !isSpectator && (
                 <form onSubmit={handleAddTag} className="inline-flex items-center h-6 rounded-full border border-dashed border-[#B7C7D8] bg-white/70 overflow-hidden">
                   <input
                     value={newTag}
@@ -370,6 +386,15 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
           {renderActionBar()}
         </div>
       </div>
+
+      {isSpectator && (
+        <div className="bg-indigo-50 border-b border-indigo-100 px-6 py-2 flex items-center justify-center gap-2 z-10 shrink-0">
+          <Eye size={16} className="text-indigo-600" />
+          <span className="text-sm font-semibold text-indigo-800">
+            Modo Espectador: Você está visualizando o atendimento de {conversation.assignee?.name || 'outro agente'}.
+          </span>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 z-10 flex flex-col fluvius-scroll">
@@ -491,9 +516,13 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
         <div ref={endRef} className="h-2" />
       </div>
 
-      {/* Input — disable if resolved */}
+      {/* Input — disable if resolved or spectator */}
       <div className="z-10 shrink-0">
-        {conversation.status === 'resolved' ? (
+        {isSpectator ? (
+          <div className="bg-slate-50 px-4 py-4 text-center text-sm font-medium text-slate-500 border-t border-slate-200">
+            Modo Espectador Ativo. Você não pode enviar mensagens neste atendimento.
+          </div>
+        ) : conversation.status === 'resolved' ? (
           <div className="bg-fluvius-surface px-4 py-3 text-center text-sm text-fluvius-text-sec border-t border-fluvius-border">
             Esta conversa foi resolvida. Reabra para responder.
           </div>
@@ -503,6 +532,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
             onSendMedia={onSendMedia} 
             replyingTo={replyingTo}
             onCancelReply={() => onSetReplyingTo?.(null)}
+            conversationId={conversation.id}
           />
         )}
       </div>

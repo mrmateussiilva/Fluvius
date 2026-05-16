@@ -8,6 +8,7 @@ from app.core.database import get_db
 from app.core.auth import get_current_agent
 from app.schemas.conversation import ConversationResponse, KanbanResponse, AgentKanbanData, TransferRequest
 from app.services.conversation_service import ConversationService
+from app.services.ai_service import AIService
 from app.schemas.agent import AgentRead
 from app.models.contact import Contact
 from app.models.agent import Agent
@@ -23,9 +24,9 @@ def is_valid_whatsapp_destination(destination: str | None) -> bool:
         return False
     # Accept plain phone numbers (8-15 digits), group JIDs, or individual WA JIDs
     return bool(
-        re.fullmatch(r"\d{8,15}", destination)
+        re.fullmatch(r"\d{8,15}(:\d+)?", destination)
         or re.fullmatch(r"\d[\d-]{7,}@g\.us", destination)
-        or re.fullmatch(r"\d{8,15}@s\.whatsapp\.net", destination)
+        or re.fullmatch(r"\d{8,15}(:\d+)?@s\.whatsapp\.net", destination)
     )
 
 
@@ -72,6 +73,26 @@ def get_conversations(
             results.append(conv)
 
     return results
+
+
+@router.post("/{conversation_id}/suggest-reply")
+def suggest_reply(
+    conversation_id: str,
+    db: Session = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent)
+):
+    # Check if conversation belongs to workspace
+    conversation = ConversationService.get_conversation_by_id(db, conversation_id)
+    if not conversation or conversation.workspace_id != current_agent.workspace_id:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+        
+    try:
+        suggestion = AIService.suggest_reply(db, conversation_id)
+        return {"suggestion": suggestion}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error in AI Service")
 
 
 class AssignRequest(BaseModel):
