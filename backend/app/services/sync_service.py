@@ -213,6 +213,28 @@ class SyncService:
                 instance_name=connection.instance_name
             )
 
+            # Fallback: if findChats returns empty, use findContacts
+            if not chats:
+                logger.warning("fetch_chats returned 0 results, trying fetch_contacts as fallback...")
+                raw_contacts = await EvolutionService.fetch_contacts(
+                    base_url=connection.base_url,
+                    api_key=connection.api_key,
+                    instance_name=connection.instance_name
+                )
+                # Normalize contact format to match chat format expected by sync_chat_record
+                # Contacts have: {"id": "...", "remoteJid": "...", "pushName": "...", ...}
+                chats = []
+                for c in raw_contacts:
+                    jid = c.get("id") or c.get("remoteJid")
+                    if jid:
+                        chats.append({
+                            "id": jid,
+                            "pushName": c.get("pushName") or c.get("name"),
+                            "name": c.get("name") or c.get("pushName"),
+                            "pictureUrl": c.get("profilePictureUrl") or c.get("pictureUrl")
+                        })
+                logger.info(f"Normalized {len(chats)} contacts for sync")
+
             # 2. Fetch group chats
             groups = await EvolutionService.fetch_groups(
                 base_url=connection.base_url,

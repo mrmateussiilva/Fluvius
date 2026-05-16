@@ -170,11 +170,51 @@ class EvolutionService:
         
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.post(url, headers=headers, json={}, timeout=20.0)
+                response = await client.post(url, headers=headers, json={}, timeout=60.0)
+                logger.info(f"fetch_chats status={response.status_code} for {instance_name}")
                 response.raise_for_status()
-                return response.json()
+                data = response.json()
+                
+                # Evolution API v2 can return: list | {"chats": [...]} | {"data": [...]}
+                if isinstance(data, list):
+                    logger.info(f"fetch_chats returned {len(data)} chats (list format)")
+                    return data
+                elif isinstance(data, dict):
+                    for key in ("chats", "data", "records"):
+                        if key in data and isinstance(data[key], list):
+                            logger.info(f"fetch_chats returned {len(data[key])} chats (dict.{key} format)")
+                            return data[key]
+                    logger.warning(f"fetch_chats unknown dict format, keys: {list(data.keys())}")
+                    return []
+                logger.warning(f"fetch_chats unexpected type: {type(data)}")
+                return []
         except Exception as e:
             logger.error(f"Failed to fetch chats from Evolution API: {e}")
+            return []
+
+    @staticmethod
+    async def fetch_contacts(base_url: str, api_key: str, instance_name: str) -> list:
+        """Fetches all contacts from Evolution API as a fallback when findChats returns empty."""
+        url = f"{base_url.rstrip('/')}/chat/findContacts/{instance_name}"
+        headers = {"apikey": api_key, "Content-Type": "application/json"}
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, headers=headers, json={}, timeout=60.0)
+                logger.info(f"fetch_contacts status={response.status_code} for {instance_name}")
+                response.raise_for_status()
+                data = response.json()
+
+                if isinstance(data, list):
+                    logger.info(f"fetch_contacts returned {len(data)} contacts")
+                    return data
+                elif isinstance(data, dict):
+                    for key in ("contacts", "data", "records"):
+                        if key in data and isinstance(data[key], list):
+                            return data[key]
+                return []
+        except Exception as e:
+            logger.error(f"Failed to fetch contacts from Evolution API: {e}")
             return []
 
     @staticmethod
@@ -185,9 +225,10 @@ class EvolutionService:
 
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.get(url, headers=headers, params=params, timeout=20.0)
+                response = await client.get(url, headers=headers, params=params, timeout=60.0)
                 response.raise_for_status()
                 data = response.json()
+                logger.info(f"fetch_groups returned {len(data) if isinstance(data, list) else '?'} groups")
                 return data if isinstance(data, list) else []
         except Exception as e:
             logger.error(f"Failed to fetch groups from Evolution API: {e}")

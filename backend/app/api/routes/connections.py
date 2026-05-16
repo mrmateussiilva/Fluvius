@@ -232,3 +232,37 @@ async def sync_connection(
     
     return {"status": "sync_started", "message": "Synchronization started in background"}
 
+
+@router.get("/{connection_id}/debug-chats")
+async def debug_chats(
+    connection_id: str,
+    db: Session = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent)
+):
+    """Diagnostic endpoint: returns raw chat and contact data from Evolution API."""
+    connection = db.query(Connection).filter(
+        Connection.id == connection_id,
+        Connection.workspace_id == current_agent.workspace_id
+    ).first()
+    if not connection:
+        raise HTTPException(status_code=404, detail="Connection not found")
+
+    chats = await EvolutionService.fetch_chats(
+        base_url=connection.base_url,
+        api_key=connection.api_key,
+        instance_name=connection.instance_name
+    )
+    contacts = await EvolutionService.fetch_contacts(
+        base_url=connection.base_url,
+        api_key=connection.api_key,
+        instance_name=connection.instance_name
+    )
+
+    return {
+        "chats_count": len(chats),
+        "chats_sample": chats[:5],
+        "contacts_count": len(contacts),
+        "contacts_sample": contacts[:5],
+        "instance": connection.instance_name,
+        "base_url": connection.base_url,
+    }
