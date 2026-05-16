@@ -4,8 +4,10 @@ import { User, Clock, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 
 const ConversationCard: React.FC<{ conversation: Conversation }> = ({ conversation }) => {
+  const navigate = useNavigate();
   const contactName = conversation.contact?.name || conversation.contact?.phone || 'Desconhecido';
   const time = conversation.last_message_at 
     ? formatDistanceToNow(new Date(conversation.last_message_at), { locale: ptBR, addSuffix: true })
@@ -14,6 +16,7 @@ const ConversationCard: React.FC<{ conversation: Conversation }> = ({ conversati
   return (
     <motion.div
       layout
+      onClick={() => navigate(`/?c=${conversation.id}`)}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="bg-white p-4 rounded-[16px] border border-fluvius-border shadow-sm hover:shadow-md transition-all cursor-pointer group mb-3"

@@ -15,9 +15,13 @@ logger = logging.getLogger(__name__)
 
 
 def contact_phone_from_remote_jid(remote_jid: str) -> str:
+    if not remote_jid:
+        return ""
     if remote_jid.endswith("@g.us"):
         return remote_jid
-    return remote_jid.split("@")[0] if "@" in remote_jid else remote_jid
+    # Handle phone:device@s.whatsapp.net or LID
+    phone_part = remote_jid.split("@")[0]
+    return phone_part.split(":")[0]
 
 class WebhookService:
     @staticmethod
@@ -82,6 +86,12 @@ class WebhookService:
         
         # Phone extraction
         remote_jid = key.get("remoteJid", "")
+        remote_jid_alt = key.get("remoteJidAlt")
+        
+        # If remoteJid is a LID (Linked ID), try to use the alternative JID which is usually the real phone number
+        if "@lid" in remote_jid and remote_jid_alt and "@s.whatsapp.net" in remote_jid_alt:
+            remote_jid = remote_jid_alt
+            
         phone = contact_phone_from_remote_jid(remote_jid)
         
         # Content and Media extraction
@@ -296,6 +306,35 @@ class WebhookService:
             if direction == "inbound" and conversation.status == "bot":
                 from app.services.bot_service import BotService
                 await BotService.process_bot_message(db, conversation, content, inbox, phone, connection)
+        else:
+            # Message already exists. Check if this is a status update in an upsert event.
+            new_status_raw = data.get("status") or message_info.get("status")
+            if new_status_raw:
+                status_map = {
+                    "SERVER_ACK": "sent",
+                    "DELIVERY_ACK": "delivered",
+                    "READ": "read",
+                    "PLAYED": "read",
+                    "2": "sent",
+                    "3": "delivered",
+                    "4": "read"
+                }
+                new_status = status_map.get(str(new_status_raw).upper())
+                if new_status and msg.status != new_status:
+                    # Only update if the new status is "further" along
+                    status_order = {"pending": 0, "sent": 1, "delivered": 2, "read": 3, "failed": -1}
+                    if status_order.get(new_status, 0) > status_order.get(msg.status, 0):
+                        msg.status = new_status
+                        db.commit()
+                        await socket_manager.broadcast({
+                            "type": "MESSAGE_STATUS_UPDATED",
+                            "workspace_id": msg.workspace_id,
+                            "data": {
+                                "id": msg.id,
+                                "conversation_id": msg.conversation_id,
+                                "status": msg.status
+                            }
+                        })
 
         if is_new_message:
             # BROADCAST WS EVENTS

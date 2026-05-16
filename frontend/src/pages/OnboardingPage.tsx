@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL, fetchConnectionQR, fetchConnectionStatus } from '../api/client';
 import { fetchWithAuth } from '../api/client';
 import type { Connection } from '../api/client';
+import toast from 'react-hot-toast';
 
 export const OnboardingPage: React.FC = () => {
   const [step, setStep] = useState(1);
@@ -55,23 +56,30 @@ export const OnboardingPage: React.FC = () => {
       if (qrData.base64) setQrCode(qrData.base64);
       setQrLoading(false);
 
-      // Start status polling
+      // Start status polling & QR refresh
       const interval = setInterval(async () => {
         try {
           const status = await fetchConnectionStatus(data.id);
-          if (status?.instance?.state === 'open') {
+          if (status?.instance?.state === 'open' || status?.status === 'connected') {
             clearInterval(interval);
-            setStep(3);
+            setStep(3); // Move to next step
+            return;
+          }
+
+          // If still waiting, refresh QR to prevent expiration
+          const qrData = await fetchConnectionQR(data.id);
+          if (qrData.base64) {
+            setQrCode(qrData.base64);
           }
         } catch (e) {
-          console.error('Status check failed', e);
+          console.error('Status check or QR fetch failed', e);
         }
-      }, 5000);
+      }, 10000);
       setStatusInterval(interval);
 
     } catch (err) {
       console.error(err);
-      alert('Erro ao criar conexão');
+      toast.error('Erro ao criar conexão');
     } finally {
       setCreatingConn(false);
     }
@@ -98,7 +106,7 @@ export const OnboardingPage: React.FC = () => {
       setAgentCreated(true);
       setTimeout(() => navigate('/'), 2000);
     } catch (err) {
-      alert('Erro ao criar agente');
+      toast.error('Erro ao criar agente');
     } finally {
       setCreatingAgent(false);
     }

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def is_whatsapp_chat_jid(remote_jid: str) -> bool:
     """Accept individual WA chats (@s.whatsapp.net) and groups (@g.us)."""
     return bool(
-        re.fullmatch(r"\d{8,15}@s\.whatsapp\.net", remote_jid)
+        re.fullmatch(r"\d{8,15}(:\d+)?@s\.whatsapp\.net", remote_jid)
         or re.fullmatch(r"\d[\d-]{7,}@g\.us", remote_jid)
     )
 
@@ -21,18 +21,20 @@ def is_whatsapp_chat_jid(remote_jid: str) -> bool:
 def contact_phone_from_jid(remote_jid: str) -> str:
     if remote_jid.endswith("@g.us"):
         return remote_jid
-    return remote_jid.split("@")[0]
+    prefix = remote_jid.split("@")[0]
+    return prefix.split(":")[0]
 
 
 async def sync_chat_record(db: Session, connection: Connection, chat: dict) -> tuple[bool, int]:
-    remote_jid = chat.get("id")
+    # Evolution API v2 uses 'remoteJid' as primary field; 'id' is the DB record ID
+    remote_jid = chat.get("remoteJid") or chat.get("id")
     if not remote_jid or not is_whatsapp_chat_jid(remote_jid):
         logger.debug(f"Skipping invalid JID: {remote_jid}")
         return False, 0
 
     phone = contact_phone_from_jid(remote_jid)
     name = chat.get("pushName") or chat.get("name") or chat.get("subject") or phone
-    avatar_url = chat.get("pictureUrl")
+    avatar_url = chat.get("profilePicUrl") or chat.get("pictureUrl")
 
     # Find or Create Contact
     contact = db.query(Contact).filter(

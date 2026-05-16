@@ -10,6 +10,8 @@ import { OnboardingPage } from './pages/OnboardingPage';
 import { fetchConnections } from './api/client';
 import { useState, useEffect } from 'react';
 
+import { Toaster } from 'react-hot-toast';
+
 import './index.css';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -129,6 +131,27 @@ const AppContent = () => {
 function App() {
   return (
     <AuthProvider>
+      <Toaster 
+        position="top-right" 
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#ffffff',
+            color: '#1e293b',
+            border: '1px solid #f1f5f9',
+            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+            borderRadius: '16px',
+            fontSize: '14px',
+            fontWeight: 600,
+          },
+          success: {
+            iconTheme: {
+              primary: '#4f46e5',
+              secondary: '#ffffff',
+            },
+          },
+        }}
+      />
       <AppContent />
     </AuthProvider>
   );

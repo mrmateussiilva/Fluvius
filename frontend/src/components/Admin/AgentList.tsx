@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchAgents, updateAgent, deleteAgent, type Agent } from '../../api/client';
 import { User, Circle, Mail, Shield, UserCheck, Trash2, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export const AgentList: React.FC = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -27,7 +28,7 @@ export const AgentList: React.FC = () => {
       await updateAgent(agentId, { role: newRole });
       loadAgents();
     } catch (error) {
-      alert('Falha ao atualizar papel do agente');
+      toast.error('Falha ao atualizar papel do agente');
     }
   };
 
@@ -37,7 +38,7 @@ export const AgentList: React.FC = () => {
       await deleteAgent(agentId);
       loadAgents();
     } catch (error) {
-      alert('Falha ao remover agente');
+      toast.error('Falha ao remover agente');
     }
   };
 
@@ -153,7 +154,7 @@ export const AgentList: React.FC = () => {
                 setShowInvite(false);
                 loadAgents();
               } catch (error) {
-                alert('Erro ao criar agente');
+                toast.error('Erro ao criar agente');
               }
             }} className="p-6 space-y-4">
               <div>

@@ -4,16 +4,17 @@ import { fetchConnections, fetchConnectionQR, fetchConnectionStatus, deleteConne
 import type { Connection } from '../api/client';
 import {
   Settings, Plus, RefreshCw, Wifi, WifiOff, QrCode, X,
-  ArrowLeft, User, CheckCircle, Loader2, Trash2, LogOut, RotateCcw, DownloadCloud, Layers, Edit3, MessageSquare, Bot, Sparkles, AlertCircle
+  ArrowLeft, User, CheckCircle, Loader2, Trash2, LogOut, RotateCcw, DownloadCloud, Layers, Edit3, MessageSquare, Bot, Sparkles, AlertCircle, Zap
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import { QueuesTab } from '../components/Settings/QueuesTab';
+import { QuickRepliesTab } from '../components/Settings/QuickRepliesTab';
 import toast from 'react-hot-toast';
 
 export const SettingsPage: React.FC = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'general' | 'queues'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'queues' | 'quick-replies'>('general');
 
   // Connection state
   const [connections, setConnections] = useState<Connection[]>([]);
@@ -230,6 +231,15 @@ export const SettingsPage: React.FC = () => {
               <Layers size={18} />
               Filas / Departamentos
             </button>
+            <button 
+              onClick={() => setActiveTab('quick-replies')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-[12px] font-medium transition-all ${
+                activeTab === 'quick-replies' ? 'bg-fluvius-surface text-fluvius-blue-deep shadow-sm border border-fluvius-border' : 'text-fluvius-text-sec hover:bg-white hover:text-fluvius-text-main'
+              }`}
+            >
+              <Zap size={18} />
+              Mensagens Rápidas
+            </button>
           </div>
 
           <div className="flex-1 space-y-8">
@@ -376,6 +386,7 @@ export const SettingsPage: React.FC = () => {
       )}
 
       {activeTab === 'queues' && <QueuesTab />}
+      {activeTab === 'quick-replies' && <QuickRepliesTab />}
       </div>
     </div>
 

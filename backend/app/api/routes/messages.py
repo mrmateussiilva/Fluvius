@@ -26,8 +26,9 @@ def is_valid_whatsapp_destination(destination: str | None) -> bool:
     if not destination:
         return False
     return bool(
-        re.fullmatch(r"\d{8,15}", destination)
+        re.fullmatch(r"\d{8,15}(:\d+)?", destination)
         or re.fullmatch(r"\d[\d-]{7,}@g\.us", destination)
+        or re.fullmatch(r"\d{8,15}(:\d+)?@s\.whatsapp\.net", destination)
     )
 
 

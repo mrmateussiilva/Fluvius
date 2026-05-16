@@ -172,6 +172,13 @@ export interface Queue {
   created_at: string;
 }
 
+export interface QuickReply {
+  id: string;
+  workspace_id: string;
+  shortcut: string;
+  content: string;
+}
+
 export const getQueues = async (): Promise<Queue[]> => {
   const response = await fetchWithAuth(`${API_BASE_URL}/queues`);
   if (!response.ok) throw new Error('Failed to fetch queues');
@@ -447,4 +454,37 @@ export const updateConnection = async (connectionId: string, data: any): Promise
     throw new Error(errorMsg);
   }
   return response.json();
+};
+
+export const fetchQuickReplies = async (): Promise<QuickReply[]> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/quick-replies`);
+  if (!response.ok) throw new Error('Failed to fetch quick replies');
+  return response.json();
+};
+
+export const createQuickReply = async (data: { shortcut: string, content: string }): Promise<QuickReply> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/quick-replies`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Failed to create quick reply');
+  return response.json();
+};
+
+export const updateQuickReply = async (qrId: string, data: Partial<QuickReply>): Promise<QuickReply> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/quick-replies/${qrId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Failed to update quick reply');
+  return response.json();
+};
+
+export const deleteQuickReply = async (qrId: string): Promise<void> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/quick-replies/${qrId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete quick reply');
 };

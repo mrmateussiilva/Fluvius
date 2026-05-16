@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { type Queue, type Agent, getQueues, fetchAgents, transferConversation } from '../api/client';
 import { X, Users, Layers, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface TransferModalProps {
   conversationId: string;
@@ -44,7 +45,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({ conversationId, on
       onTransferred();
     } catch (err) {
       console.error(err);
-      alert('Erro ao transferir conversa');
+      toast.error('Erro ao transferir conversa');
     } finally {
       setTransferring(false);
     }

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Smile, Paperclip, Image as ImageIcon, Music, FileText, Camera, Mic, Square, AlertCircle, X, Sparkles, Loader2 } from 'lucide-react';
-import { suggestReply, type Message } from '../api/client';
+import { Send, Smile, Paperclip, Image as ImageIcon, Music, FileText, Camera, Mic, Square, AlertCircle, X, Sparkles, Loader2, Zap } from 'lucide-react';
+import { suggestReply, type Message, fetchQuickReplies, type QuickReply } from '../api/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MediaPreviewModal } from './MediaPreviewModal';
 import { clsx, type ClassValue } from 'clsx';
@@ -29,6 +29,12 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
   
+  // Quick Replies state
+  const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
+  const [filteredQuickReplies, setFilteredQuickReplies] = useState<QuickReply[]>([]);
+  const [showQuickReplies, setShowQuickReplies] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   
@@ -46,6 +52,35 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Fetch quick replies
+  useEffect(() => {
+    const loadQuickReplies = async () => {
+      try {
+        const data = await fetchQuickReplies();
+        setQuickReplies(data);
+      } catch (err) {
+        console.error('Failed to load quick replies', err);
+      }
+    };
+    loadQuickReplies();
+  }, []);
+
+  // Filter quick replies based on input
+  useEffect(() => {
+    if (text.startsWith('/')) {
+      const search = text.slice(1).toLowerCase();
+      const filtered = quickReplies.filter(qr => 
+        qr.shortcut.toLowerCase().includes(search) || 
+        qr.content.toLowerCase().includes(search)
+      );
+      setFilteredQuickReplies(filtered);
+      setShowQuickReplies(filtered.length > 0);
+      setSelectedIndex(0);
+    } else {
+      setShowQuickReplies(false);
+    }
+  }, [text, quickReplies]);
 
   // Recording Timer
   useEffect(() => {
@@ -95,6 +130,32 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
       showError(err instanceof Error ? err.message : 'Erro ao gerar sugestão');
     } finally {
       setIsGeneratingSuggestion(false);
+    }
+  };
+
+  const handleSelectQuickReply = (qr: QuickReply) => {
+    setText(qr.content);
+    setShowQuickReplies(false);
+    inputRef.current?.focus();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (showQuickReplies) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex(prev => (prev + 1) % filteredQuickReplies.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex(prev => (prev - 1 + filteredQuickReplies.length) % filteredQuickReplies.length);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSelectQuickReply(filteredQuickReplies[selectedIndex]);
+      } else if (e.key === 'Escape') {
+        setShowQuickReplies(false);
+      }
+    } else if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
   };
 
@@ -179,12 +240,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
     reader.readAsDataURL(previewFile.file);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSend();
-    }
-  };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     const items = e.clipboardData?.items;
@@ -291,6 +346,49 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
           </button>
         </div>
       )}
+
+      <AnimatePresence>
+        {showQuickReplies && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="absolute bottom-full left-4 mb-2 w-[calc(100%-2rem)] max-w-md bg-white rounded-[16px] shadow-2xl border border-fluvius-border overflow-hidden z-50"
+          >
+            <div className="px-4 py-2 bg-fluvius-surface border-b border-fluvius-border flex items-center justify-between">
+              <span className="text-[10px] font-bold text-fluvius-text-sec uppercase tracking-wider flex items-center gap-1">
+                <Zap size={10} className="text-fluvius-blue-main" />
+                Respostas Rápidas
+              </span>
+              <span className="text-[10px] text-fluvius-text-sec">Use ↑↓ para navegar</span>
+            </div>
+            <div className="max-h-60 overflow-y-auto divide-y divide-fluvius-border">
+              {filteredQuickReplies.map((qr, index) => (
+                <button
+                  key={qr.id}
+                  onClick={() => handleSelectQuickReply(qr)}
+                  className={cn(
+                    "w-full text-left px-4 py-3 flex items-start gap-3 transition-colors",
+                    index === selectedIndex ? "bg-fluvius-blue-main/5" : "hover:bg-fluvius-bg"
+                  )}
+                >
+                  <div className="w-8 h-8 rounded-[8px] bg-fluvius-surface text-fluvius-blue-deep flex items-center justify-center font-bold text-[10px] shrink-0 border border-fluvius-border">
+                    /{qr.shortcut}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={cn(
+                      "text-sm font-medium truncate",
+                      index === selectedIndex ? "text-fluvius-blue-deep" : "text-fluvius-text-main"
+                    )}>
+                      {qr.content}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className={cn(
         "px-4 py-3 flex items-center gap-2 shrink-0 border-t border-[#DCE7F0] transition-colors duration-300",
