@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def is_whatsapp_chat_jid(remote_jid: str) -> bool:
+    """Accept individual WA chats (@s.whatsapp.net) and groups (@g.us)."""
     return bool(
         re.fullmatch(r"\d{8,15}@s\.whatsapp\.net", remote_jid)
         or re.fullmatch(r"\d[\d-]{7,}@g\.us", remote_jid)
@@ -26,6 +27,7 @@ def contact_phone_from_jid(remote_jid: str) -> str:
 async def sync_chat_record(db: Session, connection: Connection, chat: dict) -> tuple[bool, int]:
     remote_jid = chat.get("id")
     if not remote_jid or not is_whatsapp_chat_jid(remote_jid):
+        logger.debug(f"Skipping invalid JID: {remote_jid}")
         return False, 0
 
     phone = contact_phone_from_jid(remote_jid)
@@ -193,52 +195,70 @@ from app.core.database import SessionLocal
 class SyncService:
     @staticmethod
     async def sync_connection(connection_id: str) -> dict:
-        with SessionLocal() as db:
+        # CRITICAL FIX: do NOT close the db session before using it in sync_chat_record.
+        # The 'with' block was closing the session prematurely.
+        db = SessionLocal()
+        try:
             connection = db.query(Connection).filter(Connection.id == connection_id).first()
-        if not connection:
-            logger.error(f"Sync failed: Connection {connection_id} not found.")
-            return {"error": "Connection not found"}
+            if not connection:
+                logger.error(f"Sync failed: Connection {connection_id} not found.")
+                return {"error": "Connection not found"}
 
-        logger.info(f"Starting sync for connection {connection_id} ({connection.instance_name})")
-        
-        # 1. Fetch all chats
-        chats = await EvolutionService.fetch_chats(
-            base_url=connection.base_url,
-            api_key=connection.api_key,
-            instance_name=connection.instance_name
-        )
-        groups = await EvolutionService.fetch_groups(
-            base_url=connection.base_url,
-            api_key=connection.api_key,
-            instance_name=connection.instance_name
-        )
-        
-        synced_chats = 0
-        synced_groups = 0
-        synced_messages = 0
-        skipped_chats = 0
+            logger.info(f"Starting sync for connection {connection_id} ({connection.instance_name})")
 
-        for chat in chats:
-            synced, message_count = await sync_chat_record(db, connection, chat)
-            if synced:
-                synced_chats += 1
-                synced_messages += message_count
-            else:
-                skipped_chats += 1
+            # 1. Fetch individual chats (contacts you've talked to)
+            chats = await EvolutionService.fetch_chats(
+                base_url=connection.base_url,
+                api_key=connection.api_key,
+                instance_name=connection.instance_name
+            )
 
-        for group in groups:
-            synced, message_count = await sync_chat_record(db, connection, group)
-            if synced:
-                synced_groups += 1
-                synced_messages += message_count
+            # 2. Fetch group chats
+            groups = await EvolutionService.fetch_groups(
+                base_url=connection.base_url,
+                api_key=connection.api_key,
+                instance_name=connection.instance_name
+            )
 
-        logger.info(
-            f"Sync complete for {connection_id}. Synced {synced_chats} chats, "
-            f"{synced_groups} groups and {synced_messages} messages. Skipped {skipped_chats} chats."
-        )
-        return {
-            "synced_chats": synced_chats,
-            "synced_groups": synced_groups,
-            "synced_messages": synced_messages,
-            "skipped_chats": skipped_chats,
-        }
+            logger.info(f"Fetched {len(chats)} chats and {len(groups)} groups from Evolution API for {connection.instance_name}")
+
+            synced_chats = 0
+            synced_groups = 0
+            synced_messages = 0
+            skipped_chats = 0
+
+            for chat in chats:
+                try:
+                    synced, message_count = await sync_chat_record(db, connection, chat)
+                    if synced:
+                        synced_chats += 1
+                        synced_messages += message_count
+                    else:
+                        skipped_chats += 1
+                except Exception as e:
+                    logger.error(f"Error syncing chat {chat.get('id')}: {e}")
+                    db.rollback()
+
+            for group in groups:
+                try:
+                    synced, message_count = await sync_chat_record(db, connection, group)
+                    if synced:
+                        synced_groups += 1
+                        synced_messages += message_count
+                except Exception as e:
+                    logger.error(f"Error syncing group {group.get('id')}: {e}")
+                    db.rollback()
+
+            logger.info(
+                f"Sync complete for {connection_id}. "
+                f"Synced {synced_chats} chats, {synced_groups} groups and {synced_messages} messages. "
+                f"Skipped {skipped_chats} chats."
+            )
+            return {
+                "synced_chats": synced_chats,
+                "synced_groups": synced_groups,
+                "synced_messages": synced_messages,
+                "skipped_chats": skipped_chats,
+            }
+        finally:
+            db.close()

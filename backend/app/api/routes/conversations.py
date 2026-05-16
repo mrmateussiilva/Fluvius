@@ -21,9 +21,11 @@ router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 def is_valid_whatsapp_destination(destination: str | None) -> bool:
     if not destination:
         return False
+    # Accept plain phone numbers (8-15 digits), group JIDs, or individual WA JIDs
     return bool(
         re.fullmatch(r"\d{8,15}", destination)
         or re.fullmatch(r"\d[\d-]{7,}@g\.us", destination)
+        or re.fullmatch(r"\d{8,15}@s\.whatsapp\.net", destination)
     )
 
 
