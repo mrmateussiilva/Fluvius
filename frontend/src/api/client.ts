@@ -89,7 +89,7 @@ export interface DashboardConnectionSummary {
   instance: string;
 }
 
-
+export interface DashboardData {
   totals: {
     contacts: number;
     groups: number;
