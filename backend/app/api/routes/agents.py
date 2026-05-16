@@ -4,6 +4,7 @@ from typing import List
 
 from app.core.database import get_db
 from app.core.auth import get_current_agent, get_password_hash
+from app.core.socket_manager import socket_manager
 from app.models.agent import Agent
 from app.schemas.agent import AgentCreate, AgentRead, AgentUpdate
 from app.models.workspace import generate_uuid, utcnow
@@ -16,7 +17,16 @@ def get_agents(
     db: Session = Depends(get_db),
     current_agent: Agent = Depends(get_current_agent)
 ):
-    return db.query(Agent).filter(Agent.workspace_id == current_agent.workspace_id).all()
+    agents = db.query(Agent).filter(Agent.workspace_id == current_agent.workspace_id).all()
+    
+    for agent in agents:
+        is_agent_online = False
+        if agent.workspace_id in socket_manager.active_connections:
+            if agent.id in socket_manager.active_connections[agent.workspace_id]:
+                is_agent_online = True
+        agent.is_online = is_agent_online
+        
+    return agents
 
 
 @router.post("", response_model=AgentRead, status_code=201)

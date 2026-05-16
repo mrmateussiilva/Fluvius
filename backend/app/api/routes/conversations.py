@@ -331,6 +331,14 @@ def get_kanban(
             if attach_contact_and_assignee(db, conv, agent)
         ]
             
+        # Update is_online dynamically from socket_manager
+        is_agent_online = False
+        if workspace_id in socket_manager.active_connections:
+            if agent.id in socket_manager.active_connections[workspace_id]:
+                is_agent_online = True
+        
+        agent.is_online = is_agent_online
+
         by_agent.append(AgentKanbanData(
             agent=AgentRead.model_validate(agent),
             open=agent_open,

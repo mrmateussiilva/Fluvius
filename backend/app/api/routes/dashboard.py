@@ -13,6 +13,7 @@ from app.models.contact import Contact
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.workspace import utcnow
+from app.core.socket_manager import socket_manager
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
@@ -126,13 +127,18 @@ def get_dashboard(
             conversation for conversation in conversations
             if conversation.assignee_id == agent.id
         ]
+        is_agent_online = False
+        if workspace_id in socket_manager.active_connections:
+            if agent.id in socket_manager.active_connections[workspace_id]:
+                is_agent_online = True
+
         agent_summaries.append(AgentSummary(
             id=agent.id,
             name=agent.name,
             open=sum(1 for conversation in agent_conversations if conversation.status == "open"),
             resolved=sum(1 for conversation in agent_conversations if conversation.status == "resolved"),
             unread=sum(conversation.unread_count or 0 for conversation in agent_conversations),
-            is_online=agent.is_online,
+            is_online=is_agent_online,
         ))
 
     contact_by_id = {contact.id: contact for contact in contacts}
