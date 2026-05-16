@@ -1,4 +1,5 @@
 from sqlalchemy import Column, String, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 from app.models.workspace import generate_uuid, utcnow
 
@@ -16,3 +17,6 @@ class Connection(Base):
     api_key = Column(String, nullable=False)
     status = Column(String, nullable=False, default="offline")
     created_at = Column(DateTime, default=utcnow, nullable=False)
+
+    inbox = relationship("Inbox")
+

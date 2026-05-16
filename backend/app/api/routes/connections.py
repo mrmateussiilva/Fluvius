@@ -19,11 +19,27 @@ def get_connections(
     current_agent: Agent = Depends(get_current_agent)
 ):
     connections = db.query(Connection).filter(Connection.workspace_id == current_agent.workspace_id).all()
+    
+    # Manual mapping for Pydantic to pick up inbox fields
+    for conn in connections:
+        if conn.inbox:
+            conn.welcome_message = conn.inbox.welcome_message
+            conn.default_bot_active = conn.inbox.default_bot_active
+            conn.bot_type = conn.inbox.bot_type
+            conn.ai_instructions = conn.inbox.ai_instructions
+            
     return connections
 
 class ConnectionCreate(BaseModel):
     name: str
     instance_name: Optional[str] = None
+
+class ConnectionUpdate(BaseModel):
+    name: Optional[str] = None
+    welcome_message: Optional[str] = None
+    default_bot_active: Optional[bool] = None
+    bot_type: Optional[str] = None
+    ai_instructions: Optional[str] = None
 
 @router.post("", response_model=ConnectionRead)
 async def create_connection(
@@ -137,6 +153,50 @@ async def get_connection_status(
         return state_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/{connection_id}", response_model=ConnectionRead)
+async def update_connection(
+    connection_id: str,
+    body: ConnectionUpdate,
+    db: Session = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent)
+):
+    connection = db.query(Connection).filter(
+        Connection.id == connection_id,
+        Connection.workspace_id == current_agent.workspace_id
+    ).first()
+    
+    if not connection:
+        raise HTTPException(status_code=404, detail="Connection not found")
+        
+    if body.name is not None:
+        connection.name = body.name
+        
+    # Update linked Inbox
+    from app.models.inbox import Inbox
+    inbox = db.query(Inbox).filter(Inbox.id == connection.inbox_id).first()
+    if inbox:
+        if body.welcome_message is not None:
+            inbox.welcome_message = body.welcome_message
+        if body.default_bot_active is not None:
+            inbox.default_bot_active = body.default_bot_active
+        if body.bot_type is not None:
+            inbox.bot_type = body.bot_type
+        if body.ai_instructions is not None:
+            inbox.ai_instructions = body.ai_instructions
+            
+    db.commit()
+    db.refresh(connection)
+    
+    # Map inbox fields for response
+    if connection.inbox:
+        connection.welcome_message = connection.inbox.welcome_message
+        connection.default_bot_active = connection.inbox.default_bot_active
+        connection.bot_type = connection.inbox.bot_type
+        connection.ai_instructions = connection.inbox.ai_instructions
+
+    return connection
 
 
 @router.delete("/{connection_id}")

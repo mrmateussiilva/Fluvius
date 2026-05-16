@@ -13,6 +13,12 @@ class ConnectionRead(ConnectionBase):
     workspace_id: str
     inbox_id: str
     created_at: datetime
+    
+    # Inbox fields
+    welcome_message: Optional[str] = None
+    default_bot_active: bool = True
+    bot_type: str = "menu"
+    ai_instructions: Optional[str] = None
 
     class Config:
         from_attributes = True

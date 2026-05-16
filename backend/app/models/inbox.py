@@ -13,6 +13,8 @@ class Inbox(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     welcome_message = Column(String, nullable=True)
     default_bot_active = Column(Boolean, default=True, nullable=False)
+    bot_type = Column(String, default="menu", nullable=False) # 'menu' or 'ai'
+    ai_instructions = Column(String, nullable=True)
     channel_type = Column(String, nullable=False)
     created_at = Column(DateTime, default=utcnow, nullable=False)
 
