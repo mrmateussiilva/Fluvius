@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { ConversationList } from '../components/ConversationList';
 import { MessagePanel } from '../components/MessagePanel';
 import { TransferModal } from '../components/TransferModal';
@@ -17,7 +19,8 @@ type TabFilter = 'all' | 'pending' | 'mine' | 'resolved';
 
 export const InboxPage: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(searchParams.get('c'));
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [activeTab, setActiveTab] = useState<TabFilter>('pending');
@@ -26,6 +29,7 @@ export const InboxPage: React.FC = () => {
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const { currentAgent } = useAgent();
   const { token } = useAuth();
+  const navigate = useNavigate();
 
   const loadConversations = useCallback(async () => {
     try {
@@ -80,6 +84,23 @@ export const InboxPage: React.FC = () => {
           audio.play().catch(() => {});
           document.title = '(1) Nova Mensagem | Fluvius';
           setTimeout(() => { document.title = 'Fluvius'; }, 5000);
+          
+          if (newMsg.conversation_id !== selectedConversationId) {
+             toast((t) => (
+                <div className="flex items-center gap-3">
+                   <span className="text-sm font-medium">💬 Nova mensagem recebida!</span>
+                   <button 
+                     onClick={() => {
+                        toast.dismiss(t.id);
+                        handleSelectConversation(newMsg.conversation_id);
+                     }}
+                     className="px-3 py-1.5 bg-fluvius-blue-main hover:bg-fluvius-blue-dark text-white rounded-lg text-xs font-bold transition-colors"
+                   >
+                     Abrir
+                   </button>
+                </div>
+             ), { duration: 5000, id: `new_msg_${newMsg.id}` });
+          }
         }
 
         // If this message belongs to the open conversation, add it directly.
@@ -161,7 +182,7 @@ export const InboxPage: React.FC = () => {
   const handleResolve = async (conversationId: string) => {
     try {
       await resolveConversation(conversationId);
-      setSelectedConversationId(null);
+      handleSelectConversation(null);
     } catch (err) {
       console.error(err);
     }
@@ -175,12 +196,27 @@ export const InboxPage: React.FC = () => {
     }
   };
 
-  const handleSelectConversation = async (id: string) => {
+  const handleSelectConversation = async (id: string | null) => {
+    if (id) {
+      setSearchParams({ c: id });
+    } else {
+      setSearchParams({});
+    }
     setSelectedConversationId(id);
     setReplyingTo(null); // Clear reply state when changing conversation
+    
+    if (!id) {
+      setSelectedConversation(null);
+      return;
+    }
+    
     const conv = conversations.find(c => c.id === id);
     setSelectedConversation(conv || null);
-    if (conv && conv.unread_count > 0) {
+    
+    // Do not mark as read if the conversation is assigned to someone else (Spectator Mode)
+    const isAssignedToOther = conv?.assignee_id && currentAgent && conv.assignee_id !== currentAgent.id;
+    
+    if (conv && conv.unread_count > 0 && !isAssignedToOther) {
       try {
         await markAsRead(id);
         // Optimistic update
