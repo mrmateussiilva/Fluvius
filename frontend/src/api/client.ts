@@ -157,6 +157,11 @@ export interface Connection {
   instance_name: string;
   status: string;
   created_at: string;
+  // Inbox fields joined in response
+  welcome_message?: string;
+  default_bot_active?: boolean;
+  bot_type?: 'menu' | 'ai';
+  ai_instructions?: string;
 }
 
 export interface Queue {
@@ -430,4 +435,16 @@ export const suggestReply = async (conversationId: string): Promise<string> => {
   }
   const data = await response.json();
   return data.suggestion;
+};
+export const updateConnection = async (connectionId: string, data: any): Promise<Connection> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/connections/${connectionId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const errorMsg = await getErrorMessage(response, 'Failed to update connection');
+    throw new Error(errorMsg);
+  }
+  return response.json();
 };
