@@ -23,9 +23,11 @@ const AgentContext = createContext<AgentContextType>({
   isLoading: true,
 });
 
-export const useAgent = () => useContext(AgentContext);
+export function useAgent() {
+  return useContext(AgentContext);
+}
 
-export const AgentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function AgentProvider({ children }: { children: React.ReactNode }) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [currentAgent, setCurrentAgentState] = useState<Agent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,4 +68,4 @@ export const AgentProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       {children}
     </AgentContext.Provider>
   );
-};
+}
