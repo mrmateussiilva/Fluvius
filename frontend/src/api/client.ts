@@ -83,18 +83,26 @@ export interface DashboardRecentConversation {
   assignee_name: string | null;
 }
 
-export interface DashboardData {
+export interface DashboardConnectionSummary {
+  name: string;
+  status: string;
+  instance: string;
+}
+
+
   totals: {
     contacts: number;
     groups: number;
     conversations: number;
     unread: number;
     agents: number;
+    online_agents: number;
   };
   statuses: DashboardStatusSummary;
   messages: DashboardMessageSummary;
   agents: DashboardAgentSummary[];
   recent_conversations: DashboardRecentConversation[];
+  connections: DashboardConnectionSummary[];
 }
 
 export interface Contact {

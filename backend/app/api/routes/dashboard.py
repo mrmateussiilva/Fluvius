@@ -12,6 +12,7 @@ from app.models.agent import Agent
 from app.models.contact import Contact
 from app.models.conversation import Conversation
 from app.models.message import Message
+from app.models.connection import Connection
 from app.models.workspace import utcnow
 from app.core.socket_manager import socket_manager
 
@@ -52,12 +53,18 @@ class RecentConversation(BaseModel):
     assignee_name: str | None
 
 
+class ConnectionStatusSummary(BaseModel):
+    name: str
+    status: str
+    instance: str
+
 class DashboardResponse(BaseModel):
     totals: dict[str, int]
     statuses: StatusSummary
     messages: MessageSummary
     agents: list[AgentSummary]
     recent_conversations: list[RecentConversation]
+    connections: list[ConnectionStatusSummary] = []
 
 
 def is_valid_whatsapp_destination(destination: str | None) -> bool:
@@ -161,6 +168,15 @@ def get_dashboard(
             assignee_name=assignee.name if assignee else None,
         ))
 
+    connections_data = db.query(Connection).filter(Connection.workspace_id == workspace_id).all()
+    connection_summaries = [
+        ConnectionStatusSummary(
+            name=c.name or c.instance_name,
+            status=c.status or "unknown",
+            instance=c.instance_name
+        ) for c in connections_data
+    ]
+
     return DashboardResponse(
         totals={
             "contacts": len(valid_contact_ids),
@@ -168,6 +184,7 @@ def get_dashboard(
             "conversations": len(conversations),
             "unread": unread_total,
             "agents": len(agents),
+            "online_agents": sum(1 for a in agent_summaries if a.is_online),
         },
         statuses=statuses,
         messages=MessageSummary(
@@ -179,4 +196,5 @@ def get_dashboard(
         ),
         agents=agent_summaries,
         recent_conversations=recent_conversations,
+        connections=connection_summaries,
     )

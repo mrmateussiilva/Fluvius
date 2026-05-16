@@ -1,6 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, CheckCircle2, Clock, MessageCircle, Radio, RefreshCw, Users, UserRoundCheck } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Activity, CheckCircle2, Clock, MessageCircle, Radio, 
+  RefreshCw, Users, UserRoundCheck, ShieldCheck, Zap, 
+  ArrowUpRight, ArrowDownLeft, AlertCircle, Share2
+} from 'lucide-react';
 import { fetchDashboard, type DashboardData, type DashboardRecentConversation } from '../../api/client';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 const statusLabel: Record<string, string> = {
   bot: 'Bot',
@@ -10,53 +21,135 @@ const statusLabel: Record<string, string> = {
 };
 
 const statusStyle: Record<string, string> = {
-  bot: 'bg-violet-50 text-violet-700 border-violet-100',
+  bot: 'bg-purple-50 text-purple-700 border-purple-100',
   pending: 'bg-amber-50 text-amber-700 border-amber-100',
   open: 'bg-blue-50 text-blue-700 border-blue-100',
   resolved: 'bg-emerald-50 text-emerald-700 border-emerald-100',
 };
 
-const StatCard: React.FC<{ label: string; value: number; icon: React.ReactNode; detail: string }> = ({ label, value, icon, detail }) => (
-  <div className="bg-white border border-fluvius-border rounded-[8px] p-5 shadow-sm">
-    <div className="flex items-center justify-between gap-4">
-      <div>
-        <p className="text-xs font-semibold text-slate-500 uppercase">{label}</p>
-        <p className="mt-2 text-3xl font-bold text-slate-950">{value}</p>
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: { duration: 0.4, ease: "easeOut" }
+  }
+};
+
+const StatCard: React.FC<{ 
+  label: string; 
+  value: number; 
+  icon: React.ReactNode; 
+  detail: string; 
+  trend?: { val: string; pos: boolean };
+  gradient?: string;
+}> = ({ label, value, icon, detail, trend, gradient }) => (
+  <motion.div 
+    variants={itemVariants}
+    whileHover={{ y: -4, transition: { duration: 0.2 } }}
+    className="group bg-white border border-fluvius-border rounded-[20px] p-6 shadow-sm hover:shadow-md transition-all relative overflow-hidden"
+  >
+    {gradient && (
+      <div className={cn("absolute top-0 right-0 w-32 h-32 opacity-[0.03] -mr-8 -mt-8 rounded-full", gradient)} />
+    )}
+    <div className="flex items-start justify-between">
+      <div className="space-y-1">
+        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{label}</p>
+        <div className="flex items-baseline gap-2">
+          <h3 className="text-3xl font-bold text-slate-900 tracking-tight">{value}</h3>
+          {trend && (
+            <span className={cn(
+              "flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full",
+              trend.pos ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+            )}>
+              {trend.pos ? <ArrowUpRight size={10} /> : <ArrowDownLeft size={10} />}
+              {trend.val}
+            </span>
+          )}
+        </div>
       </div>
-      <div className="w-10 h-10 rounded-[8px] bg-slate-100 text-slate-700 flex items-center justify-center">
+      <div className="w-12 h-12 rounded-[14px] bg-slate-50 text-slate-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
         {icon}
       </div>
     </div>
-    <p className="mt-3 text-sm text-slate-500">{detail}</p>
-  </div>
+    <p className="mt-4 text-[13px] text-slate-500 font-medium flex items-center gap-1.5">
+      <span className="w-1.5 h-1.5 rounded-full bg-fluvius-blue-main animate-pulse" />
+      {detail}
+    </p>
+  </motion.div>
 );
 
+const ProgressBar: React.FC<{ label: string; value: number; total: number; color: string }> = ({ label, value, total, color }) => {
+  const percentage = total > 0 ? (value / total) * 100 : 0;
+  
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-sm">
+        <span className="font-semibold text-slate-600">{label}</span>
+        <span className="font-bold text-slate-900">{value} <span className="text-[11px] text-slate-400 font-medium">({Math.round(percentage)}%)</span></span>
+      </div>
+      <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+        <motion.div 
+          initial={{ width: 0 }}
+          animate={{ width: `${percentage}%` }}
+          transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
+          className={cn("h-full rounded-full shadow-[0_0_10px_rgba(0,0,0,0.05)]", color)}
+        />
+      </div>
+    </div>
+  );
+};
+
 const ConversationRow: React.FC<{ conversation: DashboardRecentConversation }> = ({ conversation }) => (
-  <div className="grid grid-cols-[1fr_auto] gap-4 px-4 py-3 border-b border-slate-100 last:border-b-0">
-    <div className="min-w-0">
-      <div className="flex items-center gap-2 min-w-0">
-        <p className="text-sm font-semibold text-slate-900 truncate">{conversation.contact_name}</p>
-        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusStyle[conversation.status] || 'bg-slate-50 text-slate-600 border-slate-100'}`}>
+  <motion.div 
+    variants={itemVariants}
+    className="flex items-center gap-4 px-5 py-4 border-b border-slate-50 last:border-b-0 hover:bg-slate-50/50 transition-colors"
+  >
+    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 shrink-0 border border-white shadow-sm">
+      <Users size={20} />
+    </div>
+    <div className="min-w-0 flex-1">
+      <div className="flex items-center gap-2">
+        <p className="text-[14px] font-bold text-slate-900 truncate">{conversation.contact_name}</p>
+        <span className={cn(
+          "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-tighter", 
+          statusStyle[conversation.status] || 'bg-slate-50 text-slate-600 border-slate-100'
+        )}>
           {statusLabel[conversation.status] || conversation.status}
         </span>
       </div>
-      <p className="mt-1 text-xs text-slate-500 truncate">{conversation.contact_phone}</p>
+      <p className="mt-0.5 text-xs text-slate-500 font-medium">{conversation.contact_phone}</p>
     </div>
-    <div className="text-right">
-      <p className="text-xs text-slate-500">{conversation.assignee_name || 'Sem atendente'}</p>
-      <p className="mt-1 text-xs font-medium text-slate-700">
-        {conversation.last_message_at ? new Date(conversation.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sem mensagem'}
+    <div className="text-right shrink-0">
+      <div className="flex items-center justify-end gap-1.5 text-slate-400">
+        <UserRoundCheck size={12} />
+        <p className="text-[11px] font-semibold">{conversation.assignee_name || 'Sem fila'}</p>
+      </div>
+      <p className="mt-1 text-[11px] font-bold text-slate-700">
+        {conversation.last_message_at ? new Date(conversation.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
       </p>
     </div>
-  </div>
+  </motion.div>
 );
 
 export const DashboardOverview: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadDashboard = async () => {
+  const loadDashboard = async (isManual = false) => {
+    if (isManual) setRefreshing(true);
     try {
       setError(null);
       const dashboard = await fetchDashboard();
@@ -65,13 +158,17 @@ export const DashboardOverview: React.FC = () => {
       setError(err instanceof Error ? err.message : 'Erro ao carregar dashboard');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
     loadDashboard();
+    const interval = setInterval(() => loadDashboard(), 30000); // Auto refresh every 30s
+    return () => clearInterval(interval);
   }, []);
 
+  const totals = data?.totals;
   const maxStatus = useMemo(() => {
     if (!data) return 1;
     return Math.max(...Object.values(data.statuses), 1);
@@ -84,134 +181,281 @@ export const DashboardOverview: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-fluvius-blue-main border-t-transparent rounded-full animate-spin" />
+      <div className="h-full flex flex-col items-center justify-center gap-4">
+        <div className="relative">
+          <div className="w-16 h-16 border-[5px] border-slate-100 rounded-full" />
+          <div className="w-16 h-16 border-[5px] border-fluvius-blue-main border-t-transparent rounded-full animate-spin absolute top-0 left-0" />
+        </div>
+        <p className="text-sm font-bold text-slate-400 animate-pulse uppercase tracking-widest">Carregando painel...</p>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="p-8">
-        <div className="rounded-[8px] border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-          {error || 'Dashboard indisponível'}
-        </div>
+      <div className="p-8 h-full flex items-center justify-center">
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="max-w-md w-full bg-rose-50 border border-rose-100 p-8 rounded-[24px] text-center"
+        >
+          <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle size={32} />
+          </div>
+          <h2 className="text-xl font-bold text-rose-900 mb-2">Ops! Algo deu errado</h2>
+          <p className="text-rose-700 text-sm mb-6">{error || 'Não foi possível conectar ao servidor de dados.'}</p>
+          <button 
+            onClick={() => loadDashboard(true)}
+            className="w-full bg-rose-600 text-white font-bold py-3 rounded-[14px] hover:bg-rose-700 transition-colors"
+          >
+            Tentar novamente
+          </button>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between gap-4">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="p-8 space-y-8 max-w-[1600px] mx-auto fluvius-scroll h-full overflow-y-auto"
+    >
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-950">Visão Geral</h1>
-          <p className="mt-1 text-sm text-slate-500">Resumo operacional do atendimento no workspace.</p>
-        </div>
-        <button
-          onClick={loadDashboard}
-          className="inline-flex items-center gap-2 rounded-[8px] border border-fluvius-border bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
-          <RefreshCw size={16} />
-          Atualizar
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-        <StatCard label="Conversas" value={data.totals.conversations} icon={<MessageCircle size={20} />} detail={`${data.statuses.open} abertas agora`} />
-        <StatCard label="Na fila" value={data.statuses.pending} icon={<Clock size={20} />} detail="Aguardando atendimento" />
-        <StatCard label="Não lidas" value={data.totals.unread} icon={<Activity size={20} />} detail="Mensagens pendentes" />
-        <StatCard label="Contatos" value={data.totals.contacts} icon={<Users size={20} />} detail={`${data.totals.groups} grupos sincronizados`} />
-        <StatCard label="Agentes" value={data.totals.agents} icon={<UserRoundCheck size={20} />} detail={`${data.agents.filter(agent => agent.is_online).length} online`} />
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">
-        <section className="bg-white border border-fluvius-border rounded-[8px] shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-fluvius-border">
-            <h2 className="text-sm font-bold text-slate-900">Distribuição por status</h2>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-fluvius-blue-main/10 rounded-[12px] flex items-center justify-center text-fluvius-blue-main">
+              <Zap size={24} />
+            </div>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Painel de Controle</h1>
           </div>
-          <div className="p-5 space-y-4">
-            {Object.entries(data.statuses).map(([status, value]) => (
-              <div key={status} className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-slate-700">{statusLabel[status]}</span>
-                  <span className="font-semibold text-slate-900">{value}</span>
-                </div>
-                <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                  <div className="h-full bg-fluvius-blue-main" style={{ width: `${(value / maxStatus) * 100}%` }} />
-                </div>
-              </div>
+          <p className="mt-1.5 text-[15px] text-slate-500 font-medium">Acompanhe o desempenho do seu atendimento em tempo real.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-full hidden lg:flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[13px] font-bold text-slate-600">Sistema Online</span>
+          </div>
+          <button
+            onClick={() => loadDashboard(true)}
+            className={cn(
+              "inline-flex items-center gap-2.5 rounded-[14px] border border-fluvius-border bg-white px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-95",
+              refreshing && "opacity-50 pointer-events-none"
+            )}
+          >
+            <RefreshCw size={18} className={cn(refreshing && "animate-spin")} />
+            {refreshing ? "Atualizando..." : "Sincronizar"}
+          </button>
+        </div>
+      </div>
+
+      {/* Grid de Stats Principais */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+        <StatCard 
+          label="Conversas Totais" 
+          value={totals!.conversations} 
+          icon={<MessageCircle size={22} />} 
+          detail={`${data.statuses.open} em atendimento`}
+          gradient="bg-blue-500"
+        />
+        <StatCard 
+          label="Em Espera" 
+          value={data.statuses.pending} 
+          icon={<Clock size={22} />} 
+          detail="Aguardando agente"
+          gradient="bg-amber-500"
+        />
+        <StatCard 
+          label="Não Lidas" 
+          value={totals!.unread} 
+          icon={<Activity size={22} />} 
+          detail="Mensagens pendentes"
+          gradient="bg-rose-500"
+        />
+        <StatCard 
+          label="Contatos" 
+          value={totals!.contacts} 
+          icon={<Users size={22} />} 
+          detail={`${totals!.groups} grupos ativos`}
+          gradient="bg-emerald-500"
+        />
+        <StatCard 
+          label="Agentes" 
+          value={totals!.agents} 
+          icon={<UserRoundCheck size={22} />} 
+          detail={`${totals!.online_agents} conectados agora`}
+          gradient="bg-indigo-500"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Distribuição por Status */}
+        <motion.section 
+          variants={itemVariants}
+          className="lg:col-span-4 bg-white border border-fluvius-border rounded-[24px] shadow-sm overflow-hidden flex flex-col"
+        >
+          <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
+            <h2 className="text-[15px] font-bold text-slate-900">Funil de Atendimento</h2>
+            <div className="p-1.5 bg-slate-50 rounded-lg text-slate-400">
+              <ShieldCheck size={16} />
+            </div>
+          </div>
+          <div className="p-7 space-y-6 flex-1">
+            {Object.entries(data.statuses).map(([status, value], idx) => (
+              <ProgressBar 
+                key={status} 
+                label={statusLabel[status]} 
+                value={value} 
+                total={totals!.conversations}
+                color={idx === 0 ? "bg-purple-500" : idx === 1 ? "bg-amber-500" : idx === 2 ? "bg-blue-500" : "bg-emerald-500"}
+              />
             ))}
           </div>
-        </section>
+        </motion.section>
 
-        <section className="bg-white border border-fluvius-border rounded-[8px] shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-fluvius-border flex items-center justify-between">
-            <h2 className="text-sm font-bold text-slate-900">Mensagens</h2>
-            <Radio size={16} className="text-slate-400" />
-          </div>
-          <div className="grid grid-cols-2 gap-px bg-fluvius-border">
-            <div className="bg-white p-5">
-              <p className="text-xs font-semibold text-slate-500 uppercase">Hoje</p>
-              <p className="mt-2 text-2xl font-bold text-slate-950">{data.messages.today}</p>
+        {/* Mensagens e Conexões */}
+        <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Mensagens */}
+          <motion.section 
+            variants={itemVariants}
+            className="bg-white border border-fluvius-border rounded-[24px] shadow-sm overflow-hidden"
+          >
+            <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
+              <h2 className="text-[15px] font-bold text-slate-900">Volume de Mensagens</h2>
+              <Radio size={16} className="text-fluvius-blue-main animate-pulse" />
             </div>
-            <div className="bg-white p-5">
-              <p className="text-xs font-semibold text-slate-500 uppercase">7 dias</p>
-              <p className="mt-2 text-2xl font-bold text-slate-950">{data.messages.last_7_days}</p>
+            <div className="grid grid-cols-2 gap-px bg-slate-100">
+              {[
+                { label: 'Hoje', val: data.messages.today, color: 'text-slate-900' },
+                { label: '7 dias', val: data.messages.last_7_days, color: 'text-slate-900' },
+                { label: 'Recebidas', val: data.messages.inbound, color: 'text-emerald-600' },
+                { label: 'Enviadas', val: data.messages.outbound, color: 'text-blue-600' }
+              ].map((m, i) => (
+                <div key={i} className="bg-white p-6">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{m.label}</p>
+                  <p className={cn("mt-2 text-3xl font-extrabold tracking-tighter", m.color)}>{m.val}</p>
+                </div>
+              ))}
             </div>
-            <div className="bg-white p-5">
-              <p className="text-xs font-semibold text-slate-500 uppercase">Recebidas</p>
-              <p className="mt-2 text-2xl font-bold text-slate-950">{data.messages.inbound}</p>
+          </motion.section>
+
+          {/* Conexões (Saúde do Sistema) */}
+          <motion.section 
+            variants={itemVariants}
+            className="bg-white border border-fluvius-border rounded-[24px] shadow-sm overflow-hidden flex flex-col"
+          >
+            <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
+              <h2 className="text-[15px] font-bold text-slate-900">Saúde das Instâncias</h2>
+              <Share2 size={16} className="text-slate-400" />
             </div>
-            <div className="bg-white p-5">
-              <p className="text-xs font-semibold text-slate-500 uppercase">Enviadas</p>
-              <p className="mt-2 text-2xl font-bold text-slate-950">{data.messages.outbound}</p>
+            <div className="p-6 space-y-4 flex-1">
+              {data.connections.map((conn, idx) => (
+                <div key={idx} className="p-4 rounded-[16px] bg-slate-50 border border-slate-100 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-900 truncate">{conn.name}</p>
+                    <p className="text-[11px] text-slate-500 font-medium">ID: {conn.instance}</p>
+                  </div>
+                  <span className={cn(
+                    "px-3 py-1 rounded-full text-[10px] font-extrabold uppercase",
+                    conn.status === 'open' ? "bg-emerald-100 text-emerald-700" : 
+                    conn.status === 'connecting' ? "bg-blue-100 text-blue-700" : "bg-rose-100 text-rose-700"
+                  )}>
+                    {conn.status}
+                  </span>
+                </div>
+              ))}
+              {data.connections.length === 0 && (
+                <div className="h-full flex flex-col items-center justify-center text-center p-4">
+                  <div className="p-3 bg-amber-50 text-amber-500 rounded-full mb-3">
+                    <AlertCircle size={24} />
+                  </div>
+                  <p className="text-xs font-bold text-slate-400 uppercase">Nenhuma instância vinculada</p>
+                </div>
+              )}
             </div>
-          </div>
-        </section>
+          </motion.section>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[0.9fr_1.1fr] gap-6">
-        <section className="bg-white border border-fluvius-border rounded-[8px] shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-fluvius-border">
-            <h2 className="text-sm font-bold text-slate-900">Carga por agente</h2>
+      <div className="grid grid-cols-1 xl:grid-cols-[4.5fr_7.5fr] gap-8">
+        {/* Performance por Agente */}
+        <motion.section 
+          variants={itemVariants}
+          className="bg-white border border-fluvius-border rounded-[24px] shadow-sm overflow-hidden"
+        >
+          <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
+            <h2 className="text-[15px] font-bold text-slate-900">Atividade dos Agentes</h2>
           </div>
-          <div className="p-5 space-y-4">
+          <div className="p-7 space-y-6">
             {data.agents.map(agent => {
               const load = agent.open + agent.resolved;
               return (
                 <div key={agent.id} className="space-y-2">
                   <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className={`h-2.5 w-2.5 rounded-full ${agent.is_online ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                      <span className="text-sm font-medium text-slate-800 truncate">{agent.name}</span>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="relative">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 border border-white flex items-center justify-center text-[10px] font-bold text-slate-500">
+                          {agent.name.charAt(0)}
+                        </div>
+                        <span className={cn(
+                          "absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white",
+                          agent.is_online ? "bg-emerald-500" : "bg-slate-300"
+                        )} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-bold text-slate-900 truncate">{agent.name}</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">{agent.is_online ? 'Disponível' : 'Ausente'}</p>
+                      </div>
                     </div>
-                    <span className="text-xs text-slate-500">{agent.open} abertas</span>
+                    <div className="text-right">
+                      <p className="text-[13px] font-bold text-slate-900">{agent.open}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">Abertas</p>
+                    </div>
                   </div>
-                  <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-emerald-500" style={{ width: `${(load / maxAgentLoad) * 100}%` }} />
+                  <div className="h-2 rounded-full bg-slate-50 overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(load / maxAgentLoad) * 100}%` }}
+                      className="h-full bg-emerald-500" 
+                    />
                   </div>
                 </div>
               );
             })}
-            {data.agents.length === 0 && <p className="text-sm text-slate-500">Nenhum agente cadastrado.</p>}
-          </div>
-        </section>
-
-        <section className="bg-white border border-fluvius-border rounded-[8px] shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-fluvius-border flex items-center gap-2">
-            <CheckCircle2 size={16} className="text-slate-500" />
-            <h2 className="text-sm font-bold text-slate-900">Atividade recente</h2>
-          </div>
-          <div>
-            {data.recent_conversations.map(conversation => (
-              <ConversationRow key={conversation.id} conversation={conversation} />
-            ))}
-            {data.recent_conversations.length === 0 && (
-              <p className="px-5 py-8 text-center text-sm text-slate-500">Nenhuma conversa sincronizada.</p>
+            {data.agents.length === 0 && (
+              <p className="text-sm font-medium text-slate-400 text-center py-4">Nenhum agente cadastrado.</p>
             )}
           </div>
-        </section>
+        </motion.section>
+
+        {/* Atividade Recente (Feed) */}
+        <motion.section 
+          variants={itemVariants}
+          className="bg-white border border-fluvius-border rounded-[24px] shadow-sm overflow-hidden"
+        >
+          <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
+            <h2 className="text-[15px] font-bold text-slate-900">Histórico de Atividade</h2>
+            <span className="text-[11px] font-extrabold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full uppercase">Tempo Real</span>
+          </div>
+          <div className="max-h-[500px] overflow-y-auto fluvius-scroll">
+            <AnimatePresence mode="popLayout">
+              {data.recent_conversations.map(conversation => (
+                <ConversationRow key={conversation.id} conversation={conversation} />
+              ))}
+            </AnimatePresence>
+            {data.recent_conversations.length === 0 && (
+              <div className="p-12 text-center">
+                <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <RefreshCw size={24} />
+                </div>
+                <p className="text-sm font-bold text-slate-400 uppercase">Aguardando interações...</p>
+              </div>
+            )}
+          </div>
+        </motion.section>
       </div>
-    </div>
+    </motion.div>
   );
 };
