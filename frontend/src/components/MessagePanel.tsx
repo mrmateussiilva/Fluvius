@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { Message, Conversation } from '../api/client';
+import { updateContactTags, type Message, type Conversation, type Contact } from '../api/client';
 import { MessageInput } from './MessageInput';
-import { User, Check, CheckCheck, Clock, UserCheck, CheckCircle2, RotateCcw, Upload, Reply, Play, Pause } from 'lucide-react';
+import { User, Check, CheckCheck, Clock, UserCheck, CheckCircle2, RotateCcw, Upload, Reply, Play, Pause, Plus, X } from 'lucide-react';
 import { MediaPreviewModal } from './MediaPreviewModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
@@ -89,6 +89,8 @@ interface MessagePanelProps {
   onAssign: () => void;
   onResolve: () => void;
   onPending: () => void;
+  onTransfer?: () => void;
+  onContactUpdated?: (contact: Contact) => void;
   replyingTo?: Message | null;
   onSetReplyingTo?: (msg: Message | null) => void;
 }
@@ -101,15 +103,20 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
   onAssign,
   onResolve,
   onPending,
+  onTransfer,
+  onContactUpdated,
   replyingTo,
   onSetReplyingTo,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [previewFile, setPreviewFile] = useState<{ file: File; preview: string; type: string } | null>(null);
+  const [newTag, setNewTag] = useState('');
+  const [isUpdatingTags, setIsUpdatingTags] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   const contactName = conversation.contact?.name || conversation.contact?.phone || 'Unknown Contact';
   const contactPhone = conversation.contact?.phone || '';
+  const contactTags = conversation.contact?.tags || [];
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -165,6 +172,34 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
     }
   };
 
+  const updateTags = async (tags: string[]) => {
+    if (!conversation.contact) return;
+    setIsUpdatingTags(true);
+    try {
+      const updatedContact = await updateContactTags(conversation.contact.id, tags);
+      onContactUpdated?.(updatedContact);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsUpdatingTags(false);
+    }
+  };
+
+  const handleAddTag = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const tag = newTag.trim();
+    if (!tag || contactTags.some(existing => existing.toLowerCase() === tag.toLowerCase())) {
+      setNewTag('');
+      return;
+    }
+    setNewTag('');
+    await updateTags([...contactTags, tag]);
+  };
+
+  const handleRemoveTag = async (tag: string) => {
+    await updateTags(contactTags.filter(existing => existing !== tag));
+  };
+
   const renderActionBar = () => {
     switch (conversation.status) {
       case 'pending':
@@ -180,6 +215,14 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
         case 'open':
           return (
             <div className="flex items-center gap-2">
+              {onTransfer && (
+                <button
+                  onClick={onTransfer}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#DCE7F0] text-[#64748B] rounded-[12px] text-sm font-medium hover:bg-[#F8FAFC] transition-colors"
+                >
+                  Transferir
+                </button>
+              )}
               <button
                 onClick={onPending}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#DCE7F0] text-[#64748B] rounded-[12px] text-sm font-medium hover:bg-[#F8FAFC] transition-colors"
@@ -271,9 +314,48 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
               <User size={22} />
             )}
           </div>
-          <div>
+          <div className="min-w-0">
             <h2 className="font-bold text-[#0F172A] text-[15px] leading-tight">{contactName}</h2>
             {contactPhone && <p className="text-xs text-[#64748B] mt-0.5">{contactPhone}</p>}
+            <div className="mt-1 flex items-center gap-1.5 flex-wrap max-w-[520px]">
+              {contactTags.map(tag => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 rounded-full border border-[#DCE7F0] bg-white px-2 py-0.5 text-[11px] font-medium text-[#475569]"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTag(tag)}
+                    disabled={isUpdatingTags}
+                    className="text-[#94A3B8] hover:text-[#EF4444] disabled:opacity-50"
+                    title="Remover tag"
+                  >
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+              {conversation.contact && (
+                <form onSubmit={handleAddTag} className="inline-flex items-center h-6 rounded-full border border-dashed border-[#B7C7D8] bg-white/70 overflow-hidden">
+                  <input
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    disabled={isUpdatingTags}
+                    maxLength={40}
+                    placeholder="Tag"
+                    className="w-16 bg-transparent px-2 text-[11px] outline-none text-[#475569] placeholder:text-[#94A3B8] disabled:opacity-50"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isUpdatingTags}
+                    className="h-full w-6 flex items-center justify-center text-fluvius-blue-main hover:bg-fluvius-surface disabled:opacity-50"
+                    title="Adicionar tag"
+                  >
+                    <Plus size={12} />
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
         </div>
 

@@ -4,7 +4,10 @@ from app.api.routes.messages import router as messages_router
 from app.api.routes.webhooks import router as webhooks_router
 from app.api.routes.connections import router as connections_router
 from app.api.routes.agents import router as agents_router
+from app.api.routes.contacts import router as contacts_router
+from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.queues import router as queues_router
 
 __all__ = [
     "health_router",
@@ -13,5 +16,8 @@ __all__ = [
     "webhooks_router",
     "connections_router",
     "agents_router",
+    "contacts_router",
+    "dashboard_router",
     "auth_router",
+    "queues_router",
 ]

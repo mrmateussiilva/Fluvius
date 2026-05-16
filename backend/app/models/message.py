@@ -1,4 +1,5 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, String, DateTime, ForeignKey, JSON, Boolean
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 from app.models.workspace import generate_uuid, utcnow
 
@@ -13,7 +14,8 @@ class Message(Base):
     
     direction = Column(String, nullable=False)  # inbound, outbound
     message_type = Column(String, nullable=False)  # text, image, audio, video, document, unknown
-    content = Column(String, nullable=True)
+    content = Column(String, nullable=True)  # Pode ser null se for só media
+    is_private = Column(Boolean, default=False, nullable=False)
     external_message_id = Column(String, nullable=True, index=True)
     status = Column(String, nullable=False, default="pending")  # received, pending, sent, delivered, read, failed
     media_url = Column(String, nullable=True)
@@ -23,4 +25,9 @@ class Message(Base):
     quoted_content = Column(String, nullable=True)
     
     raw_payload = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    # Relationships
+    workspace = relationship("Workspace")
+    conversation = relationship("Conversation", back_populates="messages")
+    contact = relationship("Contact")

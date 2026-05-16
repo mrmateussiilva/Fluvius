@@ -6,6 +6,7 @@ from app.models.contact import Contact
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.webhook_event import WebhookEvent
+from app.models.queue import Queue
 
 __all__ = [
     "Workspace",
@@ -16,4 +17,5 @@ __all__ = [
     "Conversation",
     "Message",
     "WebhookEvent",
+    "Queue"
 ]

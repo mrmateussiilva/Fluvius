@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchConnections, fetchConnectionQR, fetchConnectionStatus, deleteConnection, logoutConnection, restartConnection, syncConnection } from '../api/client';
+import { fetchConnections, fetchConnectionQR, fetchConnectionStatus, deleteConnection, logoutConnection, restartConnection, syncConnection, createConnection } from '../api/client';
 import type { Connection } from '../api/client';
 import {
   Settings, Plus, RefreshCw, Wifi, WifiOff, QrCode, X,
-  ArrowLeft, User, CheckCircle, Loader2, Trash2, LogOut, RotateCcw, DownloadCloud
+  ArrowLeft, User, CheckCircle, Loader2, Trash2, LogOut, RotateCcw, DownloadCloud, Layers
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
-import { API_BASE_URL } from '../api/client';
+import { QueuesTab } from '../components/Settings/QueuesTab';
 
 export const SettingsPage: React.FC = () => {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'general' | 'queues'>('general');
 
   // Connection state
   const [connections, setConnections] = useState<Connection[]>([]);
@@ -109,18 +110,7 @@ export const SettingsPage: React.FC = () => {
     e.preventDefault();
     setCreatingConn(true);
     try {
-      const token = localStorage.getItem('fluvius_token');
-      const res = await fetch(`${API_BASE_URL}/connections`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ name: connName }),
-      });
-
-      if (!res.ok) throw new Error('Falha ao criar conexão');
-      
+      await createConnection({ name: connName });
       setConnName('');
       setShowCreateConn(false);
       loadConnections();
@@ -147,6 +137,34 @@ export const SettingsPage: React.FC = () => {
           </h1>
         </div>
 
+        {/* Layout */}
+        <div className="flex gap-8">
+          
+          {/* Sidebar */}
+          <div className="w-64 shrink-0 space-y-2">
+            <button 
+              onClick={() => setActiveTab('general')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-[12px] font-medium transition-all ${
+                activeTab === 'general' ? 'bg-fluvius-surface text-fluvius-blue-deep shadow-sm border border-fluvius-border' : 'text-fluvius-text-sec hover:bg-white hover:text-fluvius-text-main'
+              }`}
+            >
+              <Settings size={18} />
+              Geral
+            </button>
+            <button 
+              onClick={() => setActiveTab('queues')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-[12px] font-medium transition-all ${
+                activeTab === 'queues' ? 'bg-fluvius-surface text-fluvius-blue-deep shadow-sm border border-fluvius-border' : 'text-fluvius-text-sec hover:bg-white hover:text-fluvius-text-main'
+              }`}
+            >
+              <Layers size={18} />
+              Filas / Departamentos
+            </button>
+          </div>
+
+          <div className="flex-1 space-y-8">
+            {activeTab === 'general' && (
+              <>
         {/* PROFILE SECTION */}
         <section className="bg-white rounded-[16px] shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-fluvius-border overflow-hidden">
           <div className="px-6 py-4 border-b border-fluvius-border bg-fluvius-surface flex justify-between items-center">
@@ -281,7 +299,12 @@ export const SettingsPage: React.FC = () => {
             )}
           </div>
         </section>
+        </>
+      )}
+
+      {activeTab === 'queues' && <QueuesTab />}
       </div>
+    </div>
 
       {/* QR Code Modal */}
       {selectedConnection && (
@@ -320,5 +343,6 @@ export const SettingsPage: React.FC = () => {
         </div>
       )}
     </div>
+  </div>
   );
 };

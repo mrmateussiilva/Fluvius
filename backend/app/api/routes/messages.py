@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
 import logging
+import re
 
 from app.core.database import get_db, SessionLocal
 from app.core.auth import get_current_agent
@@ -19,6 +20,15 @@ from app.core.socket_manager import socket_manager
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/conversations/{conversation_id}/messages", tags=["messages"])
+
+
+def is_valid_whatsapp_destination(destination: str | None) -> bool:
+    if not destination:
+        return False
+    return bool(
+        re.fullmatch(r"\d{8,15}", destination)
+        or re.fullmatch(r"\d[\d-]{7,}@g\.us", destination)
+    )
 
 
 @router.get("", response_model=List[MessageResponse])
@@ -46,6 +56,11 @@ async def send_message_task(message_id: str, conversation_id: str, text: str, wo
         contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
         
         if not connection or not contact:
+            MessageService.update_message_status(db, message_id, "failed")
+            return
+
+        if not is_valid_whatsapp_destination(contact.phone):
+            logger.warning("Refusing to send message to invalid WhatsApp destination: %s", contact.phone)
             MessageService.update_message_status(db, message_id, "failed")
             return
         
@@ -102,6 +117,10 @@ async def create_message(
     
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+    contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
+    if not contact or not is_valid_whatsapp_destination(contact.phone):
+        raise HTTPException(status_code=400, detail="Contact does not have a valid WhatsApp destination")
         
     message_data = {
         "workspace_id": current_agent.workspace_id,
@@ -135,7 +154,7 @@ async def create_message(
             "conversation_id": message.conversation_id,
             "direction": message.direction,
             "content": message.content,
-            "created_at": message.created_at.isoformat(),
+            "created_at": message.created_at.isoformat() + "Z" if message.created_at.tzinfo is None else message.created_at.isoformat(),
             "status": message.status,
             "quoted_message_id": message.quoted_message_id,
             "quoted_content": message.quoted_content
@@ -157,6 +176,11 @@ async def send_media_task(message_id: str, conversation_id: str, media: str, med
         contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
         
         if not connection or not contact:
+            MessageService.update_message_status(db, message_id, "failed")
+            return
+
+        if not is_valid_whatsapp_destination(contact.phone):
+            logger.warning("Refusing to send media to invalid WhatsApp destination: %s", contact.phone)
             MessageService.update_message_status(db, message_id, "failed")
             return
             
@@ -219,6 +243,10 @@ async def create_media_message(
     
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+    contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
+    if not contact or not is_valid_whatsapp_destination(contact.phone):
+        raise HTTPException(status_code=400, detail="Contact does not have a valid WhatsApp destination")
         
     from app.utils.media import save_base64_to_disk
     

@@ -4,11 +4,12 @@ import { Link } from 'react-router-dom';
 import { AgentList } from '../components/Admin/AgentList';
 import { GlobalConversations } from '../components/Admin/GlobalConversations';
 import { KanbanBoard } from '../components/Admin/KanbanBoard';
+import { DashboardOverview } from '../components/Admin/DashboardOverview';
 
 type AdminTab = 'dashboard' | 'agents' | 'conversations' | 'kanban';
 
 export const AdminPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<AdminTab>('kanban');
+  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-fluvius-bg text-fluvius-text-main">
@@ -66,10 +67,7 @@ export const AdminPage: React.FC = () => {
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto bg-slate-50">
         {activeTab === 'dashboard' && (
-          <div className="p-8">
-            <h1 className="text-2xl font-bold mb-6">Visão Geral</h1>
-            <p className="text-slate-500">Dashboard em construção...</p>
-          </div>
+          <DashboardOverview />
         )}
         {activeTab === 'kanban' && <KanbanBoard />}
         {activeTab === 'agents' && <AgentList />}

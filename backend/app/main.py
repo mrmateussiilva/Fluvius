@@ -19,7 +19,10 @@ from app.api.routes import (
     webhooks_router,
     connections_router,
     agents_router,
+    contacts_router,
+    dashboard_router,
     auth_router,
+    queues_router,
 )
 
 logger = logging.getLogger(__name__)
@@ -46,6 +49,9 @@ app.include_router(messages_router)
 app.include_router(webhooks_router)
 app.include_router(connections_router)
 app.include_router(agents_router)
+app.include_router(contacts_router)
+app.include_router(dashboard_router)
+app.include_router(queues_router)
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 
 # Create uploads dir if it doesn't exist

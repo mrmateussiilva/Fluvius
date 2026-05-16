@@ -17,6 +17,16 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   return response;
 };
 
+const getErrorMessage = async (response: Response, fallback: string) => {
+  try {
+    const data = await response.json();
+    if (typeof data.detail === 'string') return data.detail;
+  } catch {
+    // Ignore non-JSON error bodies.
+  }
+  return fallback;
+};
+
 export interface Agent {
   id: string;
   workspace_id: string;
@@ -39,11 +49,60 @@ export interface KanbanResponse {
   by_agent: AgentKanbanData[];
 }
 
+export interface DashboardStatusSummary {
+  bot: number;
+  pending: number;
+  open: number;
+  resolved: number;
+}
+
+export interface DashboardMessageSummary {
+  total: number;
+  inbound: number;
+  outbound: number;
+  today: number;
+  last_7_days: number;
+}
+
+export interface DashboardAgentSummary {
+  id: string;
+  name: string;
+  open: number;
+  resolved: number;
+  unread: number;
+  is_online: boolean;
+}
+
+export interface DashboardRecentConversation {
+  id: string;
+  contact_name: string;
+  contact_phone: string;
+  status: string;
+  unread_count: number;
+  last_message_at: string | null;
+  assignee_name: string | null;
+}
+
+export interface DashboardData {
+  totals: {
+    contacts: number;
+    groups: number;
+    conversations: number;
+    unread: number;
+    agents: number;
+  };
+  statuses: DashboardStatusSummary;
+  messages: DashboardMessageSummary;
+  agents: DashboardAgentSummary[];
+  recent_conversations: DashboardRecentConversation[];
+}
+
 export interface Contact {
   id: string;
   phone: string;
   name: string | null;
   avatar_url: string | null;
+  tags: string[];
 }
 
 export interface Conversation {
@@ -52,6 +111,7 @@ export interface Conversation {
   inbox_id: string;
   contact_id: string;
   assignee_id: string | null;
+  queue_id: string | null;
   status: string;
   unread_count: number;
   last_message_at: string | null;
@@ -91,6 +151,75 @@ export interface Connection {
   created_at: string;
 }
 
+export interface Queue {
+  id: string;
+  workspace_id: string;
+  name: string;
+  description?: string;
+  created_at: string;
+}
+
+export const getQueues = async (): Promise<Queue[]> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/queues`);
+  if (!response.ok) throw new Error('Failed to fetch queues');
+  return response.json();
+};
+
+export const createQueue = async (data: { name: string; description?: string }): Promise<Queue> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/queues`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Failed to create queue');
+  return response.json();
+};
+
+export const updateQueue = async (id: string, data: { name?: string; description?: string }): Promise<Queue> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/queues/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Failed to update queue');
+  return response.json();
+};
+
+export const deleteQueue = async (id: string): Promise<void> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/queues/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete queue');
+};
+
+export const getQueueAgents = async (queueId: string): Promise<string[]> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/queues/${queueId}/agents`);
+  if (!response.ok) throw new Error('Failed to fetch queue agents');
+  return response.json();
+};
+
+export const updateQueueAgents = async (queueId: string, agentIds: string[]): Promise<void> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/queues/${queueId}/agents`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ agent_ids: agentIds }),
+  });
+  if (!response.ok) throw new Error('Failed to update queue agents');
+};
+
+export const transferConversation = async (
+  conversationId: string,
+  data: { agent_id?: string; queue_id?: string }
+): Promise<Conversation> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/conversations/${conversationId}/transfer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Failed to transfer conversation');
+  return response.json();
+};
+
 export const fetchConversations = async (status?: string): Promise<Conversation[]> => {
   const url = status
     ? `${API_BASE_URL}/conversations?status=${status}`
@@ -118,7 +247,7 @@ export const sendMessage = async (conversationId: string, content: string, quote
     body: JSON.stringify({ content, quoted_message_id: quotedMessageId }),
   });
   if (!response.ok) {
-    throw new Error('Failed to send message');
+    throw new Error(await getErrorMessage(response, 'Failed to send message'));
   }
   return response.json();
 };
@@ -129,7 +258,7 @@ export const sendMediaMessage = async (conversationId: string, media: string, me
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ media, media_type: mediaType, mimetype, caption, quoted_message_id: quotedMessageId }),
   });
-  if (!response.ok) throw new Error('Failed to send media message');
+  if (!response.ok) throw new Error(await getErrorMessage(response, 'Failed to send media message'));
   return response.json();
 };
 
@@ -153,6 +282,12 @@ export const resolveConversation = async (conversationId: string): Promise<Conve
 
 export const fetchKanban = async (): Promise<KanbanResponse> => {
   const response = await fetchWithAuth(`${API_BASE_URL}/conversations/admin/kanban`);
+  return response.json();
+};
+
+export const fetchDashboard = async (): Promise<DashboardData> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/dashboard`);
+  if (!response.ok) throw new Error(await getErrorMessage(response, 'Failed to fetch dashboard'));
   return response.json();
 };
 
@@ -196,6 +331,16 @@ export const markAsRead = async (conversationId: string): Promise<Conversation> 
   return response.json();
 };
 
+export const updateContactTags = async (contactId: string, tags: string[]): Promise<Contact> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/contacts/${contactId}/tags`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tags }),
+  });
+  if (!response.ok) throw new Error('Failed to update contact tags');
+  return response.json();
+};
+
 export const fetchAgents = async (): Promise<Agent[]> => {
   const response = await fetchWithAuth(`${API_BASE_URL}/agents`);
   if (!response.ok) throw new Error('Failed to fetch agents');
@@ -207,6 +352,16 @@ export const fetchConnections = async (): Promise<Connection[]> => {
   if (!response.ok) {
     throw new Error('Failed to fetch connections');
   }
+  return response.json();
+};
+
+export const createConnection = async (data: { name: string; instance_name?: string }): Promise<Connection> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/connections`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Failed to create connection');
   return response.json();
 };
 

@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { ConversationList } from '../components/ConversationList';
 import { MessagePanel } from '../components/MessagePanel';
+import { TransferModal } from '../components/TransferModal';
 import {
   fetchConversations, fetchMessages, sendMessage, sendMediaMessage,
   assignConversation, resolveConversation, pendingConversation, markAsRead
 } from '../api/client';
 import type { Conversation, Message } from '../api/client';
+import type { Contact } from '../api/client';
 import { MessageSquare } from 'lucide-react';
 import { useAgent } from '../context/AgentContext';
 import { useAuth } from '../context/AuthContext';
@@ -21,6 +23,7 @@ export const InboxPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabFilter>('pending');
   const [connectionStatus, setConnectionStatus] = useState<string>('connected');
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const { currentAgent } = useAgent();
   const { token } = useAuth();
 
@@ -73,25 +76,26 @@ export const InboxPage: React.FC = () => {
         
         // Play notification sound if message is inbound
         if (newMsg.direction === 'inbound') {
-          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
-          audio.play().catch(err => console.log('Autoplay blocked or audio error:', err));
+          const audio = new Audio('/sounds/notification.mp3');
+          audio.play().catch(() => {});
           document.title = '(1) Nova Mensagem | Fluvius';
           setTimeout(() => { document.title = 'Fluvius'; }, 5000);
         }
 
-        // 1. If this message is for the currently open chat, add it
+        // If this message belongs to the open conversation, add it directly.
+        // Do NOT call loadMessages() here — it creates a race condition where
+        // the fetch can return before the DB transaction commits, wiping the new message.
         if (newMsg.conversation_id === selectedConversationId) {
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, newMsg as Message];
           });
-          loadMessages();
           // Mark as read immediately if it's inbound
           if (newMsg.direction === 'inbound') {
-             markAsRead(newMsg.conversation_id).catch(console.error);
+            markAsRead(newMsg.conversation_id).catch(console.error);
           }
         }
-        // 2. Trigger a list refresh to update previews
+        // Always refresh the conversation list to update previews and unread counts
         loadConversations();
         break;
 
@@ -129,6 +133,7 @@ export const InboxPage: React.FC = () => {
       setReplyingTo(null);
     } catch (err) {
       console.error(err);
+      throw err;
     }
   };
 
@@ -139,6 +144,7 @@ export const InboxPage: React.FC = () => {
       setReplyingTo(null);
     } catch (err) {
       console.error(err);
+      throw err;
     }
   };
 
@@ -185,6 +191,15 @@ export const InboxPage: React.FC = () => {
     }
   };
 
+  const handleContactUpdated = (contact: Contact) => {
+    setSelectedConversation(prev => (
+      prev && prev.contact_id === contact.id ? { ...prev, contact } : prev
+    ));
+    setConversations(prev => prev.map(conversation => (
+      conversation.contact_id === contact.id ? { ...conversation, contact } : conversation
+    )));
+  };
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-fluvius-bg text-fluvius-text-main">
       {connectionStatus === 'disconnected' && (
@@ -209,6 +224,8 @@ export const InboxPage: React.FC = () => {
           onAssign={() => handleAssign(selectedConversation.id)}
           onResolve={() => handleResolve(selectedConversation.id)}
           onPending={() => handlePending(selectedConversation.id)}
+          onTransfer={() => setIsTransferModalOpen(true)}
+          onContactUpdated={handleContactUpdated}
           replyingTo={replyingTo}
           onSetReplyingTo={setReplyingTo}
         />
@@ -224,6 +241,18 @@ export const InboxPage: React.FC = () => {
         </div>
       )}
       </div>
+
+      {isTransferModalOpen && selectedConversationId && (
+        <TransferModal 
+          conversationId={selectedConversationId}
+          onClose={() => setIsTransferModalOpen(false)}
+          onTransferred={() => {
+            setIsTransferModalOpen(false);
+            setSelectedConversationId(null);
+            loadConversations();
+          }}
+        />
+      )}
     </div>
   );
 };

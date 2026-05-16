@@ -13,8 +13,8 @@ function cn(...inputs: ClassValue[]) {
 const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB
 
 interface MessageInputProps {
-  onSend: (content: string) => void;
-  onSendMedia: (media: string, mediaType: string, mimetype: string, caption?: string) => void;
+  onSend: (content: string) => Promise<void> | void;
+  onSendMedia: (media: string, mediaType: string, mimetype: string, caption?: string) => Promise<void> | void;
   replyingTo?: Message | null;
   onCancelReply?: () => void;
 }
@@ -64,11 +64,20 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleSend = () => {
+  const showError = (message: string) => {
+    setError(message);
+    setTimeout(() => setError(null), 4000);
+  };
+
+  const handleSend = async () => {
     if (text.trim()) {
-      onSend(text.trim());
-      setText('');
-      inputRef.current?.focus();
+      try {
+        await onSend(text.trim());
+        setText('');
+        inputRef.current?.focus();
+      } catch (err) {
+        showError(err instanceof Error ? err.message : 'Erro ao enviar mensagem');
+      }
     }
   };
 
@@ -85,8 +94,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
     if (!file) return;
 
     if (file.size > MAX_FILE_SIZE) {
-      setError(`Arquivo muito grande! O limite é ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
-      setTimeout(() => setError(null), 3000);
+      showError(`Arquivo muito grande! O limite é ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
       e.target.value = '';
       return;
     }
@@ -130,8 +138,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
       setIsRecording(true);
     } catch (err) {
       console.error('Microphone access denied', err);
-      setError('Acesso ao microfone negado');
-      setTimeout(() => setError(null), 3000);
+      showError('Acesso ao microfone negado');
     }
   };
 
@@ -148,14 +155,16 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
-      onSendMedia(base64String, previewFile.type, previewFile.file.type, caption);
-      setPreviewFile(null);
+      Promise.resolve(onSendMedia(base64String, previewFile.type, previewFile.file.type, caption))
+        .then(() => setPreviewFile(null))
+        .catch((err) => showError(err instanceof Error ? err.message : 'Erro ao enviar mídia'));
     };
     reader.readAsDataURL(previewFile.file);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       handleSend();
     }
   };

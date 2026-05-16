@@ -3,13 +3,21 @@ from app.models.webhook_event import WebhookEvent
 from app.models.connection import Connection
 from app.models.contact import Contact
 from app.models.conversation import Conversation
+from app.models.inbox import Inbox
 from app.models.message import Message
 from app.core.socket_manager import socket_manager
+from app.services.evolution_service import EvolutionService
 from app.services.sync_service import SyncService
 import logging
 import asyncio
 
 logger = logging.getLogger(__name__)
+
+
+def contact_phone_from_remote_jid(remote_jid: str) -> str:
+    if remote_jid.endswith("@g.us"):
+        return remote_jid
+    return remote_jid.split("@")[0] if "@" in remote_jid else remote_jid
 
 class WebhookService:
     @staticmethod
@@ -74,7 +82,7 @@ class WebhookService:
         
         # Phone extraction
         remote_jid = key.get("remoteJid", "")
-        phone = remote_jid.split("@")[0] if "@" in remote_jid else remote_jid
+        phone = contact_phone_from_remote_jid(remote_jid)
         
         # Content and Media extraction
         content = ""
@@ -163,7 +171,11 @@ class WebhookService:
         # Handle Base64 media directly from Evolution API
         # (REMOVED OLD DUPLICATE BLOCK HERE)
         
-        push_name = data.get("pushName", phone)
+        push_name = (
+            data.get("groupName")
+            or data.get("subject")
+            or (phone if remote_jid.endswith("@g.us") else data.get("pushName", phone))
+        )
         external_id = key.get("id", "")
         
         if not phone or not external_id:
@@ -185,6 +197,20 @@ class WebhookService:
             db.add(contact)
             db.commit()
             db.refresh(contact)
+        elif push_name and (not contact.name or contact.name == contact.phone):
+            contact.name = push_name
+            db.commit()
+
+        if not contact.avatar_url:
+            avatar_url = await EvolutionService.fetch_profile_picture_url(
+                base_url=connection.base_url,
+                api_key=connection.api_key,
+                instance_name=connection.instance_name,
+                number=phone
+            )
+            if avatar_url:
+                contact.avatar_url = avatar_url
+                db.commit()
             
         # Get or create conversation
         conversation = db.query(Conversation).filter(
@@ -192,20 +218,48 @@ class WebhookService:
             Conversation.contact_id == contact.id
         ).first()
         
+        inbox = db.query(Inbox).filter(Inbox.id == connection.inbox_id).first()
+        
         if not conversation:
             conversation = Conversation(
                 workspace_id=connection.workspace_id,
                 inbox_id=connection.inbox_id,
                 contact_id=contact.id,
-                status="pending"
+                status="bot" if (inbox and inbox.default_bot_active) else "pending"
             )
             db.add(conversation)
             db.commit()
             db.refresh(conversation)
             
-        # Create message if it doesn't exist
+        # Create message if it doesn't exist (by external_message_id)
         msg = db.query(Message).filter(Message.external_message_id == external_id).first()
+        is_new_message = False
+
         if not msg:
+            if direction == "outbound":
+                # This is a webhook echo of a message already sent via Fluvius.
+                # Try to find the existing pending message in this conversation to avoid duplicates.
+                # Match by content and pending status — the background task hasn't set the external_id yet.
+                existing_pending = db.query(Message).filter(
+                    Message.conversation_id == conversation.id,
+                    Message.direction == "outbound",
+                    Message.status == "pending",
+                    Message.external_message_id == None,
+                    Message.content == content,
+                ).order_by(Message.created_at.desc()).first()
+
+                if existing_pending:
+                    # Update the existing message instead of creating a duplicate
+                    existing_pending.external_message_id = external_id
+                    existing_pending.status = "sent"
+                    db.commit()
+                    db.refresh(existing_pending)
+                    msg = existing_pending
+                    # No need to broadcast — the background task will emit MESSAGE_STATUS_UPDATED
+                    return
+
+            # Truly a new message (inbound, or outbound initiated from another WhatsApp device)
+            is_new_message = True
             msg = Message(
                 workspace_id=connection.workspace_id,
                 conversation_id=conversation.id,
@@ -222,11 +276,11 @@ class WebhookService:
                 raw_payload=payload
             )
             db.add(msg)
-            
+
             # Update conversation
             from app.models.workspace import utcnow
             conversation.last_message_at = utcnow()
-            
+
             # If inbound and resolved, re-open
             if direction == "inbound":
                 conversation.unread_count += 1
@@ -238,6 +292,12 @@ class WebhookService:
             db.refresh(msg)
             db.refresh(conversation)
 
+            # Process Bot Logic if applicable
+            if direction == "inbound" and conversation.status == "bot":
+                from app.services.bot_service import BotService
+                await BotService.process_bot_message(db, conversation, content, inbox, phone, connection)
+
+        if is_new_message:
             # BROADCAST WS EVENTS
             # 1. New Message
             await WebhookService._send_conversation_event(conversation, {
@@ -255,7 +315,7 @@ class WebhookService:
                     "mime_type": msg.mime_type,
                     "external_message_id": msg.external_message_id,
                     "status": msg.status,
-                    "created_at": msg.created_at.isoformat(),
+                    "created_at": msg.created_at.isoformat() + "Z" if msg.created_at.tzinfo is None else msg.created_at.isoformat(),
                     "quoted_message_id": msg.quoted_message_id,
                     "quoted_content": msg.quoted_content
                 }
@@ -269,7 +329,7 @@ class WebhookService:
                     "id": conversation.id,
                     "status": conversation.status,
                     "unread_count": conversation.unread_count,
-                    "last_message_at": conversation.last_message_at.isoformat() if conversation.last_message_at else None,
+                    "last_message_at": (conversation.last_message_at.isoformat() + "Z" if conversation.last_message_at.tzinfo is None else conversation.last_message_at.isoformat()) if conversation.last_message_at else None,
                     "assignee_id": conversation.assignee_id
                 }
             })

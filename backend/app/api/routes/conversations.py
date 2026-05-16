@@ -3,9 +3,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional
 from pydantic import BaseModel
+import re
 from app.core.database import get_db
 from app.core.auth import get_current_agent
-from app.schemas.conversation import ConversationResponse, KanbanResponse, AgentKanbanData
+from app.schemas.conversation import ConversationResponse, KanbanResponse, AgentKanbanData, TransferRequest
 from app.services.conversation_service import ConversationService
 from app.schemas.agent import AgentRead
 from app.models.contact import Contact
@@ -15,6 +16,30 @@ from app.models.workspace import utcnow
 from app.core.socket_manager import socket_manager
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
+
+
+def is_valid_whatsapp_destination(destination: str | None) -> bool:
+    if not destination:
+        return False
+    return bool(
+        re.fullmatch(r"\d{8,15}", destination)
+        or re.fullmatch(r"\d[\d-]{7,}@g\.us", destination)
+    )
+
+
+def attach_contact_and_assignee(db: Session, conversation: Conversation, assignee: Agent | None = None) -> bool:
+    conversation.contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
+    if not conversation.contact or not is_valid_whatsapp_destination(conversation.contact.phone):
+        return False
+
+    if assignee is not None:
+        conversation.assignee = assignee
+    elif conversation.assignee_id:
+        conversation.assignee = db.query(Agent).filter(Agent.id == conversation.assignee_id).first()
+    else:
+        conversation.assignee = None
+
+    return True
 
 
 @router.get("", response_model=List[ConversationResponse])
@@ -41,12 +66,8 @@ def get_conversations(
 
     results = []
     for conv in conversations:
-        conv.contact = db.query(Contact).filter(Contact.id == conv.contact_id).first()
-        if conv.assignee_id:
-            conv.assignee = db.query(Agent).filter(Agent.id == conv.assignee_id).first()
-        else:
-            conv.assignee = None
-        results.append(conv)
+        if attach_contact_and_assignee(db, conv):
+            results.append(conv)
 
     return results
 
@@ -93,7 +114,7 @@ async def assign_conversation(
         "data": {
             "id": conversation.id,
             "status": conversation.status,
-            "last_message_at": conversation.last_message_at.isoformat() if conversation.last_message_at else None,
+            "last_message_at": (conversation.last_message_at.isoformat() + "Z" if conversation.last_message_at.tzinfo is None else conversation.last_message_at.isoformat()) if conversation.last_message_at else None,
             "assignee_id": conversation.assignee_id,
             "assignee": {
                 "id": agent.id,
@@ -105,6 +126,52 @@ async def assign_conversation(
 
     conversation.contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
     conversation.assignee = agent
+    return conversation
+
+
+@router.post("/{conversation_id}/transfer", response_model=ConversationResponse)
+async def transfer_conversation(
+    conversation_id: str,
+    body: TransferRequest,
+    db: Session = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent)
+):
+    conversation = db.query(Conversation).filter(
+        Conversation.id == conversation_id,
+        Conversation.workspace_id == current_agent.workspace_id
+    ).first()
+    
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+        
+    if body.queue_id:
+        from app.models.queue import Queue
+        queue = db.query(Queue).filter(Queue.id == body.queue_id, Queue.workspace_id == current_agent.workspace_id).first()
+        if not queue:
+            raise HTTPException(status_code=404, detail="Queue not found")
+        conversation.queue_id = queue.id
+        
+    if body.agent_id:
+        agent = db.query(Agent).filter(Agent.id == body.agent_id, Agent.workspace_id == current_agent.workspace_id).first()
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        conversation.assignee_id = agent.id
+        
+    conversation.updated_at = utcnow()
+    db.commit()
+    db.refresh(conversation)
+
+    await socket_manager.broadcast({
+        "type": "CONVERSATION_UPDATED",
+        "workspace_id": current_agent.workspace_id,
+        "data": {
+            "id": conversation.id,
+            "status": conversation.status,
+            "queue_id": conversation.queue_id,
+            "assignee_id": conversation.assignee_id
+        }
+    })
+
     return conversation
 
 
@@ -135,7 +202,7 @@ async def resolve_conversation(
         "data": {
             "id": conversation.id,
             "status": conversation.status,
-            "last_message_at": conversation.last_message_at.isoformat() if conversation.last_message_at else None,
+            "last_message_at": (conversation.last_message_at.isoformat() + "Z" if conversation.last_message_at.tzinfo is None else conversation.last_message_at.isoformat()) if conversation.last_message_at else None,
             "assignee_id": conversation.assignee_id
         }
     })
@@ -208,7 +275,7 @@ async def pending_conversation(
         "data": {
             "id": conversation.id,
             "status": conversation.status,
-            "last_message_at": conversation.last_message_at.isoformat() if conversation.last_message_at else None,
+            "last_message_at": (conversation.last_message_at.isoformat() + "Z" if conversation.last_message_at.tzinfo is None else conversation.last_message_at.isoformat()) if conversation.last_message_at else None,
             "assignee_id": None
         }
     })
@@ -233,10 +300,11 @@ def get_kanban(
         Conversation.status == "pending",
         Conversation.assignee_id == None
     ).all()
-    
-    for conv in queue_conversations:
-        conv.contact = db.query(Contact).filter(Contact.id == conv.contact_id).first()
-        conv.assignee = None
+
+    queue_conversations = [
+        conv for conv in queue_conversations
+        if attach_contact_and_assignee(db, conv)
+    ]
 
     # 2. By Agent
     agents = db.query(Agent).filter(Agent.workspace_id == workspace_id).all()
@@ -248,18 +316,20 @@ def get_kanban(
             Conversation.assignee_id == agent.id,
             Conversation.status == "open"
         ).all()
-        for conv in agent_open:
-            conv.contact = db.query(Contact).filter(Contact.id == conv.contact_id).first()
-            conv.assignee = agent
+        agent_open = [
+            conv for conv in agent_open
+            if attach_contact_and_assignee(db, conv, agent)
+        ]
             
         agent_resolved = db.query(Conversation).filter(
             Conversation.workspace_id == workspace_id,
             Conversation.assignee_id == agent.id,
             Conversation.status == "resolved"
         ).all()
-        for conv in agent_resolved:
-            conv.contact = db.query(Contact).filter(Contact.id == conv.contact_id).first()
-            conv.assignee = agent
+        agent_resolved = [
+            conv for conv in agent_resolved
+            if attach_contact_and_assignee(db, conv, agent)
+        ]
             
         by_agent.append(AgentKanbanData(
             agent=AgentRead.model_validate(agent),

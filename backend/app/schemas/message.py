@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 
 class MessageBase(BaseModel):
     content: str
@@ -32,3 +32,9 @@ class MessageResponse(BaseModel):
     quoted_content: Optional[str] = None
 
     model_config = {"from_attributes": True}
+
+    @field_serializer("created_at")
+    def serialize_dt(self, dt: datetime, _info):
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
+        return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")

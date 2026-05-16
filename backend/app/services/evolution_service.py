@@ -178,6 +178,42 @@ class EvolutionService:
             return []
 
     @staticmethod
+    async def fetch_groups(base_url: str, api_key: str, instance_name: str) -> list:
+        url = f"{base_url.rstrip('/')}/group/fetchAllGroups/{instance_name}"
+        headers = {"apikey": api_key}
+        params = {"getParticipants": "false"}
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, headers=headers, params=params, timeout=20.0)
+                response.raise_for_status()
+                data = response.json()
+                return data if isinstance(data, list) else []
+        except Exception as e:
+            logger.error(f"Failed to fetch groups from Evolution API: {e}")
+            return []
+
+    @staticmethod
+    async def fetch_profile_picture_url(base_url: str, api_key: str, instance_name: str, number: str) -> str | None:
+        url = f"{base_url.rstrip('/')}/chat/fetchProfilePictureUrl/{instance_name}"
+        headers = {"apikey": api_key, "Content-Type": "application/json"}
+        payload = {"number": number}
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, headers=headers, json=payload, timeout=10.0)
+                if response.status_code == 404:
+                    return None
+                response.raise_for_status()
+                data = response.json()
+                if isinstance(data, dict):
+                    return data.get("profilePictureUrl")
+                return None
+        except Exception as e:
+            logger.info(f"Failed to fetch profile picture for {number}: {e}")
+            return None
+
+    @staticmethod
     async def fetch_messages(base_url: str, api_key: str, instance_name: str, remote_jid: str, limit: int = 30) -> list:
         url = f"{base_url.rstrip('/')}/chat/findMessages/{instance_name}"
         headers = {"apikey": api_key, "Content-Type": "application/json"}

@@ -1,4 +1,5 @@
 from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 from app.models.workspace import generate_uuid, utcnow
 
@@ -15,3 +16,7 @@ class Agent(Base):
     avatar_url = Column(String, nullable=True)
     is_online = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=utcnow, nullable=False)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    workspace = relationship("Workspace")
+    queues = relationship("Queue", secondary="agent_queues", back_populates="agents")
