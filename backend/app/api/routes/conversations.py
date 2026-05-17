@@ -12,6 +12,7 @@ from app.services.ai_service import AIService
 from app.schemas.agent import AgentRead
 from app.models.contact import Contact
 from app.models.agent import Agent
+from app.models.connection import Connection
 from app.models.conversation import Conversation
 from app.models.inbox import Inbox
 from app.models.workspace import utcnow
@@ -57,7 +58,11 @@ def get_conversations(
     db: Session = Depends(get_db),
     current_agent: Agent = Depends(get_current_agent)
 ):
-    query = db.query(Conversation).filter(Conversation.workspace_id == current_agent.workspace_id)
+    query = db.query(Conversation).join(
+        Connection, Connection.inbox_id == Conversation.inbox_id
+    ).filter(
+        Conversation.workspace_id == current_agent.workspace_id
+    )
     
     # Role-based visibility: Non-admins only see pending or their own conversations
     if current_agent.role != "admin":
@@ -408,7 +413,9 @@ def get_kanban(
     workspace_id = current_agent.workspace_id
     
     # 1. Queue (Pending, no assignee)
-    queue_conversations = db.query(Conversation).filter(
+    queue_conversations = db.query(Conversation).join(
+        Connection, Connection.inbox_id == Conversation.inbox_id
+    ).filter(
         Conversation.workspace_id == workspace_id,
         Conversation.status == "pending",
         Conversation.assignee_id == None
@@ -424,7 +431,9 @@ def get_kanban(
     by_agent = []
     
     for agent in agents:
-        agent_open = db.query(Conversation).filter(
+        agent_open = db.query(Conversation).join(
+            Connection, Connection.inbox_id == Conversation.inbox_id
+        ).filter(
             Conversation.workspace_id == workspace_id,
             Conversation.assignee_id == agent.id,
             Conversation.status == "open"
@@ -434,7 +443,9 @@ def get_kanban(
             if attach_contact_and_assignee(db, conv, agent)
         ]
             
-        agent_resolved = db.query(Conversation).filter(
+        agent_resolved = db.query(Conversation).join(
+            Connection, Connection.inbox_id == Conversation.inbox_id
+        ).filter(
             Conversation.workspace_id == workspace_id,
             Conversation.assignee_id == agent.id,
             Conversation.status == "resolved"
