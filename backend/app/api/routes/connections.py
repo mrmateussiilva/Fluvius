@@ -219,6 +219,10 @@ async def delete_connection(
         except Exception:
             pass
         
+        # Delete associated WebhookEvents to prevent IntegrityError
+        from app.models.webhook_event import WebhookEvent
+        db.query(WebhookEvent).filter(WebhookEvent.connection_id == connection.id).delete()
+        
         db.delete(connection)
         db.commit()
         return {"status": "deleted"}
