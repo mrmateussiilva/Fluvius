@@ -8,3 +8,13 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Config and Database
+.env
+*.db
+fluvius.db
+requirements.txt
+
+# Media files
+uploads/
+/uploads/

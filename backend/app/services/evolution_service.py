@@ -132,6 +132,29 @@ class EvolutionService:
             raise
 
     @staticmethod
+    async def get_base64_from_media_message(base_url: str, api_key: str, instance_name: str, message: dict) -> str | None:
+        """
+        Requests Evolution API to decrypt and return base64 for a given media message payload.
+        """
+        url = f"{base_url.rstrip('/')}/chat/getBase64FromMediaMessage/{instance_name}"
+        headers = {
+            "apikey": api_key,
+            "Content-Type": "application/json"
+        }
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, headers=headers, json={"message": message}, timeout=30.0)
+                response.raise_for_status()
+                data = response.json()
+                if isinstance(data, dict) and "base64" in data:
+                    return data["base64"]
+                return None
+        except Exception as e:
+            logger.error(f"Failed to fetch base64 media from Evolution API: {e}")
+            return None
+
+    @staticmethod
     async def get_qrcode(base_url: str, api_key: str, instance_name: str) -> dict:
         url = f"{base_url.rstrip('/')}/instance/connect/{instance_name}"
         headers = {

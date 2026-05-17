@@ -80,6 +80,45 @@ class WebhookService:
         message_info = data.get("message", {})
         key = data.get("key", {})
         
+        external_id = key.get("id", "")
+        if external_id:
+            # Idempotência: verifica imediatamente se a mensagem já foi processada na MESMA conexão (inbox)
+            existing_msg = db.query(Message).join(Conversation).filter(
+                Message.external_message_id == external_id,
+                Conversation.inbox_id == connection.inbox_id
+            ).first()
+            if existing_msg:
+                # Se for mensagem duplicada (já existe), verifica se é uma atualização de status disfarçada de upsert
+                new_status_raw = data.get("status") or message_info.get("status")
+                if new_status_raw:
+                    status_map = {
+                        "SERVER_ACK": "sent",
+                        "DELIVERY_ACK": "delivered",
+                        "READ": "read",
+                        "PLAYED": "read",
+                        "2": "sent",
+                        "3": "delivered",
+                        "4": "read"
+                    }
+                    new_status = status_map.get(str(new_status_raw).upper())
+                    if new_status and existing_msg.status != new_status:
+                        status_order = {"pending": 0, "sent": 1, "delivered": 2, "read": 3, "failed": -1}
+                        if status_order.get(new_status, 0) > status_order.get(existing_msg.status, 0):
+                            existing_msg.status = new_status
+                            db.commit()
+                            import asyncio
+                            asyncio.create_task(socket_manager.broadcast({
+                                "type": "MESSAGE_STATUS_UPDATED",
+                                "workspace_id": existing_msg.workspace_id,
+                                "data": {
+                                    "id": existing_msg.id,
+                                    "conversation_id": existing_msg.conversation_id,
+                                    "status": existing_msg.status
+                                }
+                            }))
+                logger.debug(f"Message {external_id} already exists. Ignoring duplicate webhook.")
+                return
+
         # Determine if inbound or outbound
         from_me = key.get("fromMe", False)
         direction = "outbound" if from_me else "inbound"
@@ -133,6 +172,20 @@ class WebhookService:
         # Handle Base64 media directly from Evolution API
         base64_data = message_info.get("base64") or data.get("base64")
         from app.utils.media import save_base64_to_disk, download_media
+        from app.services.evolution_service import EvolutionService
+        
+        # If no base64 in webhook but it is a media message, request decryption
+        if not base64_data and message_type in ["image", "audio", "video", "document"] and "message" in data:
+            try:
+                base64_data = await EvolutionService.get_base64_from_media_message(
+                    base_url=connection.base_url,
+                    api_key=connection.api_key,
+                    instance_name=connection.instance_name,
+                    message=data["message"]
+                )
+            except Exception as e:
+                logger.error(f"Failed to decrypt inbound media: {e}")
+
         if base64_data and mime_type:
             try:
                 media_url = save_base64_to_disk(base64_data, mime_type)
@@ -241,100 +294,70 @@ class WebhookService:
             db.commit()
             db.refresh(conversation)
             
-        # Create message if it doesn't exist (by external_message_id)
-        msg = db.query(Message).filter(Message.external_message_id == external_id).first()
+        # At this point we know the external_id does not exist in the DB (due to idempotency check at the top).
+        msg = None
         is_new_message = False
+        
+        if direction == "outbound":
+            # This is a webhook echo of a message already sent via Fluvius.
+            # Try to find the existing pending message in this conversation to avoid duplicates.
+            # Match by content and pending status — the background task hasn't set the external_id yet.
+            existing_pending = db.query(Message).filter(
+                Message.conversation_id == conversation.id,
+                Message.direction == "outbound",
+                Message.status == "pending",
+                Message.external_message_id == None,
+                Message.content == content,
+            ).order_by(Message.created_at.desc()).first()
 
-        if not msg:
-            if direction == "outbound":
-                # This is a webhook echo of a message already sent via Fluvius.
-                # Try to find the existing pending message in this conversation to avoid duplicates.
-                # Match by content and pending status — the background task hasn't set the external_id yet.
-                existing_pending = db.query(Message).filter(
-                    Message.conversation_id == conversation.id,
-                    Message.direction == "outbound",
-                    Message.status == "pending",
-                    Message.external_message_id == None,
-                    Message.content == content,
-                ).order_by(Message.created_at.desc()).first()
+            if existing_pending:
+                # Update the existing message instead of creating a duplicate
+                existing_pending.external_message_id = external_id
+                existing_pending.status = "sent"
+                db.commit()
+                db.refresh(existing_pending)
+                msg = existing_pending
+                # No need to broadcast — the background task will emit MESSAGE_STATUS_UPDATED
+                return
 
-                if existing_pending:
-                    # Update the existing message instead of creating a duplicate
-                    existing_pending.external_message_id = external_id
-                    existing_pending.status = "sent"
-                    db.commit()
-                    db.refresh(existing_pending)
-                    msg = existing_pending
-                    # No need to broadcast — the background task will emit MESSAGE_STATUS_UPDATED
-                    return
+        # Truly a new message (inbound, or outbound initiated from another WhatsApp device)
+        is_new_message = True
+        msg = Message(
+            workspace_id=connection.workspace_id,
+            conversation_id=conversation.id,
+            contact_id=contact.id,
+            direction=direction,
+            message_type=message_type,
+            content=content,
+            media_url=media_url,
+            mime_type=mime_type,
+            external_message_id=external_id,
+            status="delivered" if direction == "inbound" else "sent",
+            quoted_message_id=quoted_message_id,
+            quoted_content=quoted_content,
+            raw_payload=payload
+        )
+        db.add(msg)
 
-            # Truly a new message (inbound, or outbound initiated from another WhatsApp device)
-            is_new_message = True
-            msg = Message(
-                workspace_id=connection.workspace_id,
-                conversation_id=conversation.id,
-                contact_id=contact.id,
-                direction=direction,
-                message_type=message_type,
-                content=content,
-                media_url=media_url,
-                mime_type=mime_type,
-                external_message_id=external_id,
-                status="delivered" if direction == "inbound" else "sent",
-                quoted_message_id=quoted_message_id,
-                quoted_content=quoted_content,
-                raw_payload=payload
-            )
-            db.add(msg)
+        # Update conversation
+        from app.models.workspace import utcnow
+        conversation.last_message_at = utcnow()
 
-            # Update conversation
-            from app.models.workspace import utcnow
-            conversation.last_message_at = utcnow()
+        # If inbound and resolved, re-open
+        if direction == "inbound":
+            conversation.unread_count += 1
+            if conversation.status == "resolved":
+                conversation.status = "pending"
+                conversation.assignee_id = None
 
-            # If inbound and resolved, re-open
-            if direction == "inbound":
-                conversation.unread_count += 1
-                if conversation.status == "resolved":
-                    conversation.status = "pending"
-                    conversation.assignee_id = None
+        db.commit()
+        db.refresh(msg)
+        db.refresh(conversation)
 
-            db.commit()
-            db.refresh(msg)
-            db.refresh(conversation)
-
-            # Process Bot Logic if applicable
-            if direction == "inbound" and conversation.status == "bot":
-                from app.services.bot_service import BotService
-                await BotService.process_bot_message(db, conversation, content, inbox, phone, connection)
-        else:
-            # Message already exists. Check if this is a status update in an upsert event.
-            new_status_raw = data.get("status") or message_info.get("status")
-            if new_status_raw:
-                status_map = {
-                    "SERVER_ACK": "sent",
-                    "DELIVERY_ACK": "delivered",
-                    "READ": "read",
-                    "PLAYED": "read",
-                    "2": "sent",
-                    "3": "delivered",
-                    "4": "read"
-                }
-                new_status = status_map.get(str(new_status_raw).upper())
-                if new_status and msg.status != new_status:
-                    # Only update if the new status is "further" along
-                    status_order = {"pending": 0, "sent": 1, "delivered": 2, "read": 3, "failed": -1}
-                    if status_order.get(new_status, 0) > status_order.get(msg.status, 0):
-                        msg.status = new_status
-                        db.commit()
-                        await socket_manager.broadcast({
-                            "type": "MESSAGE_STATUS_UPDATED",
-                            "workspace_id": msg.workspace_id,
-                            "data": {
-                                "id": msg.id,
-                                "conversation_id": msg.conversation_id,
-                                "status": msg.status
-                            }
-                        })
+        # Process Bot Logic if applicable
+        if direction == "inbound" and conversation.status == "bot":
+            from app.services.bot_service import BotService
+            await BotService.process_bot_message(db, conversation, content, inbox, phone, connection)
 
         if is_new_message:
             # BROADCAST WS EVENTS
@@ -412,10 +435,19 @@ class WebhookService:
         if not new_status:
              return
              
-        message = db.query(Message).filter(Message.external_message_id == external_id).first()
+        message = db.query(Message).join(Conversation).filter(
+            Message.external_message_id == external_id,
+            Conversation.inbox_id == connection.inbox_id
+        ).first()
+        
         if not message:
             return
             
+        status_order = {"pending": 0, "sent": 1, "delivered": 2, "read": 3, "failed": -1}
+        if status_order.get(new_status, 0) <= status_order.get(message.status, 0):
+             # Ignora se o status for igual ou mais antigo
+             return
+
         message.status = new_status
         db.commit()
         
