@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-fluvius}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fluvius_pass_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-fluvius}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fluvius}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-fluvius}:${POSTGRES_PASSWORD:-fluvius_pass_change_me}@db:5432/${POSTGRES_DB:-fluvius}
+      - WEBHOOK_PUBLIC_BASE_URL=${WEBHOOK_PUBLIC_BASE_URL}
+      - EVOLUTION_BASE_URL=${EVOLUTION_BASE_URL}
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:3000}
+    volumes:
+      - ./backend/uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
