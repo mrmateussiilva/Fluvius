@@ -3,6 +3,13 @@ import { fetchQuickReplies, createQuickReply, updateQuickReply, deleteQuickReply
 import type { QuickReply } from '../../api/client';
 import { Plus, Trash2, Edit3, CheckCircle, X, Loader2, MessageSquare, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 export const QuickRepliesTab: React.FC = () => {
   const [replies, setReplies] = useState<QuickReply[]>([]);
@@ -69,12 +76,12 @@ export const QuickRepliesTab: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-[16px] shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-fluvius-border overflow-hidden">
-        <div className="px-6 py-4 border-b border-fluvius-border bg-fluvius-surface flex justify-between items-center">
-          <h2 className="font-semibold text-fluvius-text-main text-lg flex items-center gap-2">
-            <Zap size={18} className="text-fluvius-blue-deep" />
-            Mensagens Rápidas
+    <div className="space-y-4">
+      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+        <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+          <h2 className="font-bold text-slate-500 text-[10px] uppercase tracking-wider flex items-center gap-2">
+            <Zap size={14} className="text-blue-500" />
+            Quick Replies
           </h2>
           <button
             onClick={() => {
@@ -82,95 +89,112 @@ export const QuickRepliesTab: React.FC = () => {
               setFormData({ shortcut: '', content: '' });
               setShowAdd(!showAdd);
             }}
-            className="flex items-center gap-2 text-sm bg-fluvius-gradient text-white px-3 py-1.5 rounded-[12px] hover:opacity-90 transition-all shadow-sm font-medium"
+            className="flex items-center gap-1.5 text-[10px] bg-blue-600 text-white px-3 py-1.5 rounded font-bold uppercase tracking-wider hover:bg-blue-700 transition-colors"
           >
-            <Plus size={16} />
-            Nova Mensagem
+            <Plus size={14} />
+            New Reply
           </button>
         </div>
 
-        {showAdd && (
-          <form onSubmit={handleSubmit} className="p-6 border-b border-fluvius-border bg-fluvius-bg/10 animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="md:col-span-1">
-                <label className="block text-xs font-bold text-fluvius-text-sec uppercase mb-1">Atalho (sem /)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-fluvius-text-sec">/</span>
-                  <input
-                    type="text"
+        <AnimatePresence>
+          {showAdd && (
+            <motion.form 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              onSubmit={handleSubmit} 
+              className="p-5 border-b border-slate-100 bg-slate-50/30 overflow-hidden"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-1 space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Shortcut</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">/</span>
+                    <input
+                      type="text"
+                      required
+                      value={formData.shortcut}
+                      onChange={e => setFormData({ ...formData, shortcut: e.target.value })}
+                      placeholder="hi"
+                      className="w-full border border-slate-200 rounded px-3 py-2 pl-6 text-[13px] font-medium text-slate-700 outline-none focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                </div>
+                <div className="md:col-span-2 space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Message Content</label>
+                  <textarea
                     required
-                    value={formData.shortcut}
-                    onChange={e => setFormData({ ...formData, shortcut: e.target.value })}
-                    placeholder="oi"
-                    className="w-full border border-fluvius-border rounded-[12px] pl-6 pr-3 py-2 text-sm outline-none focus:border-fluvius-blue-main"
+                    value={formData.content}
+                    onChange={e => setFormData({ ...formData, content: e.target.value })}
+                    placeholder="Hello! How can I help you?"
+                    rows={1}
+                    className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] font-medium text-slate-700 outline-none focus:border-blue-500 transition-colors resize-none"
                   />
                 </div>
+                <div className="md:col-span-1 flex items-end gap-2">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded text-[11px] font-bold uppercase tracking-wider hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdd(false)}
+                    className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
               </div>
-              <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-fluvius-text-sec uppercase mb-1">Conteúdo da Mensagem</label>
-                <textarea
-                  required
-                  value={formData.content}
-                  onChange={e => setFormData({ ...formData, content: e.target.value })}
-                  placeholder="Olá! Como posso ajudar você hoje?"
-                  rows={1}
-                  className="w-full border border-fluvius-border rounded-[12px] px-3 py-2 text-sm outline-none focus:border-fluvius-blue-main resize-none"
-                />
-              </div>
-              <div className="md:col-span-1 flex items-end gap-2">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 bg-fluvius-gradient text-white px-4 py-2 rounded-[12px] text-sm font-bold shadow-sm hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-                >
-                  {saving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                  Salvar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAdd(false)}
-                  className="p-2 text-fluvius-text-sec hover:text-fluvius-text-main transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
-          </form>
-        )}
+            </motion.form>
+          )}
+        </AnimatePresence>
 
-        <div className="divide-y divide-fluvius-border">
+        <div className="divide-y divide-slate-100">
           {loading ? (
-            <div className="p-12 text-center text-fluvius-text-sec flex flex-col items-center gap-3">
-              <Loader2 className="animate-spin text-fluvius-blue-main" size={32} />
-              <p>Carregando mensagens rápidas...</p>
+            <div className="p-12 text-center flex flex-col items-center gap-3">
+              <Loader2 className="animate-spin text-blue-500" size={24} />
+              <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Loading...</p>
             </div>
           ) : replies.length === 0 ? (
-            <div className="p-12 text-center text-fluvius-text-sec">
-              <MessageSquare size={48} className="mx-auto mb-4 opacity-20" />
-              <p>Você ainda não criou nenhuma mensagem rápida.</p>
-              <p className="text-xs mt-2">Dica: Use / no chat para acessá-las rapidamente.</p>
+            <div className="p-12 text-center flex flex-col items-center gap-4">
+              <MessageSquare className="text-slate-200" size={32} />
+              <div className="space-y-1">
+                <p className="text-slate-500 font-bold text-sm">No quick replies</p>
+                <p className="text-slate-400 text-[11px] max-w-[200px] mx-auto">Create shortcuts to speed up your workflow.</p>
+              </div>
             </div>
           ) : (
-            replies.map((reply) => (
-              <div key={reply.id} className="p-4 flex items-center justify-between hover:bg-fluvius-bg transition-colors group">
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="w-10 h-10 rounded-[12px] bg-fluvius-blue-main/10 text-fluvius-blue-deep flex items-center justify-center font-bold text-sm shrink-0">
-                    /{reply.shortcut}
+            <div className="p-3 grid grid-cols-1 gap-1">
+              {replies.map((reply) => (
+                <motion.div 
+                  layout
+                  key={reply.id} 
+                  className="p-4 flex items-center justify-between hover:bg-slate-50 rounded transition-colors group"
+                >
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="w-10 h-10 rounded bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-[12px] shrink-0 border border-blue-100">
+                      /{reply.shortcut}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[13px] font-bold text-slate-800 leading-tight">{reply.content}</p>
+                      <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Shortcut: {reply.shortcut}</p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-fluvius-text-main line-clamp-2">{reply.content}</p>
+                  <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => handleEdit(reply)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit">
+                      <Edit3 size={14} />
+                    </button>
+                    <button onClick={() => handleDelete(reply.id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors" title="Delete">
+                      <Trash2 size={14} />
+                    </button>
                   </div>
-                </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleEdit(reply)} className="p-2 text-fluvius-blue-main hover:bg-fluvius-blue-main/10 rounded-full transition-all">
-                    <Edit3 size={16} />
-                  </button>
-                  <button onClick={() => handleDelete(reply.id)} className="p-2 text-rose-400 hover:bg-rose-50 rounded-full transition-all">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            ))
+                </motion.div>
+              ))}
+            </div>
           )}
         </div>
       </div>

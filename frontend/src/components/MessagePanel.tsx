@@ -172,9 +172,9 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
   const renderStatusIcon = (status: string) => {
     switch (status) {
       case 'pending': return <Clock size={10} className="text-slate-400" />;
-      case 'sent': return <Check size={12} className="text-slate-400" />;
-      case 'delivered': return <CheckCheck size={12} className="text-slate-400" />;
-      case 'read': return <CheckCheck size={12} className="text-fluvius-blue-main" />;
+      case 'sent': return <Check size={10} className="text-slate-400" />;
+      case 'delivered': return <CheckCheck size={10} className="text-slate-400" />;
+      case 'read': return <CheckCheck size={10} className="text-blue-500" />;
       case 'failed': return <AlertCircle size={10} className="text-rose-500" />;
       default: return null;
     }
@@ -213,10 +213,10 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
       return (
         <button
           onClick={onAssign}
-          className="flex items-center gap-2 px-5 py-2 bg-fluvius-gradient text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-md active:scale-95"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded text-[11px] font-bold uppercase tracking-wider hover:bg-blue-700 transition-all"
         >
-          <UserCheck size={18} />
-          Assumir Atendimento
+          <UserCheck size={14} />
+          Claim
         </button>
       );
     }
@@ -226,10 +226,10 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
         return (
           <button
             onClick={onAssign}
-            className="flex items-center gap-2 px-5 py-2 bg-fluvius-gradient text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-md active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded text-[11px] font-bold uppercase tracking-wider hover:bg-blue-700 transition-all"
           >
-            <UserCheck size={18} />
-            Assumir
+            <UserCheck size={14} />
+            Claim
           </button>
         );
         case 'open':
@@ -238,39 +238,39 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
               {onTransfer && (
                 <button
                   onClick={onTransfer}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors active:scale-95"
+                  className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-[11px] font-bold uppercase tracking-wider hover:bg-slate-50 transition-colors"
                 >
-                  Transferir
+                  Transfer
                 </button>
               )}
               <button
                 onClick={onPending}
-                className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-[11px] font-bold uppercase tracking-wider hover:bg-slate-50 transition-colors"
               >
-                <RotateCcw size={16} />
-                Devolver
+                <RotateCcw size={14} />
+                Return
               </button>
               <button
                 onClick={onResolve}
-                className="flex items-center gap-2 px-5 py-2 bg-fluvius-gradient text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-md active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded text-[11px] font-bold uppercase tracking-wider hover:bg-emerald-700 transition-all"
               >
-                <CheckCircle2 size={18} />
-                Resolver
+                <CheckCircle2 size={14} />
+                Resolve
               </button>
             </div>
           );
       case 'resolved':
         return (
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-100">
-              <CheckCircle2 size={14} />
-              Resolvida
+            <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-emerald-600 px-2 py-1 bg-emerald-50 rounded">
+              <CheckCircle2 size={12} />
+              Resolved
             </div>
             <button
               onClick={onAssign}
-              className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors"
+              className="text-[11px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-800 transition-colors"
             >
-              Reabrir
+              Reopen
             </button>
           </div>
         );
@@ -281,35 +281,22 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
 
   return (
     <div 
-      className="flex-1 flex flex-col min-w-0 relative bg-[#F4F7F9]"
+      className="flex-1 flex flex-col min-w-0 relative bg-slate-50 overflow-hidden"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div
-        className="absolute inset-0 opacity-[0.04] pointer-events-none z-0"
-        style={{
-          backgroundImage: 'url("https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png")',
-          backgroundSize: '400px',
-        }}
-      />
-
       <AnimatePresence>
         {isDragging && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 bg-fluvius-blue-main/5 backdrop-blur-[4px] flex items-center justify-center border-4 border-dashed border-fluvius-blue-main/30 m-6 rounded-[32px]"
+            className="absolute inset-0 z-50 bg-blue-500/10 flex items-center justify-center border-2 border-dashed border-blue-500/30 m-4 rounded-xl"
           >
-            <div className="bg-white p-10 rounded-[32px] shadow-2xl flex flex-col items-center gap-5 border border-slate-100">
-              <div className="w-20 h-20 bg-fluvius-blue-main/10 text-fluvius-blue-main rounded-full flex items-center justify-center shadow-inner">
-                <Upload size={40} className="animate-bounce" />
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-black text-slate-800">Solte para enviar</p>
-                <p className="text-sm text-slate-500 font-medium mt-1">Imagens, vídeos ou documentos</p>
-              </div>
+            <div className="bg-white p-8 rounded-lg shadow-xl flex flex-col items-center gap-4">
+              <Upload size={32} className="text-blue-500" />
+              <p className="text-sm font-bold text-slate-700 uppercase tracking-widest">Drop to send</p>
             </div>
           </motion.div>
         )}
@@ -325,72 +312,24 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
         />
       )}
 
-      <div className="h-[76px] flex items-center justify-between px-8 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 z-20 shrink-0 shadow-sm">
-        <div className="flex items-center gap-5">
-          <div className="relative group cursor-pointer">
-            <div className="w-[46px] h-[46px] rounded-full bg-slate-100 flex items-center justify-center text-slate-400 shrink-0 shadow-sm border-2 border-white overflow-hidden transition-transform group-hover:scale-105">
-              {conversation.contact?.avatar_url ? (
-                <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover" />
-              ) : (
-                <User size={24} />
-              )}
-            </div>
-            <span className={cn(
-              "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-[2.5px] border-white shadow-sm",
-              conversation.status === 'open' ? 'bg-emerald-500' : 'bg-amber-500'
-            )} />
+      {/* Header - Minimalist & Functional */}
+      <div className="h-14 flex items-center justify-between px-6 bg-white border-b border-slate-200 z-20 shrink-0">
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-400 shrink-0 border border-slate-200/50">
+            {conversation.contact?.avatar_url ? (
+              <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover rounded" />
+            ) : (
+              <User size={20} className="opacity-40" />
+            )}
           </div>
           
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="font-black text-slate-800 text-[16px] leading-tight tracking-tight">{contactName}</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="font-bold text-slate-800 text-[14px] leading-tight">{contactName}</h2>
               {conversation.assignee && (
-                <span className="hidden md:flex items-center gap-1 text-[10px] font-black text-fluvius-blue-main bg-fluvius-blue-main/5 px-2 py-0.5 rounded-full uppercase tracking-wider border border-fluvius-blue-main/10">
+                <span className="text-[9px] font-bold text-blue-600 px-1.5 py-0.5 bg-blue-50 rounded uppercase tracking-wider">
                    {conversation.assignee.name}
                 </span>
-              )}
-            </div>
-            <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-              {contactTags.length > 0 ? (
-                contactTags.map(tag => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center gap-1 rounded-lg bg-slate-100/80 px-2 py-0.5 text-[10px] font-bold text-slate-600 border border-slate-200/50 transition-colors hover:bg-slate-200/80 group"
-                  >
-                    #{tag}
-                    {!isSpectator && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTag(tag)}
-                        disabled={isUpdatingTags}
-                        className="text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all ml-0.5"
-                      >
-                        <X size={10} />
-                      </button>
-                    )}
-                  </span>
-                ))
-              ) : (
-                <span className="text-[11px] text-slate-400 font-medium italic">Sem etiquetas</span>
-              )}
-              {conversation.contact && !isSpectator && (
-                <form onSubmit={handleAddTag} className="inline-flex items-center h-5 rounded-lg border border-dashed border-slate-300 bg-white/50 hover:bg-white transition-all overflow-hidden pl-1 pr-0.5 group-focus-within:border-fluvius-blue-main">
-                  <input
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    disabled={isUpdatingTags}
-                    maxLength={30}
-                    placeholder="Add tag"
-                    className="w-14 bg-transparent text-[10px] outline-none text-slate-600 font-bold placeholder:text-slate-400"
-                  />
-                  <button
-                    type="submit"
-                    disabled={isUpdatingTags}
-                    className="h-4 w-4 flex items-center justify-center text-slate-400 hover:text-fluvius-blue-main hover:bg-slate-100 rounded-md transition-all"
-                  >
-                    <Plus size={10} />
-                  </button>
-                </form>
               )}
             </div>
           </div>
@@ -402,32 +341,29 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
       </div>
 
       {isSpectator && (
-        <div className="bg-indigo-600 px-6 py-2 flex items-center justify-center gap-3 z-20 shrink-0 shadow-lg">
-          <Eye size={16} className="text-white animate-pulse" />
-          <span className="text-xs font-black text-white uppercase tracking-widest">
-            Modo Espectador &bull; Atendimento de {conversation.assignee?.name}
+        <div className="bg-slate-800 px-6 py-1.5 flex items-center justify-center gap-2 z-20 shrink-0">
+          <Eye size={12} className="text-slate-400" />
+          <span className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.1em]">
+            Viewing Mode &bull; Handled by <span className="text-blue-400">{conversation.assignee?.name}</span>
           </span>
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-6 z-10 flex flex-col gap-4 fluvius-scroll pb-10">
+      {/* Messages Feed - High Density */}
+      <div className="flex-1 overflow-y-auto p-6 z-10 flex flex-col gap-4 fluvius-scroll pb-8">
         <AnimatePresence mode="popLayout">
           {messages.length === 0 ? (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex-1 flex flex-col items-center justify-center text-center py-20"
-            >
-              <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-100 mb-4">
-                <MessageSquare size={32} className="text-slate-200" />
-              </div>
-              <p className="text-slate-400 text-sm font-medium">Inicie uma conversa agora</p>
-            </motion.div>
+            <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40">
+              <MessageSquare size={32} className="mb-4" />
+              <p className="text-[11px] font-bold uppercase tracking-widest">Start a conversation</p>
+            </div>
           ) : (
             messages.map((msg, index) => {
               const isOutbound = msg.direction === 'outbound';
               const timeString = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
               const isSameSenderAsPrev = index > 0 && messages[index-1].direction === msg.direction;
+
+              const isMedia = msg.message_type === 'image' || msg.message_type === 'video';
 
               const renderMessageContent = () => {
                 const mediaUrl = msg.media_url?.startsWith('/') ? `${UPLOADS_BASE_URL}${msg.media_url}` : msg.media_url;
@@ -436,25 +372,35 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                     return <AudioPlayer src={mediaUrl || ''} />;
                   case 'video':
                     return (
-                      <div className="space-y-2">
-                        <div className="relative rounded-2xl overflow-hidden shadow-sm border border-black/5 bg-black">
-                          <video controls className="w-full max-w-sm block">
+                      <div className="flex flex-col">
+                        <div className="bg-black overflow-hidden rounded-sm">
+                          <video controls className="w-full max-w-[440px] block max-h-[500px]">
                             <source src={mediaUrl || ''} type={msg.mime_type || 'video/mp4'} />
                           </video>
                         </div>
-                        {msg.content && <p className="text-sm leading-relaxed font-medium px-1">{msg.content}</p>}
+                        {msg.content && (
+                          <div className="px-4 py-3">
+                            <p className="text-[13px] leading-relaxed font-medium tracking-tight">{msg.content}</p>
+                          </div>
+                        )}
                       </div>
                     );
                   case 'image':
                     return (
-                      <div className="space-y-2">
-                        <img
-                          src={mediaUrl || ''}
-                          alt="Mídia"
-                          className="rounded-2xl max-w-sm w-full shadow-sm border border-black/5 cursor-pointer hover:scale-[1.01] transition-transform"
-                          onClick={() => window.open(mediaUrl || '', '_blank')}
-                        />
-                        {msg.content && <p className="text-sm leading-relaxed font-medium px-1">{msg.content}</p>}
+                      <div className="flex flex-col">
+                        <div className="overflow-hidden rounded-sm">
+                          <img
+                            src={mediaUrl || ''}
+                            alt="Media"
+                            className="w-full max-w-[440px] h-auto max-h-[500px] object-cover cursor-pointer hover:opacity-95 transition-opacity block"
+                            onClick={() => window.open(mediaUrl || '', '_blank')}
+                          />
+                        </div>
+                        {msg.content && (
+                          <div className="px-4 py-3">
+                            <p className="text-[13px] leading-relaxed font-medium tracking-tight">{msg.content}</p>
+                          </div>
+                        )}
                       </div>
                     );
                   case 'document':
@@ -463,62 +409,75 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                         href={mediaUrl || ''}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-3 p-3 bg-white/50 rounded-xl border border-black/5 hover:bg-white transition-colors"
+                        className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded hover:bg-slate-50 transition-colors m-1"
                       >
-                        <div className="w-10 h-10 rounded-lg bg-indigo-500 text-white flex items-center justify-center">
-                          <FileText size={20} />
-                        </div>
-                        <div className="min-w-0 text-left">
-                          <p className="text-sm font-bold text-slate-800 truncate max-w-[200px]">Documento</p>
-                          <p className="text-[10px] text-slate-500 font-bold uppercase">Download</p>
+                        <FileText size={20} className="text-slate-400" />
+                        <div className="min-w-0">
+                          <p className="text-[12px] font-bold text-slate-700 truncate max-w-[200px]">Document</p>
+                          <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Download</p>
                         </div>
                       </a>
                     );
                   default:
                     return (
-                      <p className="text-[14.5px] leading-[1.6] whitespace-pre-wrap font-medium tracking-tight">
-                        {msg.content}
-                      </p>
+                      <div className="px-4 py-2.5">
+                        <p className="text-[13px] leading-relaxed whitespace-pre-wrap font-medium tracking-tight">
+                          {msg.content}
+                        </p>
+                      </div>
                     );
                 }
               };
 
               return (
-                <motion.div
+                <div
                   key={msg.id}
-                  layout
-                  initial={{ opacity: 0, x: isOutbound ? 10 : -10 }}
-                  animate={{ opacity: 1, x: 0 }}
                   className={cn(
-                    "flex flex-col max-w-[75%] sm:max-w-[65%]",
+                    "flex flex-col max-w-[90%] sm:max-w-[80%]",
                     isOutbound ? "self-end items-end" : "self-start items-start",
-                    isSameSenderAsPrev ? "mt-[-8px]" : "mt-2"
+                    isSameSenderAsPrev ? "mt-0.5" : "mt-4"
                   )}
                 >
                   <div className={cn(
-                    "relative px-4 py-3 shadow-sm transition-all group",
+                    "relative overflow-hidden transition-colors shadow-sm group/bubble",
+                    isMedia ? "p-1" : "p-0",
                     isOutbound 
-                      ? "bg-fluvius-gradient text-white rounded-2xl rounded-tr-none shadow-blue-500/10" 
-                      : "bg-white text-slate-800 rounded-2xl rounded-tl-none border border-slate-100 shadow-slate-200/50"
+                      ? "bg-slate-800 text-white rounded-lg rounded-tr-none" 
+                      : "bg-white text-slate-800 rounded-lg rounded-tl-none border border-slate-200"
                   )}>
+                    {/* Botão Responder (visível no hover) */}
+                    <div className={cn(
+                      "absolute top-1 z-10 opacity-0 group-hover/bubble:opacity-100 transition-opacity",
+                      isOutbound ? "-left-10" : "-right-10"
+                    )}>
+                      <button
+                        onClick={() => onSetReplyingTo?.(msg)}
+                        className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-full text-slate-500 shadow-sm hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                        title="Responder"
+                      >
+                        <Reply size={14} />
+                      </button>
+                    </div>
+
                     {msg.quoted_content && (
                       <div className={cn(
-                        "rounded-lg p-2 mb-2 border-l-4 text-[12px] opacity-80",
-                        isOutbound ? "bg-white/10 border-white/30" : "bg-slate-50 border-fluvius-blue-main"
+                        "rounded p-2 m-2 border-l-2 text-[11px] italic opacity-80",
+                        isOutbound ? "bg-black/20 border-white/40" : "bg-slate-50 border-slate-300"
                       )}>
-                        <span className="truncate block">{msg.quoted_content}</span>
+                        "{msg.quoted_content}"
                       </div>
                     )}
                     {renderMessageContent()}
                     <div className={cn(
-                      "flex items-center gap-1 mt-1 justify-end",
-                      isOutbound ? "text-white/70" : "text-slate-400"
+                      "flex items-center gap-1.5 px-3 pb-1.5 justify-end",
+                      isMedia && !msg.content ? "absolute bottom-2 right-2 bg-black/30 backdrop-blur-sm px-1.5 py-0.5 rounded text-white" : "",
+                      !isMedia || msg.content ? (isOutbound ? "text-white/60" : "text-slate-400") : "text-white"
                     )}>
-                      <span className="text-[9px] font-black uppercase tracking-tighter">{timeString}</span>
+                      <span className="text-[9px] font-bold tabular-nums">{timeString}</span>
                       {isOutbound && renderStatusIcon(msg.status)}
                     </div>
                   </div>
-                </motion.div>
+                </div>
               );
             })
           )}
@@ -526,8 +485,9 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
         <div ref={endRef} />
       </div>
 
-      <div className="px-6 pb-6 pt-2 z-20">
-        <div className="bg-white/80 backdrop-blur-xl rounded-[24px] shadow-2xl shadow-blue-500/5 border border-slate-200/50 p-2 overflow-hidden">
+      {/* Message Input - Integrated & Minimal */}
+      <div className="px-6 pb-6 pt-2 shrink-0">
+        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
           <MessageInput
             onSend={onSendMessage}
             onSendMedia={onSendMedia}

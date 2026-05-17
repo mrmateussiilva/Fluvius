@@ -270,14 +270,13 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
   };
 
   const attachmentOptions = [
-    { id: 'document', icon: <FileText size={22} />, label: 'Documento', color: 'bg-indigo-500', accept: '*' },
-    { id: 'camera', icon: <Camera size={22} />, label: 'Câmera', color: 'bg-rose-500', accept: 'image/*;capture=camera' },
-    { id: 'gallery', icon: <ImageIcon size={22} />, label: 'Galeria', color: 'bg-purple-500', accept: 'image/*,video/*' },
-    { id: 'audio', icon: <Music size={22} />, label: 'Áudio', color: 'bg-orange-500', accept: 'audio/*' },
+    { id: 'document', icon: <FileText size={18} />, label: 'Document', color: 'text-indigo-600', bg: 'bg-indigo-50', accept: '*' },
+    { id: 'gallery', icon: <ImageIcon size={18} />, label: 'Media', color: 'text-blue-600', bg: 'bg-blue-50', accept: 'image/*,video/*' },
+    { id: 'camera', icon: <Camera size={18} />, label: 'Camera', color: 'text-rose-600', bg: 'bg-rose-50', accept: 'image/*;capture=camera' },
   ];
 
   return (
-    <div className="relative flex flex-col w-full">
+    <div className="relative flex flex-col w-full bg-white">
       {/* Media Preview Modal */}
       {previewFile && (
         <MediaPreviewModal
@@ -289,26 +288,26 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
         />
       )}
 
-      {/* Attachment Menu */}
+      {/* Attachment Menu - Functional List */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
             ref={menuRef}
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="absolute bottom-20 left-4 z-40 bg-white rounded-2xl shadow-2xl p-4 border border-slate-100 flex flex-col gap-4 min-w-[160px]"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 5 }}
+            className="absolute bottom-full left-2 mb-2 z-40 bg-white rounded-md shadow-lg border border-slate-200 p-1 min-w-[140px]"
           >
             {attachmentOptions.map((opt) => (
               <button
                 key={opt.id}
                 onClick={() => handleFileSelect(opt.accept)}
-                className="flex items-center gap-3 w-full hover:bg-slate-50 p-2 rounded-xl transition-colors group"
+                className="flex items-center gap-2.5 w-full hover:bg-slate-50 px-3 py-2 rounded transition-colors text-left"
               >
-                <div className={`${opt.color} text-white p-2.5 rounded-full shadow-sm group-hover:scale-110 transition-transform`}>
+                <div className={cn(opt.color, opt.bg, "p-1.5 rounded")}>
                   {opt.icon}
                 </div>
-                <span className="text-sm font-medium text-slate-600">{opt.label}</span>
+                <span className="text-[12px] font-bold text-slate-700">{opt.label}</span>
               </button>
             ))}
           </motion.div>
@@ -319,70 +318,58 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
       <AnimatePresence>
         {error && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="absolute bottom-20 left-1/2 -translate-x-1/2 z-40 bg-rose-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-sm font-medium"
+            exit={{ opacity: 0, y: 5 }}
+            className="absolute bottom-full left-1/2 -translate-x-1/2 z-40 bg-rose-600 text-white px-3 py-1.5 rounded text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 mb-2"
           >
-            <AlertCircle size={16} />
+            <AlertCircle size={14} />
             {error}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Reply Preview */}
+      {/* Reply Preview - Discrete */}
       {replyingTo && (
-        <div className="bg-[#F8FAFC] border-t border-fluvius-border/50 px-4 py-2 flex items-center justify-between relative z-10">
-          <div className="flex flex-col flex-1 border-l-4 border-fluvius-blue-main pl-3">
-            <span className="text-xs font-semibold text-fluvius-blue-main">
-              {replyingTo.direction === 'inbound' ? 'Cliente' : 'Você'}
+        <div className="mx-2 mb-1 bg-slate-50 border-x border-t border-slate-200 px-3 py-2 flex items-center justify-between rounded-t-md">
+          <div className="flex flex-col flex-1 border-l-2 border-blue-500 pl-3">
+            <span className="text-[9px] font-bold text-blue-600 uppercase tracking-widest">
+              Replying to {replyingTo.direction === 'inbound' ? 'Customer' : 'You'}
             </span>
-            <span className="text-[13px] text-slate-600 truncate">
-              {replyingTo.message_type === 'text' ? replyingTo.content : 'Mídia'}
+            <span className="text-[12px] text-slate-600 truncate mt-0.5">
+              {replyingTo.message_type === 'text' ? replyingTo.content : replyingTo.message_type.toUpperCase()}
             </span>
           </div>
-          <button onClick={onCancelReply} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200/50 transition-colors">
-            <X size={16} />
+          <button onClick={onCancelReply} className="p-1 text-slate-400 hover:text-rose-500 transition-colors">
+            <X size={14} />
           </button>
         </div>
       )}
 
+      {/* Quick Replies - Obsidian Style */}
       <AnimatePresence>
         {showQuickReplies && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="absolute bottom-full left-4 mb-2 w-[calc(100%-2rem)] max-w-md bg-white rounded-[16px] shadow-2xl border border-fluvius-border overflow-hidden z-50"
+            exit={{ opacity: 0, y: 5 }}
+            className="absolute bottom-full left-0 w-full bg-white border border-slate-200 shadow-xl overflow-hidden z-50 rounded-t-md"
           >
-            <div className="px-4 py-2 bg-fluvius-surface border-b border-fluvius-border flex items-center justify-between">
-              <span className="text-[10px] font-bold text-fluvius-text-sec uppercase tracking-wider flex items-center gap-1">
-                <Zap size={10} className="text-fluvius-blue-main" />
-                Respostas Rápidas
-              </span>
-              <span className="text-[10px] text-fluvius-text-sec">Use ↑↓ para navegar</span>
+            <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Quick Replies</span>
             </div>
-            <div className="max-h-60 overflow-y-auto divide-y divide-fluvius-border">
+            <div className="max-h-48 overflow-y-auto">
               {filteredQuickReplies.map((qr, index) => (
                 <button
                   key={qr.id}
                   onClick={() => handleSelectQuickReply(qr)}
                   className={cn(
-                    "w-full text-left px-4 py-3 flex items-start gap-3 transition-colors",
-                    index === selectedIndex ? "bg-fluvius-blue-main/5" : "hover:bg-fluvius-bg"
+                    "w-full text-left px-3 py-2 flex items-center gap-3 border-l-2 transition-colors",
+                    index === selectedIndex ? "bg-blue-50 border-blue-500" : "border-transparent hover:bg-slate-50"
                   )}
                 >
-                  <div className="w-8 h-8 rounded-[8px] bg-fluvius-surface text-fluvius-blue-deep flex items-center justify-center font-bold text-[10px] shrink-0 border border-fluvius-border">
-                    /{qr.shortcut}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={cn(
-                      "text-sm font-medium truncate",
-                      index === selectedIndex ? "text-fluvius-blue-deep" : "text-fluvius-text-main"
-                    )}>
-                      {qr.content}
-                    </p>
-                  </div>
+                  <span className="text-[11px] font-bold text-blue-600 shrink-0">/{qr.shortcut}</span>
+                  <span className="text-[12px] text-slate-700 truncate">{qr.content}</span>
                 </button>
               ))}
             </div>
@@ -390,8 +377,9 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
         )}
       </AnimatePresence>
 
+      {/* Main Input Area */}
       <div className={cn(
-        "px-4 py-3 flex items-center gap-2 shrink-0 border-t border-[#DCE7F0] transition-colors duration-300",
+        "flex items-center gap-1 p-1 transition-colors",
         isRecording ? "bg-rose-50" : "bg-white"
       )}>
         {!isRecording ? (
@@ -400,11 +388,11 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
               type="button"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className={cn(
-                "p-2 transition-all rounded-full",
-                isMenuOpen ? "bg-[#EFF6FF] text-[#1EA7FF]" : "text-[#64748B] hover:text-[#1EA7FF] hover:bg-[#F8FAFC]"
+                "p-2 rounded transition-colors",
+                isMenuOpen ? "bg-slate-100 text-slate-800" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
               )}
             >
-              <Paperclip size={24} className={isMenuOpen ? 'rotate-45 transition-transform' : 'transition-transform'} />
+              <Paperclip size={18} />
             </button>
             
             <input
@@ -418,20 +406,17 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
               type="button"
               onClick={handleSuggestReply}
               disabled={isGeneratingSuggestion || !conversationId}
-              className={cn(
-                "p-2 transition-all rounded-full",
-                isGeneratingSuggestion ? "text-fluvius-blue-main animate-pulse" : "text-amber-500 hover:text-amber-600 hover:bg-amber-50"
-              )}
-              title="Sugerir resposta com IA"
+              className="p-2 text-amber-500 hover:bg-amber-50 rounded transition-colors"
+              title="AI Help"
             >
-              {isGeneratingSuggestion ? <Loader2 size={24} className="animate-spin" /> : <Sparkles size={24} />}
+              {isGeneratingSuggestion ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <Sparkles size={18} />
+              )}
             </button>
             
-            <button type="button" className="p-2 text-[#64748B] hover:text-[#1EA7FF] transition-colors rounded-full hover:bg-[#F8FAFC]">
-              <Smile size={24} />
-            </button>
-            
-            <div className="flex-1 bg-[#F8FAFC] rounded-[14px] flex items-center border border-[#DCE7F0] focus-within:border-[#1EA7FF] focus-within:ring-2 focus-within:ring-[#1EA7FF]/10 transition-all overflow-hidden">
+            <div className="flex-1 flex items-center mx-1">
               <input
                 ref={inputRef}
                 type="text"
@@ -439,43 +424,61 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
-                placeholder="Digite uma mensagem..."
-                className="w-full bg-transparent outline-none px-4 py-3 text-[#0F172A] placeholder-[#64748B] text-[15px]"
+                placeholder="Type a message..."
+                className="w-full bg-transparent outline-none px-2 py-2 text-[13px] text-slate-800 placeholder:text-slate-400"
               />
             </div>
             
-            {text.trim() ? (
-              <button
-                type="button"
-                onClick={handleSend}
-                className="p-3 rounded-full flex items-center justify-center bg-fluvius-gradient text-white hover:opacity-90 shadow-[0_4px_12px_rgba(30,167,255,0.2)] transform hover:scale-105 active:scale-95 transition-all"
-              >
-                <Send size={20} className="ml-0.5" />
+            <div className="flex items-center gap-1">
+              <button type="button" className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+                <Smile size={18} />
               </button>
-            ) : (
-              <button
-                type="button"
-                onClick={startRecording}
-                className="p-3 rounded-full flex items-center justify-center bg-fluvius-gradient text-white hover:opacity-90 shadow-[0_4px_12px_rgba(30,167,255,0.2)] transform hover:scale-105 active:scale-95 transition-all"
-              >
-                <Mic size={24} />
-              </button>
-            )}
+              
+              {text.trim() ? (
+                <button
+                  type="button"
+                  onClick={handleSend}
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded text-[11px] font-bold uppercase tracking-wider hover:bg-blue-700 transition-all"
+                >
+                  Send
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={startRecording}
+                  className="p-2 text-slate-400 hover:text-rose-600 transition-colors"
+                >
+                  <Mic size={18} />
+                </button>
+              )}
+            </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-between bg-rose-100 rounded-xl px-4 py-2 border border-rose-200">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-rose-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium text-rose-700">Gravando áudio...</span>
-                <span className="text-sm font-bold text-rose-600 ml-2">{formatDuration(recordingDuration)}</span>
-              </div>
-            <button
-              type="button"
-              onClick={stopRecording}
-              className="p-2 bg-rose-500 text-white rounded-full hover:bg-rose-600 transition-colors shadow-sm"
-            >
-              <Square size={18} fill="currentColor" />
-            </button>
+          <div className="flex-1 flex items-center justify-between px-3 py-1.5">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
+              <span className="text-[11px] font-bold text-rose-600 uppercase tracking-widest tabular-nums">
+                {formatDuration(recordingDuration)}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  setIsRecording(false);
+                  mediaRecorderRef.current?.stop();
+                  setPreviewFile(null);
+                }}
+                className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X size={16} />
+              </button>
+              <button
+                onClick={stopRecording}
+                className="px-3 py-1 bg-rose-600 text-white rounded text-[10px] font-bold uppercase tracking-wider"
+              >
+                Done
+              </button>
+            </div>
           </div>
         )}
       </div>

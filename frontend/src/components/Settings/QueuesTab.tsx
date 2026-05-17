@@ -120,49 +120,49 @@ export const QueuesTab: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-[24px] border border-fluvius-border shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-[16px] flex items-center justify-center">
-            <Layers size={24} />
+          <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded flex items-center justify-center border border-indigo-100">
+            <Layers size={20} />
           </div>
           <div>
-            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Departamentos / Filas</h2>
-            <p className="text-[14px] text-slate-500 font-medium">Organize o roteamento de atendimentos para sua equipe.</p>
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Departments</h2>
+            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Route conversations to specialized teams</p>
           </div>
         </div>
         <button 
           onClick={() => handleOpenModal()}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-[14px] text-sm font-bold transition-all shadow-sm shadow-indigo-600/20"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold uppercase tracking-wider transition-colors shadow-sm"
         >
-          <Plus size={18} />
-          Nova Fila
+          <Plus size={16} />
+          New Department
         </button>
       </div>
 
-      {/* Tabela */}
-      <div className="bg-white rounded-[24px] overflow-hidden border border-fluvius-border shadow-sm">
+      {/* Table */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/80 text-slate-500 text-[11px] font-extrabold uppercase tracking-wider border-b border-slate-100">
-                <th className="px-6 py-4">Nome do Departamento</th>
-                <th className="px-6 py-4">Descrição</th>
-                <th className="px-6 py-4 text-right">Configurações</th>
+              <tr className="bg-slate-50/50 text-slate-500 text-[9px] font-bold uppercase tracking-widest border-b border-slate-100">
+                <th className="px-5 py-3">Team Name</th>
+                <th className="px-5 py-3">Description</th>
+                <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-100">
               <AnimatePresence>
                 {queues.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-6 py-12 text-center">
+                    <td colSpan={3} className="px-5 py-12 text-center">
                       <div className="flex flex-col items-center gap-3">
-                        <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
-                          <Layers size={24} />
+                        <Layers className="text-slate-200" size={32} />
+                        <div className="space-y-1">
+                           <p className="text-slate-500 font-bold text-sm">No departments</p>
+                           <p className="text-slate-400 text-[11px] max-w-sm mx-auto">Create queues to organize your customer flow.</p>
                         </div>
-                        <p className="text-sm font-bold text-slate-500">Nenhuma fila criada</p>
-                        <p className="text-xs text-slate-400 font-medium max-w-sm mx-auto">Crie departamentos (ex: Vendas, Suporte) para direcionar as conversas para os agentes certos.</p>
                       </div>
                     </td>
                   </tr>
@@ -175,38 +175,39 @@ export const QueuesTab: React.FC = () => {
                     exit={{ opacity: 0 }}
                     className="hover:bg-slate-50/50 transition-colors group"
                   >
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
-                        <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
-                        <span className="font-bold text-[14px] text-slate-900">{q.name}</span>
+                        <div className="w-8 h-8 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-[10px] border border-indigo-100">
+                          {q.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="font-bold text-[13px] text-slate-800">{q.name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-[13px] text-slate-500 font-medium max-w-xs truncate">
-                      {q.description || <span className="text-slate-300 italic">Sem descrição</span>}
+                    <td className="px-5 py-3 text-[12px] text-slate-500 font-medium truncate max-w-xs">
+                      {q.description || <span className="text-slate-300 italic text-[10px]">No description</span>}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                    <td className="px-5 py-3">
+                      <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={() => handleOpenAgentsModal(q.id)} 
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                          className="flex items-center gap-1.5 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded border border-indigo-100 transition-colors"
                         >
-                          <Users size={14} />
-                          Agentes
+                          <Users size={12} />
+                          Agents
                         </button>
-                        <div className="w-px h-4 bg-slate-200 mx-2" />
                         <button 
                           onClick={() => handleOpenModal(q)} 
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Editar"
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          title="Edit"
                         >
-                          <Edit size={16} />
+                          <Edit size={14} />
                         </button>
                         <button 
                           onClick={() => handleDelete(q.id)} 
-                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                          title="Excluir"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                          title="Delete"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>
@@ -230,59 +231,57 @@ export const QueuesTab: React.FC = () => {
               onClick={() => setIsModalOpen(false)}
             />
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              initial={{ opacity: 0, scale: 0.95, y: 5 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-white rounded-[24px] w-full max-w-md shadow-2xl relative overflow-hidden"
+              exit={{ opacity: 0, scale: 0.95, y: 5 }}
+              className="bg-white rounded-lg w-full max-w-md shadow-xl relative overflow-hidden border border-slate-200"
             >
-              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                    <Layers size={16} />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900">{editingQueue ? 'Editar Fila' : 'Nova Fila'}</h3>
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                <div className="flex items-center gap-2">
+                  <Layers size={16} className="text-blue-500" />
+                  <h3 className="text-sm font-bold text-slate-900">{editingQueue ? 'Edit Department' : 'New Department'}</h3>
                 </div>
-                <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-full hover:bg-slate-100">
-                  <X size={20}/>
+                <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors">
+                  <X size={18}/>
                 </button>
               </div>
               
-              <div className="p-6 space-y-5">
+              <div className="p-6 space-y-4">
                 <div className="space-y-1.5">
-                  <label className="block text-[13px] font-bold text-slate-700">Nome do Departamento *</label>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider">Department Name *</label>
                   <input 
                     type="text" 
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full bg-slate-50 text-slate-900 border border-slate-200 rounded-[14px] px-4 py-3 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium text-sm"
-                    placeholder="Ex: Suporte Técnico"
+                    className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] font-medium text-slate-700 outline-none focus:border-blue-500 transition-colors"
+                    placeholder="e.g. Sales"
                     autoFocus
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-[13px] font-bold text-slate-700">Descrição Opcional</label>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider">Description</label>
                   <textarea 
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    className="w-full bg-slate-50 text-slate-900 border border-slate-200 rounded-[14px] px-4 py-3 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium text-sm resize-none h-24"
-                    placeholder="Para que serve este departamento?"
+                    className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] font-medium text-slate-700 outline-none focus:border-blue-500 transition-colors resize-none h-20"
+                    placeholder="What is this team for?"
                   />
                 </div>
               </div>
               
-              <div className="px-6 py-4 border-t border-slate-50 bg-slate-50/50 flex justify-end gap-3">
+              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
                 <button 
                   onClick={() => setIsModalOpen(false)} 
-                  className="px-5 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-[12px] transition-colors"
+                  className="px-4 py-2 text-[11px] font-bold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-wider"
                 >
-                  Cancelar
+                  Cancel
                 </button>
                 <button 
                   onClick={handleSave} 
                   disabled={!formData.name}
-                  className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:pointer-events-none text-white rounded-[12px] text-sm font-bold transition-colors shadow-sm shadow-indigo-600/20"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded text-[11px] font-bold uppercase tracking-wider transition-colors shadow-sm"
                 >
-                  Salvar Fila
+                  Save Department
                 </button>
               </div>
             </motion.div>
@@ -302,34 +301,32 @@ export const QueuesTab: React.FC = () => {
               onClick={() => setIsAgentsModalOpen(false)}
             />
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              initial={{ opacity: 0, scale: 0.95, y: 5 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-white rounded-[24px] w-full max-w-md shadow-2xl relative overflow-hidden flex flex-col max-h-[85vh]"
+              exit={{ opacity: 0, scale: 0.95, y: 5 }}
+              className="bg-white rounded-lg w-full max-w-sm shadow-xl relative overflow-hidden flex flex-col max-h-[80vh] border border-slate-200"
             >
-              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                    <Users size={16} />
-                  </div>
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50">
+                <div className="flex items-center gap-2">
+                  <Users size={16} className="text-indigo-500" />
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900">Vincular Agentes</h3>
-                    <p className="text-[11px] font-medium text-slate-500">Selecione quem atenderá nesta fila</p>
+                    <h3 className="text-sm font-bold text-slate-900">Assign Agents</h3>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Select team members</p>
                   </div>
                 </div>
-                <button onClick={() => setIsAgentsModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-full hover:bg-slate-100">
-                  <X size={20}/>
+                <button onClick={() => setIsAgentsModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors">
+                  <X size={18}/>
                 </button>
               </div>
               
-              <div className="p-4 overflow-y-auto fluvius-scroll flex-1 bg-slate-50/50">
+              <div className="p-3 overflow-y-auto fluvius-scroll flex-1">
                 {agents.length === 0 ? (
                   <div className="text-center py-8">
-                    <AlertCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                    <p className="text-sm font-bold text-slate-500">Nenhum agente cadastrado</p>
+                    <AlertCircle className="w-8 h-8 text-slate-200 mx-auto mb-2" />
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">No agents found</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {agents.map(agent => {
                       const isSelected = selectedAgentIds.includes(agent.id);
                       return (
@@ -337,26 +334,26 @@ export const QueuesTab: React.FC = () => {
                           key={agent.id} 
                           onClick={() => toggleAgent(agent.id)}
                           className={cn(
-                            "flex items-center gap-4 p-4 rounded-[16px] cursor-pointer transition-all border",
-                            isSelected ? "bg-indigo-50/50 border-indigo-200" : "bg-white border-slate-100 hover:border-slate-300 shadow-sm"
+                            "flex items-center gap-3 p-3 rounded cursor-pointer transition-colors border",
+                            isSelected ? "bg-blue-50 border-blue-200" : "bg-white border-transparent hover:bg-slate-50"
                           )}
                         >
                           <div className={cn(
-                            "w-5 h-5 rounded flex items-center justify-center shrink-0 transition-colors",
-                            isSelected ? "bg-indigo-600 text-white" : "border-2 border-slate-300"
+                            "w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-colors",
+                            isSelected ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300"
                           )}>
-                            {isSelected && <CheckCircle2 size={14} strokeWidth={3} />}
+                            {isSelected && <CheckCircle2 size={12} strokeWidth={3} />}
                           </div>
                           
                           <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 border border-white shadow-sm flex items-center justify-center text-[12px] font-bold text-slate-600 shrink-0">
+                            <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0 border border-slate-200">
                               {agent.name.charAt(0)}
                             </div>
                             <div className="min-w-0">
-                              <p className={cn("text-[14px] font-bold truncate", isSelected ? "text-indigo-900" : "text-slate-900")}>
+                              <p className={cn("text-[13px] font-bold truncate", isSelected ? "text-blue-900" : "text-slate-900")}>
                                 {agent.name}
                               </p>
-                              <p className="text-[12px] text-slate-500 font-medium truncate">{agent.email}</p>
+                              <p className="text-[10px] text-slate-400 truncate">{agent.email}</p>
                             </div>
                           </div>
                         </div>
@@ -366,18 +363,18 @@ export const QueuesTab: React.FC = () => {
                 )}
               </div>
               
-              <div className="px-6 py-4 border-t border-slate-100 bg-white flex justify-end gap-3 shrink-0">
+              <div className="px-5 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 shrink-0">
                 <button 
                   onClick={() => setIsAgentsModalOpen(false)} 
-                  className="px-5 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-[12px] transition-colors"
+                  className="px-4 py-2 text-[11px] font-bold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-wider"
                 >
-                  Cancelar
+                  Cancel
                 </button>
                 <button 
                   onClick={handleSaveAgents} 
-                  className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[12px] text-sm font-bold transition-colors shadow-sm shadow-indigo-600/20"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold uppercase tracking-wider transition-colors shadow-sm"
                 >
-                  Salvar Vínculos
+                  Save Changes
                 </button>
               </div>
             </motion.div>

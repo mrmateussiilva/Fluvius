@@ -6,6 +6,13 @@ import {
   Settings, Plus, RefreshCw, Wifi, WifiOff, QrCode, X,
   ArrowLeft, User, CheckCircle, Loader2, Trash2, LogOut, RotateCcw, DownloadCloud, Layers, Edit3, MessageSquare, Bot, Sparkles, AlertCircle, Zap
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 import { useAuth } from '../context/AuthContext';
 import { QueuesTab } from '../components/Settings/QueuesTab';
@@ -61,7 +68,7 @@ export const SettingsPage: React.FC = () => {
         try {
           const statusRes = await fetchConnectionStatus(selectedConnection.id);
           if (statusRes.status === 'open' || statusRes.status === 'connected') {
-            toast.success('WhatsApp conectado com sucesso!');
+            toast.success('WhatsApp connected successfully!');
             setSelectedConnection(null);
             loadConnections();
             return;
@@ -108,24 +115,24 @@ export const SettingsPage: React.FC = () => {
 
 
   const handleDelete = async (conn: Connection) => {
-    if (!confirm(`Remover a conexão "${conn.name}"? Esta ação irá desconectar e apagar a instância.`)) return;
+    if (!confirm(`Remove connection "${conn.name}"? This will disconnect and delete the instance.`)) return;
     try {
       await deleteConnection(conn.id);
       loadConnections();
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao remover conexão.');
+      toast.error('Error removing connection.');
     }
   };
 
   const handleLogout = async (conn: Connection) => {
-    if (!confirm(`Desconectar "${conn.name}" sem apagar a instância?`)) return;
+    if (!confirm(`Disconnect "${conn.name}" without deleting the instance?`)) return;
     try {
       await logoutConnection(conn.id);
       loadConnections();
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao desconectar.');
+      toast.error('Error disconnecting.');
     }
   };
 
@@ -136,17 +143,17 @@ export const SettingsPage: React.FC = () => {
       handleConnect(conn);
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao reconectar.');
+      toast.error('Error reconnecting.');
     }
   };
 
   const handleSync = async (conn: Connection) => {
     try {
       await syncConnection(conn.id);
-      toast.success('Sincronização iniciada! Os chats aparecerão em instantes.', { duration: 6000 });
+      toast.success('Sync started! Messages will appear soon.', { duration: 6000 });
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao iniciar sincronização');
+      toast.error('Error starting sync');
     }
   };
 
@@ -182,254 +189,330 @@ export const SettingsPage: React.FC = () => {
     setSavingConn(true);
     try {
       await updateConnection(editingConn.id, editFormData);
-      toast.success('Conexão atualizada com sucesso!');
+      toast.success('Connection updated!');
       setEditingConn(null);
       loadConnections();
     } catch (err: any) {
-      toast.error(err.message || 'Erro ao atualizar conexão');
+      toast.error(err.message || 'Error updating connection');
     } finally {
       setSavingConn(false);
     }
   };
 
   return (
-    <div className="flex-1 bg-fluvius-bg min-h-screen p-8 overflow-y-auto">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="flex-1 bg-slate-50 min-h-screen p-6 overflow-y-auto fluvius-scroll">
+      <div className="max-w-5xl mx-auto space-y-6">
 
-        {/* Back */}
-        <div>
-          <Link to="/" className="flex items-center gap-2 text-fluvius-text-sec hover:text-fluvius-text-main transition-colors mb-6 group w-fit">
-            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-            Voltar para o Chat
-          </Link>
-          <h1 className="text-3xl font-bold text-fluvius-text-main flex items-center gap-3">
-            <Settings className="text-fluvius-blue-main" />
-            Configurações
-          </h1>
+        {/* Header Section */}
+        <div className="flex items-center justify-between">
+          <div>
+            <Link to="/" className="flex items-center gap-1.5 text-slate-400 hover:text-blue-600 transition-all mb-2 group w-fit font-bold uppercase text-[9px] tracking-wider">
+              <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+              Workspace
+            </Link>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
+              <Settings className="text-blue-600" size={20} />
+              Settings
+            </h1>
+          </div>
         </div>
 
-        {/* Layout */}
-        <div className="flex gap-8">
+        {/* Layout Grid */}
+        <div className="grid grid-cols-12 gap-6">
           
-          {/* Sidebar */}
-          <div className="w-64 shrink-0 space-y-2">
-            <button 
-              onClick={() => setActiveTab('general')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-[12px] font-medium transition-all ${
-                activeTab === 'general' ? 'bg-fluvius-surface text-fluvius-blue-deep shadow-sm border border-fluvius-border' : 'text-fluvius-text-sec hover:bg-white hover:text-fluvius-text-main'
-              }`}
-            >
-              <Settings size={18} />
-              Geral
-            </button>
-            <button 
-              onClick={() => setActiveTab('queues')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-[12px] font-medium transition-all ${
-                activeTab === 'queues' ? 'bg-fluvius-surface text-fluvius-blue-deep shadow-sm border border-fluvius-border' : 'text-fluvius-text-sec hover:bg-white hover:text-fluvius-text-main'
-              }`}
-            >
-              <Layers size={18} />
-              Filas / Departamentos
-            </button>
-            <button 
-              onClick={() => setActiveTab('quick-replies')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-[12px] font-medium transition-all ${
-                activeTab === 'quick-replies' ? 'bg-fluvius-surface text-fluvius-blue-deep shadow-sm border border-fluvius-border' : 'text-fluvius-text-sec hover:bg-white hover:text-fluvius-text-main'
-              }`}
-            >
-              <Zap size={18} />
-              Mensagens Rápidas
-            </button>
+          {/* Settings Navigation */}
+          <div className="col-span-3 space-y-1">
+            {[
+              { id: 'general', label: 'General', icon: Settings },
+              { id: 'queues', label: 'Departments', icon: Layers },
+              { id: 'quick-replies', label: 'Quick Replies', icon: Zap },
+            ].map((tab) => (
+              <button 
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2 rounded font-bold text-[12px] transition-colors",
+                  activeTab === tab.id 
+                    ? "bg-white text-blue-600 border border-slate-200 shadow-sm" 
+                    : "text-slate-500 hover:bg-slate-200/50 hover:text-slate-700"
+                )}
+              >
+                <tab.icon size={16} className={activeTab === tab.id ? "text-blue-500" : "opacity-50"} />
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          <div className="flex-1 space-y-8">
+          <div className="col-span-9 space-y-6">
             {activeTab === 'general' && (
               <>
-        {/* PROFILE SECTION */}
-        <section className="bg-white rounded-[16px] shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-fluvius-border overflow-hidden">
-          <div className="px-6 py-4 border-b border-fluvius-border bg-fluvius-surface flex justify-between items-center">
-            <h2 className="font-semibold text-fluvius-text-main text-lg flex items-center gap-2">
-              <User size={18} className="text-fluvius-blue-deep" />
-              Meu Perfil
-            </h2>
-          </div>
-          <div className="p-6 space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-fluvius-gradient flex items-center justify-center text-white font-bold text-xl shadow-sm">
-                {user?.name.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-fluvius-text-main">{user?.name}</h3>
-                <p className="text-fluvius-text-sec">{user?.email}</p>
-                <span className="inline-block mt-1 text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                  {user?.role === 'admin' ? 'Administrador' : 'Operador'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CONNECTIONS SECTION */}
-        <section className="bg-white rounded-[16px] shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-fluvius-border overflow-hidden">
-          <div className="px-6 py-4 border-b border-fluvius-border bg-fluvius-surface flex justify-between items-center">
-            <h2 className="font-semibold text-fluvius-text-main text-lg flex items-center gap-2">
-              <Wifi size={18} className="text-fluvius-blue-deep" />
-              Conexões WhatsApp
-            </h2>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowCreateConn(!showCreateConn)}
-                className="flex items-center gap-2 text-sm bg-fluvius-gradient text-white px-3 py-1.5 rounded-[12px] hover:opacity-90 transition-all shadow-sm font-medium"
-              >
-                <Plus size={16} />
-                Nova Conexão
-              </button>
-              <button onClick={loadConnections} className="text-fluvius-text-sec hover:text-fluvius-text-main transition-colors">
-                <RefreshCw size={18} />
-              </button>
-            </div>
-          </div>
-
-          {/* Create Connection Form */}
-          {showCreateConn && (
-            <form onSubmit={handleCreateConnection} className="p-6 border-b border-fluvius-border bg-white">
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  placeholder="Nome da conexão (ex: Comercial)"
-                  value={connName}
-                  onChange={e => setConnName(e.target.value)}
-                  required
-                  className="flex-1 border border-fluvius-border rounded-[12px] px-3 py-2 text-sm text-fluvius-text-main outline-none focus:border-fluvius-blue-main focus:ring-2 focus:ring-fluvius-blue-main/10"
-                />
-                <button
-                  type="submit"
-                  disabled={creatingConn}
-                  className="bg-fluvius-gradient text-white px-4 py-2 rounded-[12px] text-sm font-medium hover:opacity-90 transition-all shadow-sm flex items-center gap-2 disabled:opacity-60"
-                >
-                  {creatingConn ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                  Criar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateConn(false)}
-                  className="text-fluvius-text-sec hover:text-fluvius-text-main transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            </form>
-          )}
-
-          <div className="divide-y divide-fluvius-border">
-            {connLoading ? (
-              <div className="p-12 text-center text-fluvius-text-sec">Carregando conexões...</div>
-            ) : connections.length === 0 ? (
-              <div className="p-12 text-center text-fluvius-text-sec">Nenhuma conexão configurada.</div>
-            ) : (
-              connections.map((conn) => (
-                <div key={conn.id} className="p-6 flex items-center justify-between hover:bg-fluvius-bg transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm border border-white ${conn.status === 'open' ? 'bg-fluvius-green-water text-white' : 'bg-fluvius-surface text-fluvius-text-sec'}`}>
-                      {conn.status === 'open' ? <Wifi size={24} /> : <WifiOff size={24} />}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-fluvius-text-main">{conn.name}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium uppercase ${conn.status === 'open' ? 'bg-fluvius-green-water/20 text-fluvius-green-emerald' : 'bg-fluvius-surface text-fluvius-text-sec'}`}>
-                          {conn.status === 'open' ? 'Conectado' : 'Desconectado'}
-                        </span>
-                        <span className="text-xs text-fluvius-text-sec font-mono">{conn.instance_name}</span>
+                {/* Profile Card */}
+                <section className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+                  <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
+                    <h2 className="font-bold text-slate-500 text-[10px] uppercase tracking-wider flex items-center gap-2">
+                      <User size={14} />
+                      Profile
+                    </h2>
+                  </div>
+                  <div className="p-6">
+                    <div className="flex items-center gap-6">
+                      <div className="w-16 h-16 rounded bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-sm">
+                        {user?.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900 tracking-tight">{user?.name}</h3>
+                        <p className="text-slate-400 text-sm font-medium">{user?.email}</p>
+                        <div className="inline-flex items-center gap-1.5 mt-2 px-2 py-0.5 bg-blue-50 text-blue-600 rounded font-bold text-[9px] uppercase tracking-wider border border-blue-100">
+                          {user?.role === 'admin' ? 'Administrator' : 'Operator'}
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => handleEdit(conn)} className="p-2 text-fluvius-blue-main hover:bg-fluvius-blue-main/10 rounded-full transition-all" title="Editar Configurações">
-                      <Edit3 size={18} />
-                    </button>
-                    <button onClick={() => handleRefreshStatus(conn)} className="p-2 text-fluvius-text-sec hover:text-fluvius-text-main hover:bg-fluvius-surface rounded-full transition-all" title="Atualizar Status">
-                      <RefreshCw size={18} />
-                    </button>
-                    {conn.status === 'open' ? (
-                      <>
-                        <button onClick={() => handleSync(conn)} className="flex items-center gap-1.5 text-blue-600 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-[12px] text-sm font-medium hover:bg-blue-100 transition-colors" title="Sincronizar Histórico">
-                          <DownloadCloud size={15} />
-                          Sincronizar
-                        </button>
-                        <button onClick={() => handleLogout(conn)} className="flex items-center gap-1.5 text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-[12px] text-sm font-medium hover:bg-amber-100 transition-colors" title="Desconectar">
-                          <LogOut size={15} />
-                          Desconectar
-                        </button>
-                      </>
-                    ) : (
-                      <button onClick={() => handleRestart(conn)} className="flex items-center gap-1.5 text-fluvius-blue-main bg-fluvius-blue-main/10 border border-fluvius-blue-main/20 px-3 py-1.5 rounded-[12px] text-sm font-medium hover:bg-fluvius-blue-main/20 transition-colors">
-                        <RotateCcw size={15} />
-                        Reconectar
-                      </button>
-                    )}
-                    {conn.status !== 'open' && (
-                      <button onClick={() => handleConnect(conn)} className="flex items-center gap-1.5 text-white bg-fluvius-gradient px-3 py-1.5 rounded-[12px] text-sm font-medium shadow-sm">
-                        <QrCode size={15} />
-                        QR Code
-                      </button>
-                    )}
-                    <button onClick={() => handleDelete(conn)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all" title="Remover conexão">
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </section>
-        </>
-      )}
+                </section>
 
-      {activeTab === 'queues' && <QueuesTab />}
-      {activeTab === 'quick-replies' && <QuickRepliesTab />}
+                {/* Connections Card */}
+                <section className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+                  <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                    <h2 className="font-bold text-slate-500 text-[10px] uppercase tracking-wider flex items-center gap-2">
+                      <Wifi size={14} />
+                      Connections
+                    </h2>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setShowCreateConn(!showCreateConn)}
+                        className="flex items-center gap-1.5 text-[10px] bg-blue-600 text-white px-3 py-1.5 rounded font-bold uppercase tracking-wider hover:bg-blue-700 transition-colors"
+                      >
+                        <Plus size={14} />
+                        New
+                      </button>
+                      <button onClick={loadConnections} className="p-1.5 rounded hover:bg-slate-200 text-slate-400 transition-colors">
+                        <RefreshCw size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Create Form */}
+                  <AnimatePresence>
+                    {showCreateConn && (
+                      <motion.form 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        onSubmit={handleCreateConnection} 
+                        className="p-5 border-b border-slate-100 bg-slate-50/30 overflow-hidden"
+                      >
+                        <div className="flex gap-3">
+                          <input
+                            type="text"
+                            placeholder="Connection name..."
+                            value={connName}
+                            onChange={e => setConnName(e.target.value)}
+                            required
+                            className="flex-1 border border-slate-200 rounded px-3 py-2 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 transition-colors"
+                          />
+                          <button
+                            type="submit"
+                            disabled={creatingConn}
+                            className="bg-blue-600 text-white px-4 py-2 rounded text-[11px] font-bold uppercase tracking-wider hover:bg-blue-700 transition-colors disabled:opacity-50"
+                          >
+                            {creatingConn ? <Loader2 size={16} className="animate-spin" /> : "Create"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowCreateConn(false)}
+                            className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
+                          >
+                            <X size={20} />
+                          </button>
+                        </div>
+                      </motion.form>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="divide-y divide-slate-100">
+                    {connLoading ? (
+                      <div className="p-12 text-center flex flex-col items-center gap-3">
+                        <Loader2 className="animate-spin text-blue-500" size={24} />
+                        <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Loading...</p>
+                      </div>
+                    ) : connections.length === 0 ? (
+                      <div className="p-12 text-center flex flex-col items-center gap-3">
+                        <WifiOff className="text-slate-200" size={32} />
+                        <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">No connections</p>
+                      </div>
+                    ) : (
+                      connections.map((conn) => (
+                        <div key={conn.id} className="p-5 flex items-center justify-between hover:bg-slate-50 transition-colors group">
+                          <div className="flex items-center gap-4">
+                            <div className={cn(
+                              "w-10 h-10 rounded flex items-center justify-center border transition-all",
+                              conn.status === 'open' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-200 text-slate-300'
+                            )}>
+                              {conn.status === 'open' ? <Wifi size={20} /> : <WifiOff size={20} />}
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-slate-800 text-[13px]">{conn.name}</h3>
+                              <div className="flex items-center gap-3 mt-0.5">
+                                <span className={cn(
+                                  "text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider",
+                                  conn.status === 'open' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                                )}>
+                                  {conn.status === 'open' ? 'Connected' : 'Offline'}
+                                </span>
+                                <span className="text-[9px] text-slate-400 font-medium truncate max-w-[150px]">Inst: {conn.instance_name}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => handleEdit(conn)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit">
+                              <Edit3 size={14} />
+                            </button>
+                            <button onClick={() => handleRefreshStatus(conn)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors" title="Refresh">
+                              <RefreshCw size={14} />
+                            </button>
+                            {conn.status === 'open' ? (
+                              <>
+                                <button onClick={() => handleSync(conn)} className="text-[10px] font-bold uppercase tracking-wider text-slate-600 border border-slate-200 px-2 py-1 rounded hover:bg-slate-50 transition-colors" title="Sync">
+                                  Sync
+                                </button>
+                                <button onClick={() => handleLogout(conn)} className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-1 rounded hover:bg-amber-100 transition-colors" title="Logout">
+                                  Exit
+                                </button>
+                              </>
+                            ) : (
+                              <button onClick={() => handleRestart(conn)} className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-1 rounded hover:bg-blue-100 transition-colors">
+                                Reconnect
+                              </button>
+                            )}
+                            {conn.status !== 'open' && (
+                              <button onClick={() => handleConnect(conn)} className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-white bg-slate-900 px-3 py-1 rounded hover:bg-slate-800 transition-colors">
+                                <QrCode size={12} />
+                                QR
+                              </button>
+                            )}
+                            <button onClick={() => handleDelete(conn)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors" title="Delete">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </section>
+              </>
+            )}
+
+            <AnimatePresence mode="wait">
+              {activeTab === 'queues' && (
+                <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} key="queues">
+                  <QueuesTab />
+                </motion.div>
+              )}
+              {activeTab === 'quick-replies' && (
+                <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} key="quick-replies">
+                  <QuickRepliesTab />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
       </div>
-    </div>
+
+      {/* Connection QR Modal */}
+      {selectedConnection && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-6">
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-lg shadow-xl max-w-sm w-full overflow-hidden border border-slate-200"
+          >
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm">Connect WhatsApp</h3>
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{selectedConnection.instance_name}</p>
+              </div>
+              <button onClick={() => setSelectedConnection(null)} className="p-1 text-slate-400 hover:text-slate-900 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="p-8 flex flex-col items-center gap-6">
+              <div className="p-4 bg-slate-50 rounded border border-slate-100">
+                {qrLoading ? (
+                  <div className="w-[200px] h-[200px] flex items-center justify-center">
+                    <Loader2 size={32} className="animate-spin text-blue-500" />
+                  </div>
+                ) : qrCode ? (
+                  <div className="bg-white p-2 rounded border border-slate-200">
+                    <img src={qrCode} alt="QR Code" className="w-[200px] h-[200px]" />
+                  </div>
+                ) : (
+                  <div className="w-[200px] h-[200px] flex flex-col items-center justify-center gap-2 text-slate-400">
+                    <AlertCircle size={32} />
+                    <p className="text-[9px] font-bold uppercase tracking-wider">Failed to load QR</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="text-center space-y-1">
+                <p className="text-slate-900 font-bold text-sm">Scan QR Code</p>
+                <p className="text-slate-400 text-[11px] leading-relaxed max-w-[200px] mx-auto">
+                  Open WhatsApp on your phone and link this device.
+                </p>
+              </div>
+              
+              <div className="w-full flex items-center justify-center gap-2 py-2 bg-blue-50 rounded text-blue-600">
+                <RefreshCw size={12} className="animate-spin" />
+                <span className="text-[9px] font-bold uppercase tracking-widest">Waiting...</span>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Edit Connection Modal */}
       {editingConn && (
-        <div className="fixed inset-0 bg-fluvius-text-main/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[24px] shadow-2xl max-w-2xl w-full overflow-hidden border border-fluvius-border">
-            <div className="p-6 border-b border-fluvius-border flex justify-between items-center bg-fluvius-surface">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-6">
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-lg shadow-xl max-w-xl w-full overflow-hidden border border-slate-200"
+          >
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <div>
-                <h3 className="font-bold text-fluvius-text-main text-lg">Configurar Conexão</h3>
-                <p className="text-xs text-fluvius-text-sec font-mono">{editingConn.instance_name}</p>
+                <h3 className="font-bold text-slate-900 text-sm">Instance Configuration</h3>
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{editingConn.instance_name}</p>
               </div>
-              <button onClick={() => setEditingConn(null)} className="text-fluvius-text-sec hover:text-fluvius-text-main transition-colors">
-                <X size={24} />
+              <button onClick={() => setEditingConn(null)} className="p-1 text-slate-400 hover:text-slate-900 transition-colors">
+                <X size={18} />
               </button>
             </div>
-            <form onSubmit={handleSaveEdit} className="max-h-[80vh] overflow-y-auto">
-              <div className="p-6 space-y-6">
+            <form onSubmit={handleSaveEdit} className="max-h-[80vh] overflow-y-auto fluvius-scroll">
+              <div className="p-8 space-y-8">
                 {/* Basic Info */}
                 <div className="space-y-4">
-                  <h4 className="text-xs font-bold text-fluvius-text-sec uppercase tracking-wider flex items-center gap-2">
-                    <Settings size={14} />
-                    Informações Básicas
+                  <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <Settings size={12} className="text-blue-500" />
+                    Identity
                   </h4>
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-fluvius-text-main">Nome da Conexão</label>
-                      <input
-                        type="text"
-                        value={editFormData.name}
-                        onChange={e => setEditFormData({...editFormData, name: e.target.value})}
-                        className="w-full border border-fluvius-border rounded-[12px] px-3 py-2 text-sm focus:border-fluvius-blue-main outline-none"
-                      />
-                    </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Friendly Name</label>
+                    <input
+                      type="text"
+                      value={editFormData.name}
+                      onChange={e => setEditFormData({...editFormData, name: e.target.value})}
+                      className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] font-medium text-slate-700 outline-none focus:border-blue-500 transition-colors"
+                      placeholder="e.g. Sales"
+                    />
                   </div>
                 </div>
 
                 {/* Bot Configuration */}
-                <div className="space-y-4 pt-4 border-t border-fluvius-border">
+                <div className="space-y-6 pt-6 border-t border-slate-100">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-fluvius-text-sec uppercase tracking-wider flex items-center gap-2">
-                      <Bot size={14} />
-                      Robô de Atendimento
+                    <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                      <Bot size={14} className="text-indigo-500" />
+                      Automation
                     </h4>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input 
@@ -438,139 +521,97 @@ export const SettingsPage: React.FC = () => {
                         checked={editFormData.default_bot_active}
                         onChange={e => setEditFormData({...editFormData, default_bot_active: e.target.checked})}
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-fluvius-blue-main"></div>
-                      <span className="ml-3 text-sm font-medium text-fluvius-text-main">Robô Ativo</span>
+                      <div className="w-9 h-5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                   </div>
 
                   {editFormData.default_bot_active && (
-                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
                       <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-fluvius-text-main">Mensagem de Boas-vindas</label>
+                        <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Welcome Message</label>
                         <textarea
                           value={editFormData.welcome_message}
                           onChange={e => setEditFormData({...editFormData, welcome_message: e.target.value})}
-                          placeholder="Olá! Seja bem-vindo..."
+                          placeholder="Hello! Welcome to..."
                           rows={2}
-                          className="w-full border border-fluvius-border rounded-[12px] px-3 py-2 text-sm focus:border-fluvius-blue-main outline-none resize-none"
+                          className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] outline-none focus:border-blue-500 transition-colors resize-none"
                         />
                       </div>
 
-                      <div className="space-y-3">
-                        <label className="text-sm font-medium text-fluvius-text-main">Tipo do Robô</label>
+                      <div className="space-y-2.5">
+                        <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Bot Type</label>
                         <div className="grid grid-cols-2 gap-3">
                           <button
                             type="button"
                             onClick={() => setEditFormData({...editFormData, bot_type: 'menu'})}
-                            className={`flex flex-col items-center gap-2 p-3 rounded-[16px] border-2 transition-all ${
+                            className={`p-3 rounded border text-left transition-all ${
                               editFormData.bot_type === 'menu' 
-                                ? 'border-fluvius-blue-main bg-fluvius-blue-main/5 text-fluvius-blue-deep' 
-                                : 'border-fluvius-border bg-white text-fluvius-text-sec hover:border-fluvius-blue-main/30'
+                                ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                                : 'border-slate-200 bg-white text-slate-500 hover:border-blue-300'
                             }`}
                           >
-                            <MessageSquare size={20} />
-                            <span className="text-sm font-bold">Menu de Opções</span>
-                            <span className="text-[10px] text-center">Cliente escolhe por número (1, 2...)</span>
+                            <div className="flex items-center gap-2 mb-1">
+                              <MessageSquare size={16} />
+                              <span className="text-[12px] font-bold">Standard Menu</span>
+                            </div>
+                            <p className="text-[10px] opacity-70 leading-relaxed">Option-based selection (1, 2, 3...)</p>
                           </button>
                           <button
                             type="button"
                             onClick={() => setEditFormData({...editFormData, bot_type: 'ai'})}
-                            className={`flex flex-col items-center gap-2 p-3 rounded-[16px] border-2 transition-all ${
+                            className={`p-3 rounded border text-left transition-all ${
                               editFormData.bot_type === 'ai' 
-                                ? 'border-fluvius-blue-main bg-fluvius-blue-main/5 text-fluvius-blue-deep' 
-                                : 'border-fluvius-border bg-white text-fluvius-text-sec hover:border-fluvius-blue-main/30'
+                                ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                                : 'border-slate-200 bg-white text-slate-500 hover:border-blue-300'
                             }`}
                           >
-                            <Sparkles size={20} />
-                            <span className="text-sm font-bold">IA (Gemini)</span>
-                            <span className="text-[10px] text-center">IA conversa e tira dúvidas livremente</span>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Sparkles size={16} />
+                              <span className="text-[12px] font-bold">AI Agent</span>
+                            </div>
+                            <p className="text-[10px] opacity-70 leading-relaxed">Natural conversation powered by AI</p>
                           </button>
                         </div>
                       </div>
 
                       {editFormData.bot_type === 'ai' && (
-                        <div className="space-y-2 animate-in zoom-in-95 duration-300">
-                          <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-3 rounded-[12px] border border-amber-100">
-                            <AlertCircle size={16} className="shrink-0" />
-                            <p className="text-[11px] leading-tight font-medium">
-                              No modo IA, o robô responderá de acordo com as instruções abaixo. Ele tentará entender a intenção do cliente e transferir para um humano se necessário.
-                            </p>
-                          </div>
-                          <label className="text-sm font-medium text-fluvius-text-main">Instruções da IA (Personalidade)</label>
+                        <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
+                          <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">AI Instructions (System Prompt)</label>
                           <textarea
                             value={editFormData.ai_instructions}
                             onChange={e => setEditFormData({...editFormData, ai_instructions: e.target.value})}
-                            placeholder="Ex: Você é um assistente da loja XPTO. Seja educado, tire dúvidas sobre nossos produtos X e Y. Se o cliente quiser falar com alguém, transfira o atendimento."
+                            placeholder="You are a helpful assistant for..."
                             rows={4}
-                            className="w-full border border-fluvius-border rounded-[12px] px-3 py-2 text-sm focus:border-fluvius-blue-main outline-none resize-none bg-fluvius-bg/30"
+                            className="w-full border border-slate-200 rounded px-3 py-2 text-[12px] outline-none focus:border-blue-500 transition-colors resize-none font-mono"
                           />
+                          <p className="text-[10px] text-slate-400">Describe the bot's personality, goals, and knowledge base.</p>
                         </div>
                       )}
                     </div>
                   )}
                 </div>
               </div>
-
-              <div className="p-6 border-t border-fluvius-border flex justify-end gap-3 bg-fluvius-surface">
+              <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setEditingConn(null)}
-                  className="px-4 py-2 text-sm font-medium text-fluvius-text-sec hover:text-fluvius-text-main transition-colors"
+                  className="px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-800 transition-colors"
                 >
-                  Cancelar
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingConn}
-                  className="bg-fluvius-gradient text-white px-6 py-2 rounded-[12px] text-sm font-bold shadow-md hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-60"
+                  className="px-6 py-2 bg-blue-600 text-white rounded text-[11px] font-bold uppercase tracking-wider hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
-                  {savingConn ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                  Salvar Alterações
+                  {savingConn ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                  Save Changes
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* QR Code Modal */}
-
-      {selectedConnection && (
-        <div className="fixed inset-0 bg-fluvius-text-main/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[24px] shadow-2xl max-w-sm w-full overflow-hidden border border-fluvius-border">
-            <div className="p-6 border-b border-fluvius-border flex justify-between items-center bg-fluvius-surface">
-              <h3 className="font-bold text-fluvius-text-main text-lg">Conectar WhatsApp</h3>
-              <button onClick={() => setSelectedConnection(null)} className="text-fluvius-text-sec hover:text-fluvius-text-main transition-colors">
-                <X size={24} />
-              </button>
-            </div>
-            <div className="p-8 flex flex-col items-center text-center bg-white">
-              <p className="text-fluvius-text-sec mb-6">Escaneie o QR Code abaixo com o seu WhatsApp.</p>
-              <div className="w-64 h-64 bg-fluvius-bg rounded-[16px] flex items-center justify-center border-2 border-dashed border-fluvius-border overflow-hidden">
-                {qrLoading ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <RefreshCw className="animate-spin text-fluvius-blue-main" size={32} />
-                    <span className="text-sm text-fluvius-text-sec">Gerando QR...</span>
-                  </div>
-                ) : qrCode ? (
-                  <img src={qrCode} alt="WhatsApp QR Code" className="w-full h-full object-contain" />
-                ) : (
-                  <div className="text-fluvius-text-sec text-sm">Erro ao gerar QR Code</div>
-                )}
-              </div>
-              <div className="mt-6 text-xs text-fluvius-text-sec">
-                Instância: <span className="font-mono text-fluvius-text-main">{selectedConnection.instance_name}</span>
-              </div>
-            </div>
-            <div className="p-4 bg-fluvius-surface text-center border-t border-fluvius-border">
-              <button onClick={() => setSelectedConnection(null)} className="text-fluvius-text-sec font-medium hover:text-fluvius-text-main transition-colors text-sm">
-                Fechar
-              </button>
-            </div>
-          </div>
+          </motion.div>
         </div>
       )}
     </div>
-  </div>
   );
 };
