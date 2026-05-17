@@ -1,11 +1,12 @@
 # Stage 1: Build React App
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
 # Copy package.json and install dependencies
-COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm install -g pnpm
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # Copy the rest of the application
 COPY . .
@@ -17,7 +18,7 @@ ENV VITE_WS_URL=
 
 # Note: In the client code, if VITE_WS_URL is empty, it needs to be inferred from window.location.
 # But we can also set it dynamically in client.ts. Or we can set it to a relative path if the WS client supports it.
-RUN npm run build
+RUN pnpm run build
 
 # Stage 2: Serve with Nginx
 FROM nginx:alpine

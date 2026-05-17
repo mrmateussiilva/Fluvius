@@ -44,7 +44,7 @@ const itemVariants = {
     opacity: 1,
     transition: { duration: 0.4, ease: "easeOut" }
   }
-};
+} as const;
 
 const StatCard: React.FC<{ 
   label: string; 
