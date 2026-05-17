@@ -115,25 +115,64 @@ export const SettingsPage: React.FC = () => {
 
 
   const handleDelete = async (conn: Connection) => {
-    if (!confirm(`Remove connection "${conn.name}"? This will disconnect and delete the instance.`)) return;
-    try {
-      await deleteConnection(conn.id);
-      loadConnections();
-    } catch (err) {
-      console.error(err);
-      toast.error('Error removing connection.');
-    }
+    toast((t) => (
+      <div className="flex flex-col gap-3">
+        <span className="text-sm font-medium">Remove connection "{conn.name}"?</span>
+        <div className="flex gap-2">
+          <button
+            onClick={async () => {
+              toast.dismiss(t.id);
+              try {
+                await deleteConnection(conn.id);
+                loadConnections();
+              } catch (err) {
+                console.error(err);
+                toast.error('Error removing connection.');
+              }
+            }}
+            className="px-3 py-1.5 bg-rose-500 text-white rounded text-xs font-bold"
+          >
+            Yes, delete
+          </button>
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded text-xs font-bold"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: 8000 });
   };
-
   const handleLogout = async (conn: Connection) => {
-    if (!confirm(`Disconnect "${conn.name}" without deleting the instance?`)) return;
-    try {
-      await logoutConnection(conn.id);
-      loadConnections();
-    } catch (err) {
-      console.error(err);
-      toast.error('Error disconnecting.');
-    }
+    toast((t) => (
+      <div className="flex flex-col gap-3">
+        <span className="text-sm font-medium">Disconnect "{conn.name}" without deleting?</span>
+        <div className="flex gap-2">
+          <button
+            onClick={async () => {
+              toast.dismiss(t.id);
+              try {
+                await logoutConnection(conn.id);
+                loadConnections();
+              } catch (err) {
+                console.error(err);
+                toast.error('Error disconnecting.');
+              }
+            }}
+            className="px-3 py-1.5 bg-amber-500 text-white rounded text-xs font-bold"
+          >
+            Yes, disconnect
+          </button>
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded text-xs font-bold"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: 8000 });
   };
 
   const handleRestart = async (conn: Connection) => {
