@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     # Legacy name kept for existing local env files.
     EVOLUTION_API_URL: str | None = None
     EVOLUTION_API_KEY: str = "dev_fluvius_change_me"
+    
+    # Security Webhook Secret
+    EVOLUTION_WEBHOOK_SECRET: str | None = None
 
     # Browser/frontend -> backend
     PUBLIC_API_BASE_URL: str = "http://localhost:8000"

@@ -14,6 +14,12 @@ SECRET_KEY = os.getenv("JWT_SECRET_KEY", "super-secret-key-change-it-in-producti
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
 
+if SECRET_KEY == "super-secret-key-change-it-in-production":
+    import logging
+    logging.getLogger("uvicorn.error").warning(
+        "⚠️ JWT_SECRET_KEY is insecure! Change this key in production environment."
+    )
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
