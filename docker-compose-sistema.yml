@@ -28,6 +28,7 @@ services:
       - WEBHOOK_PUBLIC_BASE_URL=${WEBHOOK_PUBLIC_BASE_URL}
       - EVOLUTION_BASE_URL=${EVOLUTION_BASE_URL}
       - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
       - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:3000}
     volumes:
       - ./backend/uploads:/app/uploads
