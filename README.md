@@ -120,3 +120,44 @@ WEBHOOK_PUBLIC_BASE_URL=http://host.docker.internal:8000
 EVOLUTION_BASE_URL=http://localhost:8080
 EVOLUTION_API_KEY=...
 ```
+
+## Deploy em Produção (VPS com Docker Compose e PostgreSQL)
+
+O Fluvius possui uma infraestrutura própria (`docker-compose-sistema.yml`) para isolar o Postgres do sistema principal daquele utilizado pela Evolution API. Além disso, o Nginx é usado como proxy interno no Frontend, repassando requisições `/api` e `/ws` para o Backend internamente.
+
+### 1. Iniciar o Sistema
+
+1.  Certifique-se de que a Evolution API (via `docker-compose.yml`) já esteja rodando na sua máquina:
+    ```bash
+    docker compose up -d
+    ```
+
+2.  Suba o Sistema Fluvius (que subirá o seu próprio Postgres na rede Docker, o backend em FastAPI e o Nginx com React):
+    ```bash
+    docker compose -f docker-compose-sistema.yml up -d --build
+    ```
+
+> O Frontend será exposto na porta local `3000`. O Backend ficará na `8000`.
+
+### 2. Configurar o Proxy Reverso (Caddy)
+
+Você precisará usar um Proxy Reverso (como Caddy) para adicionar SSL (HTTPS) apontando o seu subdomínio para a porta `3000` do contêiner Frontend.
+No seu arquivo `Caddyfile`, adicione o bloco abaixo:
+
+```caddyfile
+app.fluvius.com.br {
+    reverse_proxy localhost:3000
+}
+```
+
+O Frontend já está configurado via `nginx.conf` interno para direcionar as rotas da API:
+*   Acesso a `/api/*` será reencaminhado para o backend.
+*   Acesso a `/ws/*` será reencaminhado via Upgrade (WebSocket) para o backend.
+*   Acesso a `/uploads/*` exibirá mídias armazenadas.
+
+### 3. Variáveis de Ambiente e Arquivos de Upload
+
+*   O banco PostgreSQL do sistema salva dados no volume persistente `pgdata`.
+*   As mídias do WhatsApp recebidas são mantidas no disco via bind mount `./backend/uploads:/app/uploads`. Nunca exclua essa pasta, ou você perderá arquivos e áudios.
+*   Antes de subir o sistema, configure o host publico do sistema para garantir que os Webhooks da Evolution alcancem o Backend:
+    *   No Backend (no `.env`), altere `WEBHOOK_PUBLIC_BASE_URL=https://app.fluvius.com.br/api`
