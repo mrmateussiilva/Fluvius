@@ -7,6 +7,7 @@ from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.webhook_event import WebhookEvent
 from app.models.queue import Queue
+from app.models.quick_reply import QuickReply
 
 __all__ = [
     "Workspace",
@@ -17,5 +18,6 @@ __all__ = [
     "Conversation",
     "Message",
     "WebhookEvent",
-    "Queue"
+    "Queue",
+    "QuickReply"
 ]
