@@ -23,13 +23,22 @@ export const InboxPage: React.FC = () => {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(searchParams.get('c'));
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [activeTab, setActiveTab] = useState<TabFilter>('pending');
-  const [connectionStatus, setConnectionStatus] = useState<string>('connected');
+  const [connectionStatus, setConnectionStatus] = useState<string>('connecting');
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const { currentAgent } = useAgent();
   const { token } = useAuth();
   const navigate = useNavigate();
+
+  // Request notification permissions on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   const loadConversations = useCallback(async () => {
     try {
@@ -61,10 +70,31 @@ export const InboxPage: React.FC = () => {
     try {
       const data = await fetchMessages(selectedConversationId);
       setMessages(data);
+      setHasMoreMessages(data.length === 50);
     } catch (err) {
       console.error(err);
     }
   }, [selectedConversationId]);
+
+  const handleLoadMoreMessages = useCallback(async () => {
+    if (!selectedConversationId || isLoadingMore || !hasMoreMessages || messages.length === 0) return;
+    
+    setIsLoadingMore(true);
+    try {
+      const oldestMessage = messages[0];
+      const data = await fetchMessages(selectedConversationId, oldestMessage.created_at);
+      if (data.length > 0) {
+        setMessages(prev => [...data, ...prev]);
+        setHasMoreMessages(data.length === 50);
+      } else {
+        setHasMoreMessages(false);
+      }
+    } catch (err) {
+      console.error('Failed to load older messages:', err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [selectedConversationId, messages, isLoadingMore, hasMoreMessages]);
 
   // Initial loads
   useEffect(() => { loadConversations(); }, [loadConversations]);
@@ -81,9 +111,22 @@ export const InboxPage: React.FC = () => {
         // Play notification sound if message is inbound
         if (newMsg.direction === 'inbound') {
           const audio = new Audio('/sounds/notification.mp3');
+          audio.volume = 0.5;
           audio.play().catch(() => {});
-          document.title = '(1) Nova Mensagem | Fluvius';
-          setTimeout(() => { document.title = 'Fluvius'; }, 5000);
+          
+          if (document.hidden) {
+            document.title = '(1) Nova Mensagem | Fluvius';
+            setTimeout(() => { document.title = 'Fluvius'; }, 5000);
+            
+            // Push Notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+               const contactName = conversations.find(c => c.id === newMsg.conversation_id)?.contact?.name || 'Cliente';
+               new Notification(`Mensagem de ${contactName}`, {
+                 body: newMsg.message_type === 'text' ? newMsg.content : 'Enviou um anexo',
+                 icon: '/logo.png'
+               });
+            }
+          }
           
           if (newMsg.conversation_id !== selectedConversationId) {
              toast((t) => (
@@ -264,6 +307,9 @@ export const InboxPage: React.FC = () => {
           onContactUpdated={handleContactUpdated}
           replyingTo={replyingTo}
           onSetReplyingTo={setReplyingTo}
+          onLoadMore={handleLoadMoreMessages}
+          hasMore={hasMoreMessages}
+          isLoadingMore={isLoadingMore}
         />
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center bg-fluvius-surface border-l border-fluvius-border">

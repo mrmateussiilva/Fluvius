@@ -13,8 +13,14 @@ from app.schemas.agent import AgentRead
 from app.models.contact import Contact
 from app.models.agent import Agent
 from app.models.conversation import Conversation
+from app.models.inbox import Inbox
 from app.models.workspace import utcnow
 from app.core.socket_manager import socket_manager
+
+class StartConversationRequest(BaseModel):
+    phone: str
+    name: Optional[str] = None
+    inbox_id: Optional[str] = None
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
@@ -231,6 +237,90 @@ async def resolve_conversation(
     })
 
     conversation.contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
+    if conversation.assignee_id:
+        conversation.assignee = db.query(Agent).filter(Agent.id == conversation.assignee_id).first()
+    return conversation
+
+
+@router.post("/start", response_model=ConversationResponse)
+async def start_conversation(
+    body: StartConversationRequest,
+    db: Session = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent)
+):
+    import re
+    # Sanitize phone (only numbers)
+    phone = re.sub(r"\D", "", body.phone)
+    if not phone:
+        raise HTTPException(status_code=400, detail="Invalid phone number")
+
+    # Find or create contact
+    contact = db.query(Contact).filter(
+        Contact.workspace_id == current_agent.workspace_id,
+        Contact.phone == phone
+    ).first()
+
+    if not contact:
+        contact = Contact(
+            workspace_id=current_agent.workspace_id,
+            phone=phone,
+            name=body.name or phone
+        )
+        db.add(contact)
+        db.commit()
+        db.refresh(contact)
+
+    # Determine inbox_id
+    inbox_id = body.inbox_id
+    if not inbox_id:
+        # Default to the first active inbox in the workspace
+        inbox = db.query(Inbox).filter(Inbox.workspace_id == current_agent.workspace_id).first()
+        if not inbox:
+            raise HTTPException(status_code=400, detail="No active WhatsApp connections found in this workspace.")
+        inbox_id = inbox.id
+
+    # Check if conversation already exists for this inbox and contact
+    conversation = db.query(Conversation).filter(
+        Conversation.workspace_id == current_agent.workspace_id,
+        Conversation.inbox_id == inbox_id,
+        Conversation.contact_id == contact.id
+    ).first()
+
+    if not conversation:
+        conversation = Conversation(
+            workspace_id=current_agent.workspace_id,
+            inbox_id=inbox_id,
+            contact_id=contact.id,
+            status="open",
+            assignee_id=current_agent.id, # Automatically assign to the agent who started it
+            assigned_at=utcnow()
+        )
+        db.add(conversation)
+        db.commit()
+        db.refresh(conversation)
+
+        # Broadcast the new conversation
+        conversation.contact = contact
+        conversation.assignee = current_agent
+        
+        await socket_manager.broadcast({
+            "type": "NEW_CONVERSATION",
+            "workspace_id": current_agent.workspace_id,
+            "data": {
+                "id": conversation.id,
+                "status": conversation.status,
+                "contact": {
+                    "id": contact.id,
+                    "name": contact.name,
+                    "phone": contact.phone,
+                    "avatar_url": contact.avatar_url
+                },
+                "unread_count": 0,
+                "last_message_at": None
+            }
+        })
+
+    conversation.contact = contact
     if conversation.assignee_id:
         conversation.assignee = db.query(Agent).filter(Agent.id == conversation.assignee_id).first()
     return conversation

@@ -35,7 +35,8 @@ export const useWebSocket = (token: string | null, onEvent: (event: WSEvent) => 
 
     const configuredWsUrl = import.meta.env.VITE_WS_URL;
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = new URL(configuredWsUrl || `${protocol}//localhost:8000/ws`);
+    const defaultWsHost = window.location.host.includes('localhost') ? 'localhost:8000' : window.location.host;
+    const wsUrl = new URL(configuredWsUrl || `${protocol}//${defaultWsHost}/ws`);
     wsUrl.searchParams.set('token', token);
 
     console.log(`Connecting to WebSocket: ${wsUrl.origin}${wsUrl.pathname}`);

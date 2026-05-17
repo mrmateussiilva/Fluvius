@@ -4,8 +4,17 @@ from app.models.message import Message
 
 class MessageService:
     @staticmethod
-    def get_messages_by_conversation(db: Session, conversation_id: str) -> List[Message]:
-        return db.query(Message).filter(Message.conversation_id == conversation_id).order_by(Message.created_at.asc()).all()
+    def get_messages_by_conversation(db: Session, conversation_id: str, limit: int = 50, before_date: Optional[str] = None) -> List[Message]:
+        query = db.query(Message).filter(Message.conversation_id == conversation_id)
+        if before_date:
+            from datetime import datetime
+            dt = datetime.fromisoformat(before_date.replace('Z', '+00:00'))
+            query = query.filter(Message.created_at < dt)
+            
+        # We need to order by created_at desc to get the most recent ones before the cursor,
+        # but then we want to return them in ascending order for the chat UI.
+        messages = query.order_by(Message.created_at.desc()).limit(limit).all()
+        return list(reversed(messages))
 
     @staticmethod
     def create_message(db: Session, message_data: dict) -> Message:

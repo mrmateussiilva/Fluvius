@@ -13,6 +13,8 @@ import { twMerge } from 'tailwind-merge';
 import { useAgent } from '../context/AgentContext';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { NewChatModal } from './NewChatModal';
+import { MessageSquarePlus } from 'lucide-react';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -42,6 +44,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   const { currentAgent } = useAgent();
   const { logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
 
   const filteredConversations = conversations.filter(conv => {
     const contactName = conv.contact?.name || conv.contact?.phone || '';
@@ -64,16 +67,25 @@ export const ConversationList: React.FC<ConversationListProps> = ({
           </button>
         </div>
 
-        {/* Search - Flat & Functional */}
-        <div className="relative">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-100 rounded-md pl-8 pr-3 py-1.5 text-[12px] text-slate-700 placeholder:text-slate-400 focus:bg-white focus:border-blue-200 transition-all outline-none"
-          />
+        {/* Search & Actions */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-100 rounded-md pl-8 pr-3 py-1.5 text-[12px] text-slate-700 placeholder:text-slate-400 focus:bg-white focus:border-blue-200 transition-all outline-none"
+            />
+          </div>
+          <button 
+            onClick={() => setIsNewChatModalOpen(true)}
+            className="w-8 h-8 flex items-center justify-center shrink-0 bg-fluvius-blue-main hover:bg-fluvius-blue-dark text-white rounded-md transition-colors"
+            title="Nova Conversa"
+          >
+            <MessageSquarePlus size={14} />
+          </button>
         </div>
       </div>
 
@@ -206,10 +218,19 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 <SettingsIcon size={14} />
              </Link>
              <button onClick={logout} className="p-1.5 text-slate-400 hover:text-rose-500 rounded transition-colors">
-                <LogOut size={14} />
+                <LogOut size={16} />
              </button>
           </div>
         </div>
+
+        {/* Modals */}
+        <NewChatModal 
+          isOpen={isNewChatModalOpen} 
+          onClose={() => setIsNewChatModalOpen(false)} 
+          onSuccess={(convId) => {
+            onSelect(convId);
+          }}
+        />
 
         {currentAgent?.role === 'admin' && (
           <div className="px-2 pb-2">

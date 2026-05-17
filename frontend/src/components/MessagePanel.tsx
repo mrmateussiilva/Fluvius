@@ -98,6 +98,9 @@ interface MessagePanelProps {
   onContactUpdated?: (contact: Contact) => void;
   replyingTo?: Message | null;
   onSetReplyingTo?: (msg: Message | null) => void;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
 }
 
 export const MessagePanel: React.FC<MessagePanelProps> = ({
@@ -112,6 +115,9 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
   onContactUpdated,
   replyingTo,
   onSetReplyingTo,
+  onLoadMore,
+  hasMore,
+  isLoadingMore,
 }) => {
   const { currentAgent } = useAgent();
   const isSpectator = !!(conversation.assignee_id && currentAgent && conversation.assignee_id !== currentAgent.id);
@@ -121,14 +127,26 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
   const [newTag, setNewTag] = useState('');
   const [isUpdatingTags, setIsUpdatingTags] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const contactName = conversation.contact?.name || conversation.contact?.phone || 'Desconhecido';
   const contactPhone = conversation.contact?.phone || '';
   const contactTags = conversation.contact?.tags || [];
 
+  // Scroll to bottom only if we are at the bottom or it's a new message
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (!isLoadingMore) {
+       endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isLoadingMore]);
+
+  const handleScroll = () => {
+    if (containerRef.current) {
+      if (containerRef.current.scrollTop === 0 && hasMore && !isLoadingMore && onLoadMore) {
+        onLoadMore();
+      }
+    }
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -350,7 +368,16 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
       )}
 
       {/* Messages Feed - High Density */}
-      <div className="flex-1 overflow-y-auto p-6 z-10 flex flex-col gap-4 fluvius-scroll pb-8">
+      <div 
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto p-6 z-10 flex flex-col gap-4 fluvius-scroll pb-8"
+      >
+        {isLoadingMore && (
+           <div className="flex justify-center py-2">
+             <span className="w-4 h-4 border-2 border-fluvius-blue-main border-t-transparent rounded-full animate-spin"></span>
+           </div>
+        )}
         <AnimatePresence mode="popLayout">
           {messages.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40">

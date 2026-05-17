@@ -251,8 +251,22 @@ export const fetchConversations = async (status?: string): Promise<Conversation[
   return response.json();
 };
 
-export const fetchMessages = async (conversationId: string): Promise<Message[]> => {
-  const response = await fetchWithAuth(`${API_BASE_URL}/conversations/${conversationId}/messages`);
+export const startConversation = async (data: { phone: string; name?: string; inbox_id?: string }): Promise<Conversation> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/conversations/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Failed to start conversation');
+  return response.json();
+};
+
+export const fetchMessages = async (conversationId: string, beforeDate?: string, limit: number = 50): Promise<Message[]> => {
+  let url = `${API_BASE_URL}/conversations/${conversationId}/messages?limit=${limit}`;
+  if (beforeDate) {
+    url += `&before_date=${encodeURIComponent(beforeDate)}`;
+  }
+  const response = await fetchWithAuth(url);
   if (!response.ok) {
     throw new Error('Failed to fetch messages');
   }

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 import logging
 import re
 
@@ -35,6 +35,8 @@ def is_valid_whatsapp_destination(destination: str | None) -> bool:
 @router.get("", response_model=List[MessageResponse])
 def get_messages(
     conversation_id: str, 
+    before_date: Optional[str] = None,
+    limit: int = 50,
     db: Session = Depends(get_db),
     current_agent: Agent = Depends(get_current_agent)
 ):
@@ -43,7 +45,12 @@ def get_messages(
     if not conversation or conversation.workspace_id != current_agent.workspace_id:
         raise HTTPException(status_code=404, detail="Conversation not found")
         
-    messages = MessageService.get_messages_by_conversation(db, conversation_id)
+    messages = MessageService.get_messages_by_conversation(
+        db, 
+        conversation_id, 
+        limit=limit, 
+        before_date=before_date
+    )
     return messages
 
 async def send_message_task(message_id: str, conversation_id: str, text: str, workspace_id: str, quoted_external_id: str = None):
