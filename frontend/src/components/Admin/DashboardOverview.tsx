@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Activity, CheckCircle2, Clock, MessageCircle, Radio, 
   RefreshCw, Users, UserRoundCheck, ShieldCheck, Zap, 
-  ArrowUpRight, ArrowDownLeft, AlertCircle, Share2
+  ArrowUpRight, ArrowDownLeft, AlertCircle, Share2, Sparkles
 } from 'lucide-react';
 import { fetchDashboard, type DashboardData, type DashboardRecentConversation } from '../../api/client';
 import { clsx, type ClassValue } from 'clsx';
@@ -48,7 +48,7 @@ const itemVariants = {
 
 const StatCard: React.FC<{ 
   label: string; 
-  value: number; 
+  value: string | number; 
   icon: React.ReactNode; 
   detail: string; 
   trend?: { val: string; pos: boolean };
@@ -252,7 +252,7 @@ export const DashboardOverview: React.FC = () => {
       </div>
 
       {/* Grid de Stats Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-5">
         <StatCard 
           label="Conversas Totais" 
           value={totals!.conversations} 
@@ -288,13 +288,27 @@ export const DashboardOverview: React.FC = () => {
           detail={`${totals!.online_agents} conectados agora`}
           gradient="bg-indigo-500"
         />
+        <StatCard 
+          label="Primeira Resposta" 
+          value={data.sla.avg_response_minutes > 0 ? `${data.sla.avg_response_minutes} min` : 'Sem dados'} 
+          icon={<Zap size={22} />} 
+          detail="Meta: < 15 min"
+          gradient="bg-orange-500"
+        />
+        <StatCard 
+          label="Tempo Resolução" 
+          value={data.sla.avg_resolution_minutes > 0 ? `${data.sla.avg_resolution_minutes} min` : 'Sem dados'} 
+          icon={<Clock size={22} />} 
+          detail="Meta: < 2 horas"
+          gradient="bg-violet-500"
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Distribuição por Status */}
         <motion.section 
           variants={itemVariants}
-          className="lg:col-span-4 bg-white border border-fluvius-border rounded-[24px] shadow-sm overflow-hidden flex flex-col"
+          className="lg:col-span-3 bg-white border border-fluvius-border rounded-[24px] shadow-sm overflow-hidden flex flex-col"
         >
           <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
             <h2 className="text-[15px] font-bold text-slate-900">Funil de Atendimento</h2>
@@ -315,8 +329,76 @@ export const DashboardOverview: React.FC = () => {
           </div>
         </motion.section>
 
+        {/* Distribuição por Sentimento */}
+        <motion.section 
+          variants={itemVariants}
+          className="lg:col-span-3 bg-white border border-fluvius-border rounded-[24px] shadow-sm overflow-hidden flex flex-col"
+        >
+          <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
+            <h2 className="text-[15px] font-bold text-slate-900">Humor da Carteira (IA)</h2>
+            <div className="p-1.5 bg-slate-50 rounded-lg text-slate-400">
+              <Sparkles size={16} className="text-blue-500 animate-pulse" />
+            </div>
+          </div>
+          <div className="p-7 space-y-6 flex-1 flex flex-col justify-between">
+            {/* Segmented Sentiment Bar */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-500">Humor Geral</span>
+                <span className="font-bold text-slate-700">Últimas 30 Conversas</span>
+              </div>
+              <div className="h-3 rounded-full bg-slate-100 flex overflow-hidden shadow-inner">
+                {(() => {
+                  const s = data.sentiments;
+                  const total = s.POSITIVE + s.NEUTRAL + s.NEGATIVE + s.URGENT || 1;
+                  const posPct = (s.POSITIVE / total) * 100;
+                  const neuPct = (s.NEUTRAL / total) * 100;
+                  const negPct = (s.NEGATIVE / total) * 100;
+                  const urgPct = (s.URGENT / total) * 100;
+                  
+                  return (
+                    <>
+                      {s.POSITIVE > 0 && <div style={{ width: `${posPct}%` }} className="bg-emerald-500 h-full transition-all" title="Amigável" />}
+                      {s.NEUTRAL > 0 && <div style={{ width: `${neuPct}%` }} className="bg-slate-400 h-full transition-all" title="Neutro" />}
+                      {s.NEGATIVE > 0 && <div style={{ width: `${negPct}%` }} className="bg-rose-500 h-full transition-all" title="Frustrado" />}
+                      {s.URGENT > 0 && <div style={{ width: `${urgPct}%` }} className="bg-amber-500 h-full transition-all" title="Urgente" />}
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Sentiment Legend / Breakdown */}
+            <div className="space-y-3">
+              {[
+                { label: 'Amigável', val: data.sentiments.POSITIVE, color: 'bg-emerald-500', emoji: '😊' },
+                { label: 'Neutro', val: data.sentiments.NEUTRAL, color: 'bg-slate-400', emoji: '😐' },
+                { label: 'Frustrado', val: data.sentiments.NEGATIVE, color: 'bg-rose-500', emoji: '😠' },
+                { label: 'Urgente', val: data.sentiments.URGENT, color: 'bg-amber-500', emoji: '⚠️' }
+              ].map((item, idx) => {
+                const s = data.sentiments;
+                const total = s.POSITIVE + s.NEUTRAL + s.NEGATIVE + s.URGENT || 1;
+                const pct = Math.round((item.val / total) * 100);
+                
+                return (
+                  <div key={idx} className="flex items-center justify-between text-xs py-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className={cn("w-2.5 h-2.5 rounded-full", item.color)} />
+                      <span className="text-slate-400 text-[13px]">{item.emoji}</span>
+                      <span className="font-semibold text-slate-600">{item.label}</span>
+                    </div>
+                    <span className="font-bold text-slate-800">
+                      {item.val} <span className="text-[10px] text-slate-400 font-medium">({pct}%)</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </motion.section>
+
         {/* Mensagens e Conexões */}
-        <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="lg:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Mensagens */}
           <motion.section 
             variants={itemVariants}

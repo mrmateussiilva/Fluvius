@@ -58,6 +58,19 @@ class ConnectionStatusSummary(BaseModel):
     status: str
     instance: str
 
+
+class SLASummary(BaseModel):
+    avg_response_minutes: int = 0
+    avg_resolution_minutes: int = 0
+
+
+class SentimentDistribution(BaseModel):
+    POSITIVE: int = 0
+    NEUTRAL: int = 0
+    NEGATIVE: int = 0
+    URGENT: int = 0
+
+
 class DashboardResponse(BaseModel):
     totals: dict[str, int]
     statuses: StatusSummary
@@ -65,6 +78,8 @@ class DashboardResponse(BaseModel):
     agents: list[AgentSummary]
     recent_conversations: list[RecentConversation]
     connections: list[ConnectionStatusSummary] = []
+    sla: SLASummary
+    sentiments: SentimentDistribution
 
 
 def is_valid_whatsapp_destination(destination: str | None) -> bool:
@@ -178,6 +193,99 @@ def get_dashboard(
         ) for c in connections_data
     ]
 
+    # 1. SLA - Resolution time
+    resolved_conversations = [
+        c for c in conversations 
+        if c.status == "resolved" and c.resolved_at and c.created_at
+    ]
+    avg_resolution = 0
+    if resolved_conversations:
+        total_resolution_seconds = sum(
+            (c.resolved_at - c.created_at).total_seconds() 
+            for c in resolved_conversations
+        )
+        avg_resolution = round(total_resolution_seconds / (60 * len(resolved_conversations)))
+
+    # 2. SLA - First response time (TMR)
+    recent_conv_ids = [c.id for c in sorted(
+        conversations,
+        key=lambda item: item.last_message_at or item.updated_at or item.created_at,
+        reverse=True
+    )[:50]]
+
+    avg_response_minutes = 0
+    if recent_conv_ids:
+        # Fetch messages for these conversations ordered chronologically
+        recent_messages = (
+            db.query(Message)
+            .filter(Message.conversation_id.in_(recent_conv_ids))
+            .order_by(Message.created_at.asc())
+            .all()
+        )
+        # Map conversation_id to list of messages
+        conv_messages = {}
+        for m in recent_messages:
+            conv_messages.setdefault(m.conversation_id, []).append(m)
+
+        # For each conversation, find the first inbound message, then the first outbound message after it
+        latencies = []
+        for cid, msgs in conv_messages.items():
+            first_inbound_time = None
+            for m in msgs:
+                if m.direction == "inbound" and first_inbound_time is None:
+                    first_inbound_time = m.created_at
+                elif m.direction == "outbound" and first_inbound_time is not None:
+                    latencies.append((m.created_at - first_inbound_time).total_seconds())
+                    break
+
+        if latencies:
+            avg_response_minutes = round(sum(latencies) / (60 * len(latencies)))
+
+    # 3. Sentiment Distribution NLP Scanner
+    sentiments = {"POSITIVE": 0, "NEUTRAL": 0, "NEGATIVE": 0, "URGENT": 0}
+    recent_active_convs = sorted(
+        conversations,
+        key=lambda item: item.last_message_at or item.updated_at or item.created_at,
+        reverse=True
+    )[:30]
+    recent_active_ids = [c.id for c in recent_active_convs]
+    
+    if recent_active_ids:
+        recent_inbounds = (
+            db.query(Message)
+            .filter(
+                Message.conversation_id.in_(recent_active_ids),
+                Message.direction == "inbound"
+            )
+            .order_by(Message.created_at.desc())
+            .all()
+        )
+        
+        last_inbound_per_conv = {}
+        for m in recent_inbounds:
+            if m.conversation_id not in last_inbound_per_conv:
+                last_inbound_per_conv[m.conversation_id] = m
+
+        def get_message_sentiment(content: str) -> str:
+            if not content:
+                return "NEUTRAL"
+            content_lower = content.lower()
+            if any(k in content_lower for k in ["urgente", "emergencia", "emergência", "rápido", "atrasado", "socorro", "critico", "crítico", "prioridade", "agora"]):
+                return "URGENT"
+            if any(k in content_lower for k in ["erro", "falha", "ruim", "problema", "não funciona", "droga", "espera", "reclamar", "pessimo", "péssimo", "demora", "incompetente"]):
+                return "NEGATIVE"
+            if any(k in content_lower for k in ["obrigado", "obrigada", "agradeço", "excelente", "ótimo", "otimo", "perfeito", "parabéns", "lindo", "bom", "parabens", "top", "amei"]):
+                return "POSITIVE"
+            return "NEUTRAL"
+
+        for cid in recent_active_ids:
+            msg = last_inbound_per_conv.get(cid)
+            if msg and msg.content:
+                s_type = get_message_sentiment(msg.content)
+                sentiments[s_type] += 1
+            else:
+                sentiments["NEUTRAL"] += 1
+
     return DashboardResponse(
         totals={
             "contacts": len(valid_contact_ids),
@@ -198,4 +306,9 @@ def get_dashboard(
         agents=agent_summaries,
         recent_conversations=recent_conversations,
         connections=connection_summaries,
+        sla=SLASummary(
+            avg_response_minutes=avg_response_minutes,
+            avg_resolution_minutes=avg_resolution
+        ),
+        sentiments=SentimentDistribution(**sentiments)
     )

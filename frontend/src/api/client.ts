@@ -103,6 +103,16 @@ export interface DashboardData {
   agents: DashboardAgentSummary[];
   recent_conversations: DashboardRecentConversation[];
   connections: DashboardConnectionSummary[];
+  sla: {
+    avg_response_minutes: number;
+    avg_resolution_minutes: number;
+  };
+  sentiments: {
+    POSITIVE: number;
+    NEUTRAL: number;
+    NEGATIVE: number;
+    URGENT: number;
+  };
 }
 
 export interface Contact {
