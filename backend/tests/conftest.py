@@ -6,6 +6,18 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.core.database import Base, get_db
 
+# Import ALL models so SQLAlchemy registers their tables before create_all()
+import app.models.workspace       # noqa: F401
+import app.models.agent           # noqa: F401
+import app.models.inbox           # noqa: F401
+import app.models.connection      # noqa: F401
+import app.models.contact         # noqa: F401
+import app.models.conversation    # noqa: F401
+import app.models.message         # noqa: F401
+import app.models.queue           # noqa: F401
+import app.models.quick_reply     # noqa: F401
+import app.models.webhook_event   # noqa: F401
+
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
 engine = create_engine(
