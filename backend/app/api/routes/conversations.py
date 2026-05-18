@@ -106,6 +106,27 @@ def suggest_reply(
         raise HTTPException(status_code=500, detail="Internal server error in AI Service")
 
 
+@router.post("/{conversation_id}/summarize")
+def summarize_conversation(
+    conversation_id: str,
+    db: Session = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent)
+):
+    # Check if conversation belongs to workspace
+    conversation = ConversationService.get_conversation_by_id(db, conversation_id)
+    if not conversation or conversation.workspace_id != current_agent.workspace_id:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+        
+    try:
+        summary = AIService.summarize_conversation(db, conversation_id)
+        return {"summary": summary}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error in AI Service")
+
+
+
 class AssignRequest(BaseModel):
     agent_id: str
 

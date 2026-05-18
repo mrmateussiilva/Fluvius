@@ -457,6 +457,19 @@ export const suggestReply = async (conversationId: string): Promise<string> => {
   const data = await response.json();
   return data.suggestion;
 };
+
+export const summarizeConversation = async (conversationId: string): Promise<string> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/conversations/${conversationId}/summarize`, {
+    method: 'POST',
+  });
+  if (!response.ok) {
+    const errorMsg = await getErrorMessage(response, 'Falha ao gerar resumo da conversa');
+    throw new Error(errorMsg);
+  }
+  const data = await response.json();
+  return data.summary;
+};
+
 export const updateConnection = async (connectionId: string, data: any): Promise<Connection> => {
   const response = await fetchWithAuth(`${API_BASE_URL}/connections/${connectionId}`, {
     method: 'PUT',

@@ -130,3 +130,52 @@ class AIService:
         except Exception as e:
             logger.exception("Erro crítico no AIService")
             raise ValueError("Ocorreu um erro interno ao processar a sugestão de IA.")
+
+    @staticmethod
+    def summarize_conversation(db: Session, conversation_id: str) -> str:
+        try:
+            api_key = settings.GEMINI_API_KEY
+            provider = GeminiProvider(api_key)
+            
+            # Carregar contexto
+            conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+            if not conversation:
+                raise ValueError("Conversa não encontrada.")
+                
+            contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
+            contact_name = contact.name if contact and contact.name else "Cliente"
+            
+            messages = db.query(Message).filter(
+                Message.conversation_id == conversation_id
+            ).order_by(Message.created_at.desc()).limit(30).all()
+            messages.reverse()
+            
+            if not messages:
+                return "Sem histórico de mensagens nesta conversa para gerar um resumo."
+                
+            # Construção do Prompt
+            prompt = (
+                "Você é um assistente de inteligência artificial de atendimento especializado em resumir conversas de suporte.\n"
+                f"Abaixo está o histórico de mensagens recentes com o cliente {contact_name}.\n"
+                "Gere um resumo executivo extremamente conciso e profissional em Português do Brasil contendo:\n"
+                "- Um parágrafo de resumo geral (qual é a dor, dúvida ou solicitação do cliente).\n"
+                "- Uma lista curta em tópicos (bullet points) com os pontos importantes resolvidos ou pendentes.\n\n"
+                "Não use placeholders ou referências ao formato do prompt. Seja direto, focado no cliente e objetivo.\n\n"
+                "HISTÓRICO DA CONVERSA:\n"
+            )
+            
+            for msg in messages:
+                sender = "Agente" if msg.direction == "outbound" else contact_name
+                content = msg.content if msg.message_type == "text" else f"[{msg.message_type}]"
+                prompt += f"{sender}: {content}\n"
+                
+            prompt += "\nRESUMO DA CONVERSA:"
+            
+            return provider.generate_suggestion(prompt)
+            
+        except ValueError as ve:
+            raise ve
+        except Exception as e:
+            logger.exception("Erro crítico no AIService de resumo")
+            raise ValueError("Ocorreu um erro interno ao processar o resumo da conversa com IA.")
+
