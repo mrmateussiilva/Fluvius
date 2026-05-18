@@ -36,11 +36,13 @@ async def test_connection_status_normalization(client, db_session):
     reg_response = client.post("/api/auth/register", json=register_payload)
     assert reg_response.status_code == 200
     token = reg_response.json()["access_token"]
-    agent_data = reg_response.json()["agent"]
-    
-    # Fetch details from DB
-    workspace_id = reg_response.json()["agent"]["id"] # in this schema, we can get workspace_id from DB
-    
+
+    # register response doesn't include workspace_id — fetch it from /me
+    headers = {"Authorization": f"Bearer {token}"}
+    me_response = client.get("/api/auth/me", headers=headers)
+    assert me_response.status_code == 200
+    workspace_id = me_response.json()["workspace_id"]
+
     # Create test Inbox & Connection in DB directly
     inbox = Inbox(workspace_id=workspace_id, name="Test WhatsApp", channel_type="whatsapp")
     db_session.add(inbox)
@@ -59,8 +61,7 @@ async def test_connection_status_normalization(client, db_session):
     db_session.add(connection)
     db_session.commit()
     
-    headers = {"Authorization": f"Bearer {token}"}
-    
+
     # 2. Test status normalization: 'open' -> 'connected'
     mock_response_open = {"instance": {"state": "open"}}
     with patch("app.services.evolution_service.EvolutionService.get_connection_state", new_callable=AsyncMock) as mock_state:
