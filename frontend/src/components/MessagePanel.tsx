@@ -4,7 +4,7 @@ import { MessageInput } from './MessageInput';
 import { 
   User, Check, CheckCheck, Clock, UserCheck, CheckCircle2, 
   RotateCcw, Upload, Reply, Play, Pause, Plus, X, Eye, 
-  FileText, AlertCircle, MessageSquare, Sparkles, Loader2, Tag, ChevronRight,
+  FileText, AlertCircle, MessageSquare, Sparkles, Loader2, Tag, ChevronRight, ChevronLeft,
   Smile, Meh, Frown, AlertTriangle, RefreshCw
 } from 'lucide-react';
 import { useAgent } from '../context/AgentContext';
