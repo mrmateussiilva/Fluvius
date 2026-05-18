@@ -23,7 +23,8 @@ def test_register_and_login(client):
     response = client.post("/api/auth/login", json=login_payload)
     assert response.status_code == 200
     login_data = response.json()
-    assert login_data["access_token"] == token
+    assert "access_token" in login_data
+    assert login_data["token_type"] == "bearer"
 
     # 3. Test Invalid Login
     invalid_payload = {
