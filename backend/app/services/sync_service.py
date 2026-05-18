@@ -11,13 +11,13 @@ logger = logging.getLogger(__name__)
 
 
 def is_whatsapp_chat_jid(remote_jid: str) -> bool:
-    """Accept individual WA chats (@s.whatsapp.net, @c.us) and groups (@g.us)."""
+    """Accept individual WA chats (@s.whatsapp.net, @c.us, @lid) and groups (@g.us)."""
     if not remote_jid or not isinstance(remote_jid, str):
         return False
     if "@" not in remote_jid:
         # If it's just digits, it's a valid phone number format from Evolution
         return remote_jid.isdigit()
-    return "@s.whatsapp.net" in remote_jid or "@c.us" in remote_jid or "@g.us" in remote_jid
+    return "@s.whatsapp.net" in remote_jid or "@c.us" in remote_jid or "@g.us" in remote_jid or "@lid" in remote_jid
 
 
 def contact_phone_from_jid(remote_jid: str) -> str:

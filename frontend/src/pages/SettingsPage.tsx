@@ -385,18 +385,18 @@ export const SettingsPage: React.FC = () => {
                           <div className="flex items-center gap-4">
                             <div className={cn(
                               "w-10 h-10 rounded flex items-center justify-center border transition-all",
-                              conn.status === 'open' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-200 text-slate-300'
+                              (conn.status === 'open' || conn.status === 'connected') ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-200 text-slate-300'
                             )}>
-                              {conn.status === 'open' ? <Wifi size={20} /> : <WifiOff size={20} />}
+                              {(conn.status === 'open' || conn.status === 'connected') ? <Wifi size={20} /> : <WifiOff size={20} />}
                             </div>
                             <div>
                               <h3 className="font-bold text-slate-800 text-[13px]">{conn.name}</h3>
                               <div className="flex items-center gap-3 mt-0.5">
                                 <span className={cn(
                                   "text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider",
-                                  conn.status === 'open' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                                  (conn.status === 'open' || conn.status === 'connected') ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
                                 )}>
-                                  {conn.status === 'open' ? 'Conectado' : 'Offline'}
+                                  {(conn.status === 'open' || conn.status === 'connected') ? 'Conectado' : 'Offline'}
                                 </span>
                                 <span className="text-[9px] text-slate-400 font-medium truncate max-w-[150px]">Inst: {conn.instance_name}</span>
                               </div>
@@ -409,7 +409,7 @@ export const SettingsPage: React.FC = () => {
                             <button onClick={() => handleRefreshStatus(conn)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors" title="Refresh">
                               <RefreshCw size={14} />
                             </button>
-                            {conn.status === 'open' ? (
+                            {(conn.status === 'open' || conn.status === 'connected') ? (
                               <>
                                 <button onClick={() => handleSync(conn)} className="text-[10px] font-bold uppercase tracking-wider text-slate-600 border border-slate-200 px-2 py-1 rounded hover:bg-slate-50 transition-colors" title="Sync">
                                   Sincronizar
@@ -423,7 +423,7 @@ export const SettingsPage: React.FC = () => {
                                 Reconectar
                               </button>
                             )}
-                            {conn.status !== 'open' && (
+                            {conn.status !== 'open' && conn.status !== 'connected' && (
                               <button onClick={() => handleConnect(conn)} className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-white bg-slate-900 px-3 py-1 rounded hover:bg-slate-800 transition-colors">
                                 <QrCode size={12} />
                                 QR Code

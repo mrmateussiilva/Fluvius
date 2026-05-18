@@ -145,7 +145,14 @@ async def get_connection_status(
         )
         
         # Update local status if it changed
-        new_status = state_data.get("instance", {}).get("state", connection.status)
+        raw_status = state_data.get("instance", {}).get("state", connection.status)
+        status_map = {
+            "open": "connected",
+            "connecting": "connecting",
+            "close": "disconnected",
+            "qr": "qrcode"
+        }
+        new_status = status_map.get(str(raw_status).lower(), raw_status)
         if new_status != connection.status:
             connection.status = new_status
             db.commit()
