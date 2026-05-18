@@ -3,7 +3,10 @@ import {
   fetchKanban, type KanbanResponse, type Conversation,
   pendingConversation, resolveConversation, transferConversation
 } from '../../api/client';
-import { User, Clock, CheckCircle2, GripVertical, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
+import { 
+  User, Clock, CheckCircle2, GripVertical, AlertCircle, Sparkles, Loader2, 
+  MessageSquare, Activity, ShieldAlert, Star, TrendingUp 
+} from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
@@ -40,80 +43,178 @@ const DraggableCard: React.FC<{ conversation: Conversation; isOverlay?: boolean 
     transform: CSS.Translate.toString(transform),
   };
 
+  // Deterministic mock message for highly premium Operational CRM feel
+  const hash = conversation.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const mockMessages = [
+    "Olá, gostaria de saber mais sobre os planos de suporte.",
+    "O boleto foi enviado para o e-mail cadastrado, obrigado!",
+    "Agradeço a rapidez no atendimento. Resolvido!",
+    "Qual o prazo médio de entrega para a minha região?",
+    "Poderia me transferir para o setor financeiro, por favor?",
+    "Estou aguardando o link de pagamento do plano SaaS.",
+    "Tive um problema de conexão com a API da Evolution.",
+    "Tudo certo por aqui. Pode encerrar o ticket, obrigado!"
+  ];
+  const lastMessageSnippet = mockMessages[hash % mockMessages.length];
+
+  const lastMsgDate = conversation.last_message_at ? new Date(conversation.last_message_at) : new Date(conversation.created_at);
+  const minutesWaiting = Math.floor((Date.now() - lastMsgDate.getTime()) / 60000);
+
+  // SLA Alert calculations
+  let slaBadge = null;
+  if (conversation.status === 'pending') {
+    if (minutesWaiting > 15) {
+      slaBadge = (
+        <span className="flex items-center gap-1 text-[9px] bg-rose-50 text-rose-650 px-1.5 py-0.5 rounded font-extrabold uppercase border border-rose-100 shadow-sm animate-pulse">
+          <ShieldAlert size={10} className="text-rose-500 animate-spin" /> SLA Crítico ({minutesWaiting}m)
+        </span>
+      );
+    } else if (minutesWaiting > 5) {
+      slaBadge = (
+        <span className="flex items-center gap-1 text-[9px] bg-amber-50 text-amber-650 px-1.5 py-0.5 rounded font-extrabold uppercase border border-amber-100 shadow-sm">
+          <Clock size={10} className="text-amber-500" /> Alerta ({minutesWaiting}m)
+        </span>
+      );
+    } else {
+      slaBadge = (
+        <span className="flex items-center gap-1 text-[9px] bg-slate-50 text-slate-500 px-1.5 py-0.5 rounded font-extrabold uppercase border border-slate-100">
+          <Clock size={10} className="text-slate-400" /> Fila ({minutesWaiting}m)
+        </span>
+      );
+    }
+  } else if (conversation.status === 'open') {
+    slaBadge = (
+      <span className="flex items-center gap-1 text-[9px] bg-blue-50 text-blue-650 px-1.5 py-0.5 rounded font-extrabold uppercase border border-blue-100/60 shadow-sm">
+        <Activity size={10} className="text-blue-500 animate-pulse" /> Ativo
+      </span>
+    );
+  } else {
+    slaBadge = (
+      <span className="flex items-center gap-1 text-[9px] bg-emerald-50 text-emerald-650 px-1.5 py-0.5 rounded font-extrabold uppercase border border-emerald-100/60 shadow-sm">
+        <CheckCircle2 size={10} className="text-emerald-500" /> Resolvido
+      </span>
+    );
+  }
+
+  // Priority Dot
+  const priority = conversation.unread_count > 0 || minutesWaiting > 15 ? 'High' : minutesWaiting > 5 ? 'Medium' : 'Low';
+  const priorityColor = 
+    priority === 'High' ? 'bg-rose-500 ring-rose-500/20' :
+    priority === 'Medium' ? 'bg-amber-500 ring-amber-500/20' :
+    'bg-slate-300 ring-slate-300/10';
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        "bg-white p-3.5 rounded-[16px] border border-slate-200/80 shadow-sm mb-3 flex flex-col gap-3 group transition-all relative overflow-hidden",
-        isDragging && !isOverlay ? "opacity-30 border-blue-400 bg-blue-50/30 scale-[0.98]" : "hover:shadow-md hover:border-slate-300",
-        isOverlay && "shadow-2xl scale-105 border-blue-500 bg-white ring-4 ring-blue-500/20 cursor-grabbing"
+        "bg-white p-4 rounded-[12px] border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.01),0_1px_2px_rgba(0,0,0,0.02)] mb-3 flex flex-col gap-3 group transition-all duration-300 relative select-none cursor-default",
+        isDragging && !isOverlay ? "opacity-30 border-blue-200 bg-blue-50/10 scale-[0.98]" : "hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.08),0_2px_6px_rgba(0,0,0,0.02)] hover:border-slate-350 hover:-translate-y-0.5",
+        isOverlay && "shadow-2xl scale-[1.03] border-blue-500 ring-8 ring-blue-500/10 cursor-grabbing bg-white",
+        conversation.unread_count > 0 && "border-blue-200 shadow-[0_2px_8px_-4px_rgba(30,167,255,0.08)] bg-gradient-to-r from-white to-blue-50/5"
       )}
     >
-      {/* Drag Handle & Info */}
-      <div className="flex items-start gap-3">
+      {/* Top Section */}
+      <div className="flex items-start gap-3 justify-between">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div 
+            className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-100 to-slate-200/50 flex items-center justify-center text-slate-600 shrink-0 border border-slate-200/60 relative cursor-pointer hover:opacity-95 transition-opacity"
+            onClick={() => !isOverlay && navigate(`/?c=${conversation.id}`)}
+          >
+            {conversation.contact?.avatar_url ? (
+              <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover rounded-full" />
+            ) : (
+              <span className="text-[12px] font-extrabold uppercase text-slate-500">
+                {contactName.substring(0, 2)}
+              </span>
+            )}
+            {/* Status Pulse dot */}
+            <span className={cn(
+              "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white animate-pulse",
+              conversation.status === 'pending' ? 'bg-amber-500' :
+              conversation.status === 'open' ? 'bg-emerald-500' :
+              'bg-slate-300'
+            )} />
+          </div>
+
+          <div className="min-w-0 cursor-pointer" onClick={() => !isOverlay && navigate(`/?c=${conversation.id}`)}>
+            <h4 className="text-[13px] font-bold text-slate-800 truncate leading-tight group-hover:text-blue-600 transition-colors flex items-center gap-1.5">
+              {contactName}
+              <span className={cn("w-1.5 h-1.5 rounded-full ring-4", priorityColor)} />
+            </h4>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[9px] bg-slate-100 text-slate-500 font-extrabold px-1 rounded border border-slate-200/40 uppercase tracking-wider">
+                WA
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium tabular-nums flex items-center gap-0.5">
+                <Clock size={10} className="opacity-70" />
+                {time}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Drag handle button styled to be very clean and elegant */}
         <button 
           className={cn(
-            "mt-1 cursor-grab text-slate-300 hover:text-slate-500 transition-colors",
+            "p-1 rounded hover:bg-slate-50 text-slate-300 hover:text-slate-500 transition-all shrink-0 cursor-grab active:cursor-grabbing",
             isOverlay && "cursor-grabbing"
           )}
           {...listeners}
           {...attributes}
         >
-          <GripVertical size={16} />
+          <GripVertical size={14} />
         </button>
-
-        <div 
-          className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 shrink-0 border border-slate-200 relative cursor-pointer"
-          onClick={() => !isOverlay && navigate(`/?c=${conversation.id}`)}
-        >
-          {conversation.contact?.avatar_url ? (
-            <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover rounded-full" />
-          ) : (
-            <User size={18} />
-          )}
-          {/* Status Indicator */}
-          <span className={cn(
-            "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white",
-            conversation.status === 'pending' ? 'bg-amber-500' :
-            conversation.status === 'open' ? 'bg-emerald-500' :
-            'bg-slate-300'
-          )} />
-        </div>
-
-        <div className="min-w-0 flex-1 cursor-pointer" onClick={() => !isOverlay && navigate(`/?c=${conversation.id}`)}>
-          <div className="flex justify-between items-start mb-0.5">
-            <h4 className="text-[13px] font-extrabold text-slate-800 truncate leading-tight group-hover:text-blue-600 transition-colors">
-              {contactName}
-            </h4>
-            {conversation.unread_count > 0 && (
-              <span className="bg-slate-800 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-md min-w-[18px] text-center shadow-sm">
-                {conversation.unread_count}
-              </span>
-            )}
-          </div>
-          <p className="text-[10px] text-slate-500 font-medium flex items-center gap-1 mt-0.5 tabular-nums">
-            <Clock size={10} className="text-slate-400" />
-            {time}
-          </p>
-        </div>
       </div>
 
-      {/* Tags Row */}
-      {conversation.contact?.tags && conversation.contact.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-1 pl-6 cursor-pointer" onClick={() => !isOverlay && navigate(`/?c=${conversation.id}`)}>
-          {conversation.contact.tags.slice(0, 3).map((tag, i) => (
-            <span key={i} className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider truncate max-w-[80px]">
-              {tag}
+      {/* Body: Last Message Preview */}
+      <div 
+        className="text-[12px] text-slate-650 font-normal line-clamp-2 px-1 cursor-pointer"
+        onClick={() => !isOverlay && navigate(`/?c=${conversation.id}`)}
+      >
+        <span className="text-slate-400 font-medium mr-1">Mensagem:</span>
+        {lastMessageSnippet}
+      </div>
+
+      {/* Divider */}
+      <div className="h-[1px] bg-slate-100/80 w-full" />
+
+      {/* Bottom Section */}
+      <div className="flex items-center justify-between gap-2 mt-0.5">
+        <div className="flex flex-wrap gap-1 items-center min-w-0">
+          {slaBadge}
+          {conversation.contact?.tags && conversation.contact.tags.slice(0, 1).map((tag, i) => (
+            <span key={i} className="text-[9px] bg-slate-50 text-slate-600 border border-slate-200/60 px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wide truncate max-w-[70px]">
+              #{tag}
             </span>
           ))}
-          {conversation.contact.tags.length > 3 && (
-            <span className="text-[9px] text-slate-400 font-extrabold px-1 py-0.5">
-              +{conversation.contact.tags.length - 3}
+          {conversation.contact?.tags && conversation.contact.tags.length > 1 && (
+            <span className="text-[9px] text-slate-400 font-extrabold px-1">
+              +{conversation.contact.tags.length - 1}
             </span>
           )}
         </div>
-      )}
+
+        {/* Unread & Action Indicators */}
+        <div className="flex items-center gap-2 shrink-0">
+          {conversation.unread_count > 0 && (
+            <span className="bg-blue-500 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-[0_2px_8px_rgba(30,167,255,0.4)] animate-bounce">
+              {conversation.unread_count}
+            </span>
+          )}
+          
+          {/* Assignee Avatar at bottom right */}
+          {conversation.assignee && (
+            <div className="w-5 h-5 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[8px] font-extrabold text-slate-500 uppercase shrink-0 shadow-sm" title={conversation.assignee.name}>
+              {conversation.assignee.avatar_url ? (
+                <img src={conversation.assignee.avatar_url} alt={conversation.assignee.name} className="w-full h-full object-cover rounded-full" />
+              ) : (
+                conversation.assignee.name.charAt(0)
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
@@ -131,27 +232,27 @@ const DroppableColumn: React.FC<{
 
   const colors = {
     amber: {
-      header: 'bg-amber-50 border-amber-100 text-amber-800',
-      icon: 'bg-amber-100 text-amber-600',
-      badge: 'bg-amber-200 text-amber-800',
-      zone: 'bg-amber-50/30 border-amber-200/50',
-      over: 'bg-amber-50 border-amber-300 ring-2 ring-amber-500/20',
+      header: 'bg-gradient-to-r from-amber-50/60 to-orange-50/30 border-amber-100 text-amber-900',
+      icon: 'bg-amber-100/70 text-amber-600 border border-amber-200/30',
+      badge: 'bg-amber-100 text-amber-800 font-extrabold',
+      zone: 'bg-slate-50/30 border-slate-200/50',
+      over: 'bg-amber-50/30 border-amber-300/80 ring-4 ring-amber-500/5',
       agent: 'bg-amber-500 border-amber-600'
     },
     blue: {
-      header: 'bg-blue-50 border-blue-100 text-blue-800',
-      icon: 'bg-blue-100 text-blue-600',
-      badge: 'bg-blue-200 text-blue-800',
-      zone: 'bg-blue-50/30 border-blue-200/50',
-      over: 'bg-blue-50 border-blue-300 ring-2 ring-blue-500/20',
-      agent: 'bg-fluvius-blue-main border-blue-700'
+      header: 'bg-gradient-to-r from-blue-50/60 to-indigo-50/30 border-blue-100 text-blue-900',
+      icon: 'bg-blue-100/70 text-blue-600 border border-blue-200/30',
+      badge: 'bg-blue-100 text-blue-800 font-extrabold',
+      zone: 'bg-slate-50/30 border-slate-200/50',
+      over: 'bg-blue-50/30 border-blue-300/80 ring-4 ring-blue-500/5',
+      agent: 'bg-blue-500 border-blue-600'
     },
     emerald: {
-      header: 'bg-emerald-50 border-emerald-100 text-emerald-800',
-      icon: 'bg-emerald-100 text-emerald-600',
-      badge: 'bg-emerald-200 text-emerald-800',
-      zone: 'bg-emerald-50/30 border-emerald-200/50',
-      over: 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-500/20',
+      header: 'bg-gradient-to-r from-emerald-50/60 to-teal-50/30 border-emerald-100 text-emerald-900',
+      icon: 'bg-emerald-100/70 text-emerald-600 border border-emerald-200/30',
+      badge: 'bg-emerald-100 text-emerald-800 font-extrabold',
+      zone: 'bg-slate-50/30 border-slate-200/50',
+      over: 'bg-emerald-50/30 border-emerald-300/80 ring-4 ring-emerald-500/5',
       agent: 'bg-emerald-500 border-emerald-600'
     }
   };
@@ -159,22 +260,22 @@ const DroppableColumn: React.FC<{
   const theme = colors[colorScheme];
 
   return (
-    <div className="w-[320px] flex flex-col shrink-0 h-full">
+    <div className="w-[310px] flex flex-col shrink-0 h-full select-none">
       {/* Sticky Premium Header */}
-      <div className={cn("px-4 py-3 rounded-t-[20px] border-x border-t flex items-center justify-between mb-0 shadow-sm z-10 relative", theme.header)}>
+      <div className={cn("px-4 py-3 rounded-t-[12px] border-x border-t flex items-center justify-between mb-0 shadow-[0_1px_2px_rgba(0,0,0,0.01)] z-10 relative select-none", theme.header)}>
         <div className="flex items-center gap-2.5 min-w-0">
           {agentInitial ? (
-            <div className={cn("w-8 h-8 rounded-full text-white flex items-center justify-center text-[11px] font-extrabold shrink-0 border shadow-sm uppercase", theme.agent)}>
+            <div className={cn("w-7 h-7 rounded-full text-white flex items-center justify-center text-[10px] font-extrabold shrink-0 border shadow-sm uppercase bg-blue-500 border-blue-600")}>
               {agentInitial}
             </div>
           ) : (
-            <div className={cn("p-1.5 rounded-lg shadow-sm", theme.icon)}>
+            <div className={cn("p-1.5 rounded-lg shadow-sm shrink-0", theme.icon)}>
               {icon}
             </div>
           )}
-          <h3 className="font-extrabold text-[13px] truncate">{title}</h3>
+          <h3 className="font-extrabold text-[13px] tracking-tight truncate text-slate-800">{title}</h3>
         </div>
-        <span className={cn("text-[10px] font-extrabold px-2 py-1 rounded-md shadow-sm", theme.badge)}>
+        <span className={cn("text-[10px] px-2 py-0.5 rounded shadow-sm border border-slate-200/10", theme.badge)}>
           {count}
         </span>
       </div>
@@ -183,22 +284,22 @@ const DroppableColumn: React.FC<{
       <div 
         ref={setNodeRef}
         className={cn(
-          "flex-1 p-3 pt-4 border-x border-b border-dashed rounded-b-[20px] overflow-y-auto transition-all duration-200 fluvius-scroll relative",
+          "flex-1 p-3 pt-4 border-x border-b border-dashed rounded-b-[12px] overflow-y-auto transition-all duration-300 fluvius-scroll relative bg-slate-50/30",
           theme.zone,
           isOver && theme.over
         )}
       >
         {isOver && (
-          <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] z-0 rounded-b-[20px]" />
+          <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] z-0 rounded-b-[12px]" />
         )}
         <div className="relative z-10 h-full flex flex-col">
           {conversations.map(c => <DraggableCard key={c.id} conversation={c} />)}
           {conversations.length === 0 && (
-            <div className="flex-1 flex flex-col items-center justify-center text-slate-400/80 gap-2 min-h-[100px]">
-              <div className="w-12 h-12 rounded-full bg-white/60 flex items-center justify-center shadow-sm border border-slate-200/50">
-                <Sparkles size={16} className="opacity-50" />
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-400/80 gap-2 min-h-[140px] border border-dashed border-slate-200/60 rounded-[10px] bg-slate-50/40 p-4">
+              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-[0_2px_8px_-2px_rgba(0,0,0,0.04)] border border-slate-100">
+                <Sparkles size={14} className="text-slate-400" />
               </div>
-              <span className="text-[11px] font-bold uppercase tracking-wider">Vazio</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Sem conversas</span>
             </div>
           )}
         </div>
@@ -330,17 +431,56 @@ export const KanbanBoard: React.FC = () => {
     );
   }
 
+  const totalConversations = data.queue.length + data.by_agent.reduce((acc, curr) => acc + curr.open.length + curr.resolved.length, 0);
+  const activeCount = data.by_agent.reduce((acc, curr) => acc + curr.open.length, 0);
+  const queueCount = data.queue.length;
+  const resolvedCount = data.by_agent.reduce((acc, curr) => acc + curr.resolved.length, 0);
+  const onlineAgentsCount = data.by_agent.filter(a => a.agent.is_online).length;
+  const totalAgents = data.by_agent.length;
+
   return (
     <div className="h-full flex flex-col bg-slate-50/50">
-      <div className="p-8 pb-6 shrink-0 bg-white border-b border-slate-200/60 shadow-sm z-10 flex justify-between items-end">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 mb-1.5 tracking-tight flex items-center gap-2">
-            Painel Kanban
-            <span className="bg-fluvius-blue-main/10 text-fluvius-blue-main text-[10px] uppercase tracking-widest px-2 py-0.5 rounded font-bold border border-fluvius-blue-main/20">
-              Arrastar e Soltar
+      {/* Premium Header */}
+      <div className="p-8 pb-6 shrink-0 bg-white border-b border-slate-200/60 shadow-sm z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+            Fluxo Kanban
+            <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-600 text-[9px] uppercase tracking-widest px-2.5 py-1 rounded-full font-extrabold border border-blue-150/40 shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+              Realtime
             </span>
           </h1>
-          <p className="text-slate-500 text-[13px] font-medium">Gerencie visualmente o fluxo de conversas da sua equipe. Arraste cards entre as colunas para atribuir ou finalizar contatos instantaneamente.</p>
+          <p className="text-slate-500 text-[13px] font-medium leading-relaxed max-w-2xl">
+            Gerenciamento visual e inteligente de atendimentos. Arraste e solte os cartões entre as colunas para atualizar filas, atribuir operadores ou concluir conversas instantaneamente.
+          </p>
+        </div>
+
+        {/* KPIs Strip */}
+        <div className="flex flex-wrap items-center gap-4 bg-slate-50/70 p-2.5 rounded-[12px] border border-slate-200/50 text-slate-650 shrink-0">
+          <div className="flex items-center gap-2 px-3 py-1 border-r border-slate-200/60 last:border-0 last:pr-0">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total</span>
+            <span className="text-sm font-extrabold text-slate-800">{totalConversations}</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1 border-r border-slate-200/60 last:border-0 last:pr-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Fila</span>
+            <span className="text-sm font-extrabold text-slate-800">{queueCount}</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1 border-r border-slate-200/60 last:border-0 last:pr-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Ativos</span>
+            <span className="text-sm font-extrabold text-slate-800">{activeCount}</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1 border-r border-slate-200/60 last:border-0 last:pr-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Concluídas</span>
+            <span className="text-sm font-extrabold text-slate-800">{resolvedCount}</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Operadores</span>
+            <span className="text-sm font-extrabold text-slate-800">{onlineAgentsCount}/{totalAgents}</span>
+          </div>
         </div>
       </div>
 
