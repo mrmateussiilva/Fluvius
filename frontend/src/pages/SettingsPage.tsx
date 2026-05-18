@@ -68,7 +68,7 @@ export const SettingsPage: React.FC = () => {
         try {
           const statusRes = await fetchConnectionStatus(selectedConnection.id);
           if (statusRes.status === 'open' || statusRes.status === 'connected') {
-            toast.success('WhatsApp connected successfully!');
+            toast.success('WhatsApp conectado com sucesso!');
             setSelectedConnection(null);
             loadConnections();
             return;
@@ -127,7 +127,7 @@ export const SettingsPage: React.FC = () => {
                 loadConnections();
               } catch (err) {
                 console.error(err);
-                toast.error('Error removing connection.');
+                toast.error('Erro ao remover conexão.');
               }
             }}
             className="px-3 py-1.5 bg-rose-500 text-white rounded text-xs font-bold"
@@ -138,7 +138,7 @@ export const SettingsPage: React.FC = () => {
             onClick={() => toast.dismiss(t.id)}
             className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded text-xs font-bold"
           >
-            Cancel
+            Cancelar
           </button>
         </div>
       </div>
@@ -147,7 +147,7 @@ export const SettingsPage: React.FC = () => {
   const handleLogout = async (conn: Connection) => {
     toast((t) => (
       <div className="flex flex-col gap-3">
-        <span className="text-sm font-medium">Disconnect "{conn.name}" without deleting?</span>
+        <span className="text-sm font-medium">Desconectar "{conn.name}" sem excluir?</span>
         <div className="flex gap-2">
           <button
             onClick={async () => {
@@ -157,18 +157,18 @@ export const SettingsPage: React.FC = () => {
                 loadConnections();
               } catch (err) {
                 console.error(err);
-                toast.error('Error disconnecting.');
+                toast.error('Erro ao desconectar.');
               }
             }}
             className="px-3 py-1.5 bg-amber-500 text-white rounded text-xs font-bold"
           >
-            Yes, disconnect
+            Sim, desconectar
           </button>
           <button
             onClick={() => toast.dismiss(t.id)}
             className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded text-xs font-bold"
           >
-            Cancel
+            Cancelar
           </button>
         </div>
       </div>
@@ -182,7 +182,7 @@ export const SettingsPage: React.FC = () => {
       handleConnect(conn);
     } catch (err) {
       console.error(err);
-      toast.error('Error reconnecting.');
+      toast.error('Erro ao reconectar.');
     }
   };
 
@@ -192,7 +192,7 @@ export const SettingsPage: React.FC = () => {
       toast.success('Sync started! Messages will appear soon.', { duration: 6000 });
     } catch (err) {
       console.error(err);
-      toast.error('Error starting sync');
+      toast.error('Erro ao iniciar sincronização.');
     }
   };
 
@@ -247,11 +247,11 @@ export const SettingsPage: React.FC = () => {
           <div>
             <Link to="/" className="flex items-center gap-1.5 text-slate-400 hover:text-blue-600 transition-all mb-2 group w-fit font-bold uppercase text-[9px] tracking-wider">
               <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-              Workspace
+              Espaço de Trabalho
             </Link>
             <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
               <Settings className="text-blue-600" size={20} />
-              Settings
+              Configurações
             </h1>
           </div>
         </div>
@@ -262,9 +262,9 @@ export const SettingsPage: React.FC = () => {
           {/* Settings Navigation */}
           <div className="col-span-3 space-y-1">
             {[
-              { id: 'general', label: 'General', icon: Settings },
-              { id: 'queues', label: 'Departments', icon: Layers },
-              { id: 'quick-replies', label: 'Quick Replies', icon: Zap },
+              { id: 'general', label: 'Geral', icon: Settings },
+              { id: 'queues', label: 'Setores', icon: Layers },
+              { id: 'quick-replies', label: 'Respostas Rápidas', icon: Zap },
             ].map((tab) => (
               <button 
                 key={tab.id}
@@ -290,7 +290,7 @@ export const SettingsPage: React.FC = () => {
                   <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
                     <h2 className="font-bold text-slate-500 text-[10px] uppercase tracking-wider flex items-center gap-2">
                       <User size={14} />
-                      Profile
+                      Perfil
                     </h2>
                   </div>
                   <div className="p-6">
@@ -302,7 +302,7 @@ export const SettingsPage: React.FC = () => {
                         <h3 className="text-lg font-bold text-slate-900 tracking-tight">{user?.name}</h3>
                         <p className="text-slate-400 text-sm font-medium">{user?.email}</p>
                         <div className="inline-flex items-center gap-1.5 mt-2 px-2 py-0.5 bg-blue-50 text-blue-600 rounded font-bold text-[9px] uppercase tracking-wider border border-blue-100">
-                          {user?.role === 'admin' ? 'Administrator' : 'Operator'}
+                          {user?.role === 'admin' ? 'Administrador' : 'Atendente'}
                         </div>
                       </div>
                     </div>
@@ -314,7 +314,7 @@ export const SettingsPage: React.FC = () => {
                   <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                     <h2 className="font-bold text-slate-500 text-[10px] uppercase tracking-wider flex items-center gap-2">
                       <Wifi size={14} />
-                      Connections
+                      Conexões
                     </h2>
                     <div className="flex items-center gap-2">
                       <button
@@ -322,7 +322,7 @@ export const SettingsPage: React.FC = () => {
                         className="flex items-center gap-1.5 text-[10px] bg-blue-600 text-white px-3 py-1.5 rounded font-bold uppercase tracking-wider hover:bg-blue-700 transition-colors"
                       >
                         <Plus size={14} />
-                        New
+                        Nova
                       </button>
                       <button onClick={loadConnections} className="p-1.5 rounded hover:bg-slate-200 text-slate-400 transition-colors">
                         <RefreshCw size={14} />
@@ -343,7 +343,7 @@ export const SettingsPage: React.FC = () => {
                         <div className="flex gap-3">
                           <input
                             type="text"
-                            placeholder="Connection name..."
+                            placeholder="Nome da conexão..."
                             value={connName}
                             onChange={e => setConnName(e.target.value)}
                             required
@@ -354,7 +354,7 @@ export const SettingsPage: React.FC = () => {
                             disabled={creatingConn}
                             className="bg-blue-600 text-white px-4 py-2 rounded text-[11px] font-bold uppercase tracking-wider hover:bg-blue-700 transition-colors disabled:opacity-50"
                           >
-                            {creatingConn ? <Loader2 size={16} className="animate-spin" /> : "Create"}
+                            {creatingConn ? <Loader2 size={16} className="animate-spin" /> : "Criar"}
                           </button>
                           <button
                             type="button"
@@ -372,12 +372,12 @@ export const SettingsPage: React.FC = () => {
                     {connLoading ? (
                       <div className="p-12 text-center flex flex-col items-center gap-3">
                         <Loader2 className="animate-spin text-blue-500" size={24} />
-                        <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Loading...</p>
+                        <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Carregando...</p>
                       </div>
                     ) : connections.length === 0 ? (
                       <div className="p-12 text-center flex flex-col items-center gap-3">
                         <WifiOff className="text-slate-200" size={32} />
-                        <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">No connections</p>
+                        <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Nenhuma conexão</p>
                       </div>
                     ) : (
                       connections.map((conn) => (
@@ -396,7 +396,7 @@ export const SettingsPage: React.FC = () => {
                                   "text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider",
                                   conn.status === 'open' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
                                 )}>
-                                  {conn.status === 'open' ? 'Connected' : 'Offline'}
+                                  {conn.status === 'open' ? 'Conectado' : 'Offline'}
                                 </span>
                                 <span className="text-[9px] text-slate-400 font-medium truncate max-w-[150px]">Inst: {conn.instance_name}</span>
                               </div>
@@ -412,21 +412,21 @@ export const SettingsPage: React.FC = () => {
                             {conn.status === 'open' ? (
                               <>
                                 <button onClick={() => handleSync(conn)} className="text-[10px] font-bold uppercase tracking-wider text-slate-600 border border-slate-200 px-2 py-1 rounded hover:bg-slate-50 transition-colors" title="Sync">
-                                  Sync
+                                  Sincronizar
                                 </button>
                                 <button onClick={() => handleLogout(conn)} className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-1 rounded hover:bg-amber-100 transition-colors" title="Logout">
-                                  Exit
+                                  Sair
                                 </button>
                               </>
                             ) : (
                               <button onClick={() => handleRestart(conn)} className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-1 rounded hover:bg-blue-100 transition-colors">
-                                Reconnect
+                                Reconectar
                               </button>
                             )}
                             {conn.status !== 'open' && (
                               <button onClick={() => handleConnect(conn)} className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-white bg-slate-900 px-3 py-1 rounded hover:bg-slate-800 transition-colors">
                                 <QrCode size={12} />
-                                QR
+                                QR Code
                               </button>
                             )}
                             <button onClick={() => handleDelete(conn)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors" title="Delete">
@@ -467,7 +467,7 @@ export const SettingsPage: React.FC = () => {
           >
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <div>
-                <h3 className="font-bold text-slate-900 text-sm">Connect WhatsApp</h3>
+                <h3 className="font-bold text-slate-900 text-sm">Conectar WhatsApp</h3>
                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{selectedConnection.instance_name}</p>
               </div>
               <button onClick={() => setSelectedConnection(null)} className="p-1 text-slate-400 hover:text-slate-900 transition-colors">
@@ -488,21 +488,21 @@ export const SettingsPage: React.FC = () => {
                 ) : (
                   <div className="w-[200px] h-[200px] flex flex-col items-center justify-center gap-2 text-slate-400">
                     <AlertCircle size={32} />
-                    <p className="text-[9px] font-bold uppercase tracking-wider">Failed to load QR</p>
+                    <p className="text-[9px] font-bold uppercase tracking-wider">Falha ao carregar QR</p>
                   </div>
                 )}
               </div>
               
               <div className="text-center space-y-1">
-                <p className="text-slate-900 font-bold text-sm">Scan QR Code</p>
+                <p className="text-slate-900 font-bold text-sm">Escanear QR Code</p>
                 <p className="text-slate-400 text-[11px] leading-relaxed max-w-[200px] mx-auto">
-                  Open WhatsApp on your phone and link this device.
+                  Abra o WhatsApp no seu celular e conecte este dispositivo.
                 </p>
               </div>
               
               <div className="w-full flex items-center justify-center gap-2 py-2 bg-blue-50 rounded text-blue-600">
                 <RefreshCw size={12} className="animate-spin" />
-                <span className="text-[9px] font-bold uppercase tracking-widest">Waiting...</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest">Aguardando...</span>
               </div>
             </div>
           </motion.div>
@@ -519,7 +519,7 @@ export const SettingsPage: React.FC = () => {
           >
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <div>
-                <h3 className="font-bold text-slate-900 text-sm">Instance Configuration</h3>
+                <h3 className="font-bold text-slate-900 text-sm">Configuração da Instância</h3>
                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{editingConn.instance_name}</p>
               </div>
               <button onClick={() => setEditingConn(null)} className="p-1 text-slate-400 hover:text-slate-900 transition-colors">
@@ -532,16 +532,16 @@ export const SettingsPage: React.FC = () => {
                 <div className="space-y-4">
                   <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                     <Settings size={12} className="text-blue-500" />
-                    Identity
+                    Identidade
                   </h4>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Friendly Name</label>
+                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Nome Amigável</label>
                     <input
                       type="text"
                       value={editFormData.name}
                       onChange={e => setEditFormData({...editFormData, name: e.target.value})}
                       className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] font-medium text-slate-700 outline-none focus:border-blue-500 transition-colors"
-                      placeholder="e.g. Sales"
+                      placeholder="Ex: Vendas"
                     />
                   </div>
                 </div>
@@ -551,7 +551,7 @@ export const SettingsPage: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                       <Bot size={14} className="text-indigo-500" />
-                      Automation
+                      Automação
                     </h4>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input 
@@ -567,18 +567,18 @@ export const SettingsPage: React.FC = () => {
                   {editFormData.default_bot_active && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Welcome Message</label>
+                        <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Mensagem de Boas-vindas</label>
                         <textarea
                           value={editFormData.welcome_message}
                           onChange={e => setEditFormData({...editFormData, welcome_message: e.target.value})}
-                          placeholder="Hello! Welcome to..."
+                          placeholder="Olá! Seja bem-vindo à..."
                           rows={2}
                           className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] outline-none focus:border-blue-500 transition-colors resize-none"
                         />
                       </div>
 
                       <div className="space-y-2.5">
-                        <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Bot Type</label>
+                        <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Tipo de Bot</label>
                         <div className="grid grid-cols-2 gap-3">
                           <button
                             type="button"
@@ -591,9 +591,9 @@ export const SettingsPage: React.FC = () => {
                           >
                             <div className="flex items-center gap-2 mb-1">
                               <MessageSquare size={16} />
-                              <span className="text-[12px] font-bold">Standard Menu</span>
+                              <span className="text-[12px] font-bold">Menu Padrão</span>
                             </div>
-                            <p className="text-[10px] opacity-70 leading-relaxed">Option-based selection (1, 2, 3...)</p>
+                            <p className="text-[10px] opacity-70 leading-relaxed">Seleção por opções (1, 2, 3...)</p>
                           </button>
                           <button
                             type="button"
@@ -606,24 +606,24 @@ export const SettingsPage: React.FC = () => {
                           >
                             <div className="flex items-center gap-2 mb-1">
                               <Sparkles size={16} />
-                              <span className="text-[12px] font-bold">AI Agent</span>
+                              <span className="text-[12px] font-bold">Agente de IA</span>
                             </div>
-                            <p className="text-[10px] opacity-70 leading-relaxed">Natural conversation powered by AI</p>
+                            <p className="text-[10px] opacity-70 leading-relaxed">Conversa natural usando Inteligência Artificial</p>
                           </button>
                         </div>
                       </div>
 
                       {editFormData.bot_type === 'ai' && (
                         <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
-                          <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">AI Instructions (System Prompt)</label>
+                          <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Instruções da IA (System Prompt)</label>
                           <textarea
                             value={editFormData.ai_instructions}
                             onChange={e => setEditFormData({...editFormData, ai_instructions: e.target.value})}
-                            placeholder="You are a helpful assistant for..."
+                            placeholder="Você é um assistente prestativo para..."
                             rows={4}
                             className="w-full border border-slate-200 rounded px-3 py-2 text-[12px] outline-none focus:border-blue-500 transition-colors resize-none font-mono"
                           />
-                          <p className="text-[10px] text-slate-400">Describe the bot's personality, goals, and knowledge base.</p>
+                          <p className="text-[10px] text-slate-400">Descreva a personalidade do bot, objetivos e base de conhecimento.</p>
                         </div>
                       )}
                     </div>
@@ -636,7 +636,7 @@ export const SettingsPage: React.FC = () => {
                   onClick={() => setEditingConn(null)}
                   className="px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-800 transition-colors"
                 >
-                  Cancel
+                  Cancelar
                 </button>
                 <button
                   type="submit"
@@ -644,7 +644,7 @@ export const SettingsPage: React.FC = () => {
                   className="px-6 py-2 bg-blue-600 text-white rounded text-[11px] font-bold uppercase tracking-wider hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
                   {savingConn ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
-                  Save Changes
+                  Salvar Alterações
                 </button>
               </div>
             </form>

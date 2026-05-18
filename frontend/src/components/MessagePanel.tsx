@@ -247,7 +247,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded text-[11px] font-bold uppercase tracking-wider hover:bg-blue-700 transition-all"
           >
             <UserCheck size={14} />
-            Claim
+            Assumir
           </button>
         );
         case 'open':
@@ -258,7 +258,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                   onClick={onTransfer}
                   className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-[11px] font-bold uppercase tracking-wider hover:bg-slate-50 transition-colors"
                 >
-                  Transfer
+                  Transferir
                 </button>
               )}
               <button
@@ -266,14 +266,14 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-[11px] font-bold uppercase tracking-wider hover:bg-slate-50 transition-colors"
               >
                 <RotateCcw size={14} />
-                Return
+                Pausar
               </button>
               <button
                 onClick={onResolve}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded text-[11px] font-bold uppercase tracking-wider hover:bg-emerald-700 transition-all"
               >
                 <CheckCircle2 size={14} />
-                Resolve
+                Resolver
               </button>
             </div>
           );
@@ -282,13 +282,13 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-emerald-600 px-2 py-1 bg-emerald-50 rounded">
               <CheckCircle2 size={12} />
-              Resolved
+              Resolvido
             </div>
             <button
               onClick={onAssign}
               className="text-[11px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-800 transition-colors"
             >
-              Reopen
+              Reabrir
             </button>
           </div>
         );
@@ -521,6 +521,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
             conversationId={conversation.id}
             replyingTo={replyingTo}
             onCancelReply={() => onSetReplyingTo?.(null)}
+            contactName={conversation.contact?.name || conversation.contact?.phone || 'Contato'}
           />
         </div>
       </div>

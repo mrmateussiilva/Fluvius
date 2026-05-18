@@ -128,8 +128,8 @@ export const QueuesTab: React.FC = () => {
             <Layers size={20} />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Departments</h2>
-            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Route conversations to specialized teams</p>
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Setores</h2>
+            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Encaminhe conversas para equipes especializadas</p>
           </div>
         </div>
         <button 
@@ -137,7 +137,7 @@ export const QueuesTab: React.FC = () => {
           className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold uppercase tracking-wider transition-colors shadow-sm"
         >
           <Plus size={16} />
-          New Department
+          Novo Setor
         </button>
       </div>
 
@@ -147,9 +147,9 @@ export const QueuesTab: React.FC = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 text-slate-500 text-[9px] font-bold uppercase tracking-widest border-b border-slate-100">
-                <th className="px-5 py-3">Team Name</th>
-                <th className="px-5 py-3">Description</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-5 py-3">Nome da Equipe</th>
+                <th className="px-5 py-3">Descrição</th>
+                <th className="px-5 py-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -160,8 +160,8 @@ export const QueuesTab: React.FC = () => {
                       <div className="flex flex-col items-center gap-3">
                         <Layers className="text-slate-200" size={32} />
                         <div className="space-y-1">
-                           <p className="text-slate-500 font-bold text-sm">No departments</p>
-                           <p className="text-slate-400 text-[11px] max-w-sm mx-auto">Create queues to organize your customer flow.</p>
+                           <p className="text-slate-500 font-bold text-sm">Nenhum setor cadastrado</p>
+                           <p className="text-slate-400 text-[11px] max-w-sm mx-auto">Crie filas para organizar o fluxo de atendimento.</p>
                         </div>
                       </div>
                     </td>
@@ -184,7 +184,7 @@ export const QueuesTab: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-5 py-3 text-[12px] text-slate-500 font-medium truncate max-w-xs">
-                      {q.description || <span className="text-slate-300 italic text-[10px]">No description</span>}
+                      {q.description || <span className="text-slate-300 italic text-[10px]">Sem descrição</span>}
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -193,7 +193,7 @@ export const QueuesTab: React.FC = () => {
                           className="flex items-center gap-1.5 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded border border-indigo-100 transition-colors"
                         >
                           <Users size={12} />
-                          Agents
+                          Agentes
                         </button>
                         <button 
                           onClick={() => handleOpenModal(q)} 
@@ -239,7 +239,7 @@ export const QueuesTab: React.FC = () => {
               <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                 <div className="flex items-center gap-2">
                   <Layers size={16} className="text-blue-500" />
-                  <h3 className="text-sm font-bold text-slate-900">{editingQueue ? 'Edit Department' : 'New Department'}</h3>
+                  <h3 className="text-sm font-bold text-slate-900">{editingQueue ? 'Editar Setor' : 'Novo Setor'}</h3>
                 </div>
                 <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors">
                   <X size={18}/>
@@ -248,23 +248,23 @@ export const QueuesTab: React.FC = () => {
               
               <div className="p-6 space-y-4">
                 <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider">Department Name *</label>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider">Nome do Setor *</label>
                   <input 
                     type="text" 
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                     className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] font-medium text-slate-700 outline-none focus:border-blue-500 transition-colors"
-                    placeholder="e.g. Sales"
+                    placeholder="Ex: Vendas"
                     autoFocus
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider">Description</label>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider">Descrição</label>
                   <textarea 
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                     className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] font-medium text-slate-700 outline-none focus:border-blue-500 transition-colors resize-none h-20"
-                    placeholder="What is this team for?"
+                    placeholder="Para que serve este setor?"
                   />
                 </div>
               </div>
@@ -274,14 +274,14 @@ export const QueuesTab: React.FC = () => {
                   onClick={() => setIsModalOpen(false)} 
                   className="px-4 py-2 text-[11px] font-bold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-wider"
                 >
-                  Cancel
+                  Cancelar
                 </button>
                 <button 
                   onClick={handleSave} 
                   disabled={!formData.name}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded text-[11px] font-bold uppercase tracking-wider transition-colors shadow-sm"
                 >
-                  Save Department
+                  Salvar Setor
                 </button>
               </div>
             </motion.div>
@@ -310,8 +310,8 @@ export const QueuesTab: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Users size={16} className="text-indigo-500" />
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">Assign Agents</h3>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Select team members</p>
+                    <h3 className="text-sm font-bold text-slate-900">Vincular Agentes</h3>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Selecione membros da equipe</p>
                   </div>
                 </div>
                 <button onClick={() => setIsAgentsModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors">
@@ -323,7 +323,7 @@ export const QueuesTab: React.FC = () => {
                 {agents.length === 0 ? (
                   <div className="text-center py-8">
                     <AlertCircle className="w-8 h-8 text-slate-200 mx-auto mb-2" />
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">No agents found</p>
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Nenhum agente encontrado</p>
                   </div>
                 ) : (
                   <div className="space-y-1">
@@ -368,13 +368,13 @@ export const QueuesTab: React.FC = () => {
                   onClick={() => setIsAgentsModalOpen(false)} 
                   className="px-4 py-2 text-[11px] font-bold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-wider"
                 >
-                  Cancel
+                  Cancelar
                 </button>
                 <button 
                   onClick={handleSaveAgents} 
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold uppercase tracking-wider transition-colors shadow-sm"
                 >
-                  Save Changes
+                  Salvar Alterações
                 </button>
               </div>
             </motion.div>

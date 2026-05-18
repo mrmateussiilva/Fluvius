@@ -73,7 +73,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input 
               type="text" 
-              placeholder="Search..."
+              placeholder="Buscar..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-50 border border-slate-100 rounded-md pl-8 pr-3 py-1.5 text-[12px] text-slate-700 placeholder:text-slate-400 focus:bg-white focus:border-blue-200 transition-all outline-none"
@@ -117,12 +117,12 @@ export const ConversationList: React.FC<ConversationListProps> = ({
         <AnimatePresence mode="popLayout">
           {filteredConversations.length === 0 ? (
             <div className="py-12 text-center text-slate-400">
-              <p className="text-[11px] font-medium uppercase tracking-widest">No results</p>
+              <p className="text-[11px] font-medium uppercase tracking-widest">Nenhum resultado</p>
             </div>
           ) : (
             filteredConversations.map((conv) => {
               const isSelected = selectedId === conv.id;
-              const contactName = conv.contact?.name || conv.contact?.phone || 'Unknown';
+              const contactName = conv.contact?.name || conv.contact?.phone || 'Desconhecido';
               
               let timeStr = '';
               if (conv.last_message_at) {
@@ -183,7 +183,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                         {conv.assignee ? (
                           <span className="truncate bg-slate-100 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider">{conv.assignee.name}</span>
                         ) : (
-                          <span className="text-slate-400 text-[9px] uppercase tracking-wider font-bold">Unassigned</span>
+                          <span className="text-slate-400 text-[9px] uppercase tracking-wider font-bold">Sem atribuição</span>
                         )}
                       </div>
                       

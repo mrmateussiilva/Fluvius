@@ -18,9 +18,10 @@ interface MessageInputProps {
   replyingTo?: Message | null;
   onCancelReply?: () => void;
   conversationId?: string;
+  contactName?: string;
 }
 
-export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia, replyingTo, onCancelReply, conversationId }) => {
+export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia, replyingTo, onCancelReply, conversationId, contactName }) => {
   const [text, setText] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
@@ -270,9 +271,9 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
   };
 
   const attachmentOptions = [
-    { id: 'document', icon: <FileText size={18} />, label: 'Document', color: 'text-indigo-600', bg: 'bg-indigo-50', accept: '*' },
-    { id: 'gallery', icon: <ImageIcon size={18} />, label: 'Media', color: 'text-blue-600', bg: 'bg-blue-50', accept: 'image/*,video/*' },
-    { id: 'camera', icon: <Camera size={18} />, label: 'Camera', color: 'text-rose-600', bg: 'bg-rose-50', accept: 'image/*;capture=camera' },
+    { id: 'document', icon: <FileText size={18} />, label: 'Documento', color: 'text-indigo-600', bg: 'bg-indigo-50', accept: '*' },
+    { id: 'gallery', icon: <ImageIcon size={18} />, label: 'Mídia', color: 'text-blue-600', bg: 'bg-blue-50', accept: 'image/*,video/*' },
+    { id: 'camera', icon: <Camera size={18} />, label: 'Câmera', color: 'text-rose-600', bg: 'bg-rose-50', accept: 'image/*;capture=camera' },
   ];
 
   return (
@@ -333,9 +334,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
       {replyingTo && (
         <div className="mx-2 mb-1 bg-slate-50 border-x border-t border-slate-200 px-3 py-2 flex items-center justify-between rounded-t-md">
           <div className="flex flex-col flex-1 border-l-2 border-blue-500 pl-3">
-            <span className="text-[9px] font-bold text-blue-600 uppercase tracking-widest">
-              Replying to {replyingTo.direction === 'inbound' ? 'Customer' : 'You'}
-            </span>
+            <div className="text-[10px] text-slate-500 font-medium">Respondendo a <span className="font-bold text-slate-700">{replyingTo.direction === 'outbound' ? 'Você' : (contactName || 'Contato')}</span></div>
             <span className="text-[12px] text-slate-600 truncate mt-0.5">
               {replyingTo.message_type === 'text' ? replyingTo.content : replyingTo.message_type.toUpperCase()}
             </span>
@@ -356,7 +355,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
             className="absolute bottom-full left-0 w-full bg-white border border-slate-200 shadow-xl overflow-hidden z-50 rounded-t-md"
           >
             <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Quick Replies</span>
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Respostas Rápidas</span>
             </div>
             <div className="max-h-48 overflow-y-auto">
               {filteredQuickReplies.map((qr, index) => (
@@ -407,7 +406,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
               onClick={handleSuggestReply}
               disabled={isGeneratingSuggestion || !conversationId}
               className="p-2 text-amber-500 hover:bg-amber-50 rounded transition-colors"
-              title="AI Help"
+              title="Sugestão com IA"
             >
               {isGeneratingSuggestion ? (
                 <Loader2 size={18} className="animate-spin" />
@@ -424,7 +423,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
-                placeholder="Type a message..."
+                placeholder="Digite uma mensagem... (Use / para respostas rápidas)"
                 className="w-full bg-transparent outline-none px-2 py-2 text-[13px] text-slate-800 placeholder:text-slate-400"
               />
             </div>
@@ -440,16 +439,17 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
                   onClick={handleSend}
                   className="px-3 py-1.5 bg-blue-600 text-white rounded text-[11px] font-bold uppercase tracking-wider hover:bg-blue-700 transition-all"
                 >
-                  Send
+                  Enviar
                 </button>
               ) : (
-                <button
-                  type="button"
-                  onClick={startRecording}
-                  className="p-2 text-slate-400 hover:text-rose-600 transition-colors"
-                >
-                  <Mic size={18} />
+                <>
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="text-[9px] font-bold uppercase tracking-wider text-slate-500 hover:text-fluvius-blue-main hover:bg-slate-50 px-2 py-1.5 rounded transition-colors flex items-center gap-1.5">
+                  <ImageIcon size={14} /> Anexo
                 </button>
+                <button type="button" onMouseDown={startRecording} onMouseUp={stopRecording} onMouseLeave={stopRecording} className={`text-[9px] font-bold uppercase tracking-wider px-2 py-1.5 rounded transition-colors flex items-center gap-1.5 ${isRecording ? 'text-rose-500 bg-rose-50 animate-pulse' : 'text-slate-500 hover:text-fluvius-blue-main hover:bg-slate-50'}`}>
+                  <Mic size={14} /> Áudio
+                </button>
+                </>
               )}
             </div>
           </>
@@ -476,7 +476,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
                 onClick={stopRecording}
                 className="px-3 py-1 bg-rose-600 text-white rounded text-[10px] font-bold uppercase tracking-wider"
               >
-                Done
+                Feito
               </button>
             </div>
           </div>

@@ -92,7 +92,7 @@ export const QuickRepliesTab: React.FC = () => {
             className="flex items-center gap-1.5 text-[10px] bg-blue-600 text-white px-3 py-1.5 rounded font-bold uppercase tracking-wider hover:bg-blue-700 transition-colors"
           >
             <Plus size={14} />
-            New Reply
+            Nova Resposta
           </button>
         </div>
 
@@ -107,7 +107,7 @@ export const QuickRepliesTab: React.FC = () => {
             >
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="md:col-span-1 space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Shortcut</label>
+                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Atalho</label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">/</span>
                     <input
@@ -115,18 +115,18 @@ export const QuickRepliesTab: React.FC = () => {
                       required
                       value={formData.shortcut}
                       onChange={e => setFormData({ ...formData, shortcut: e.target.value })}
-                      placeholder="hi"
+                      placeholder="ola"
                       className="w-full border border-slate-200 rounded px-3 py-2 pl-6 text-[13px] font-medium text-slate-700 outline-none focus:border-blue-500 transition-colors"
                     />
                   </div>
                 </div>
                 <div className="md:col-span-2 space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Message Content</label>
+                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Conteúdo da Mensagem</label>
                   <textarea
                     required
                     value={formData.content}
                     onChange={e => setFormData({ ...formData, content: e.target.value })}
-                    placeholder="Hello! How can I help you?"
+                    placeholder="Olá! Como posso te ajudar?"
                     rows={1}
                     className="w-full border border-slate-200 rounded px-3 py-2 text-[13px] font-medium text-slate-700 outline-none focus:border-blue-500 transition-colors resize-none"
                   />
@@ -138,7 +138,7 @@ export const QuickRepliesTab: React.FC = () => {
                     className="flex-1 bg-blue-600 text-white px-4 py-2 rounded text-[11px] font-bold uppercase tracking-wider hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
-                    Save
+                    Salvar
                   </button>
                   <button
                     type="button"
@@ -157,14 +157,14 @@ export const QuickRepliesTab: React.FC = () => {
           {loading ? (
             <div className="p-12 text-center flex flex-col items-center gap-3">
               <Loader2 className="animate-spin text-blue-500" size={24} />
-              <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Loading...</p>
+              <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Carregando...</p>
             </div>
           ) : replies.length === 0 ? (
             <div className="p-12 text-center flex flex-col items-center gap-4">
               <MessageSquare className="text-slate-200" size={32} />
               <div className="space-y-1">
-                <p className="text-slate-500 font-bold text-sm">No quick replies</p>
-                <p className="text-slate-400 text-[11px] max-w-[200px] mx-auto">Create shortcuts to speed up your workflow.</p>
+                <p className="text-slate-500 font-bold text-sm">Nenhuma resposta rápida</p>
+                <p className="text-slate-400 text-[11px] max-w-[200px] mx-auto">Crie atalhos para acelerar seu atendimento.</p>
               </div>
             </div>
           ) : (
@@ -181,7 +181,7 @@ export const QuickRepliesTab: React.FC = () => {
                     </div>
                     <div className="flex-1">
                       <p className="text-[13px] font-bold text-slate-800 leading-tight">{reply.content}</p>
-                      <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Shortcut: {reply.shortcut}</p>
+                      <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Atalho: {reply.shortcut}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">

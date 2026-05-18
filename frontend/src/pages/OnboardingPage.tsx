@@ -182,7 +182,7 @@ export const OnboardingPage: React.FC = () => {
                 <Wifi size={32} />
               </div>
               <h1 className="text-2xl font-bold text-slate-900 mb-2">Conectar WhatsApp</h1>
-              <p className="text-slate-500 mb-8">Escore o QR Code para ativar o atendimento multicanal.</p>
+              <p className="text-slate-500 mb-8">Escaneie o QR Code para ativar o atendimento multicanal.</p>
 
               {!connection ? (
                 <button
