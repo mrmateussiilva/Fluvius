@@ -26,14 +26,6 @@ def contact_phone_from_remote_jid(remote_jid: str) -> str:
 class WebhookService:
     @staticmethod
     async def _send_conversation_event(conversation: Conversation, message: dict):
-        if conversation.assignee_id:
-            await socket_manager.send_personal_message(
-                message,
-                conversation.workspace_id,
-                conversation.assignee_id,
-            )
-            return
-
         await socket_manager.broadcast(message)
 
     @staticmethod

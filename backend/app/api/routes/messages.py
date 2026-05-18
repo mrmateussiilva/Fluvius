@@ -159,11 +159,17 @@ async def create_message(
         "workspace_id": current_agent.workspace_id,
         "data": {
             "id": message.id,
+            "workspace_id": message.workspace_id,
             "conversation_id": message.conversation_id,
+            "contact_id": message.contact_id,
             "direction": message.direction,
+            "message_type": message.message_type,
             "content": message.content,
-            "created_at": message.created_at.isoformat() + "Z" if message.created_at.tzinfo is None else message.created_at.isoformat(),
+            "media_url": message.media_url,
+            "mime_type": message.mime_type,
+            "external_message_id": message.external_message_id,
             "status": message.status,
+            "created_at": message.created_at.isoformat() + "Z" if message.created_at.tzinfo is None else message.created_at.isoformat(),
             "quoted_message_id": message.quoted_message_id,
             "quoted_content": message.quoted_content
         }
@@ -296,14 +302,17 @@ async def create_media_message(
         "workspace_id": current_agent.workspace_id,
         "data": {
             "id": message.id,
+            "workspace_id": message.workspace_id,
             "conversation_id": message.conversation_id,
+            "contact_id": message.contact_id,
             "direction": message.direction,
             "message_type": message.message_type,
             "content": message.content,
             "media_url": message.media_url,
             "mime_type": message.mime_type,
-            "created_at": message.created_at.isoformat(),
+            "external_message_id": message.external_message_id,
             "status": message.status,
+            "created_at": message.created_at.isoformat() + "Z" if message.created_at.tzinfo is None else message.created_at.isoformat(),
             "quoted_message_id": message.quoted_message_id,
             "quoted_content": message.quoted_content
         }

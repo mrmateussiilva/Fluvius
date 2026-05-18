@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ConversationList } from '../components/ConversationList';
@@ -34,6 +34,17 @@ export const InboxPage: React.FC = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
 
+  const conversationsRef = useRef<Conversation[]>([]);
+  const selectedConversationIdRef = useRef<string | null>(selectedConversationId);
+
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
+
+  useEffect(() => {
+    selectedConversationIdRef.current = selectedConversationId;
+  }, [selectedConversationId]);
+
   // Request notification permissions on mount
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -55,8 +66,8 @@ export const InboxPage: React.FC = () => {
         ? data.filter(c => c.assignee_id === currentAgent.id)
         : data;
       setConversations(filtered);
-      if (selectedConversationId) {
-        const selected = data.find(c => c.id === selectedConversationId);
+      if (selectedConversationIdRef.current) {
+        const selected = data.find(c => c.id === selectedConversationIdRef.current);
         if (selected) {
           setSelectedConversation(selected);
         }
@@ -64,7 +75,7 @@ export const InboxPage: React.FC = () => {
     } catch (err) {
       console.error(err);
     }
-  }, [activeTab, currentAgent, selectedConversationId]);
+  }, [activeTab, currentAgent]);
 
   const loadMessages = useCallback(async () => {
     if (!selectedConversationId) return;
@@ -121,7 +132,7 @@ export const InboxPage: React.FC = () => {
             
             // Push Notification
             if ('Notification' in window && Notification.permission === 'granted') {
-               const contactName = conversations.find(c => c.id === newMsg.conversation_id)?.contact?.name || 'Cliente';
+               const contactName = conversationsRef.current.find(c => c.id === newMsg.conversation_id)?.contact?.name || 'Cliente';
                new Notification(`Mensagem de ${contactName}`, {
                  body: newMsg.message_type === 'text' ? newMsg.content : 'Enviou um anexo',
                  icon: '/logo.png'

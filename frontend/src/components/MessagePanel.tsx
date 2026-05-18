@@ -5,7 +5,7 @@ import {
   User, Check, CheckCheck, Clock, UserCheck, CheckCircle2, 
   RotateCcw, Upload, Reply, Play, Pause, Plus, X, Eye, 
   FileText, AlertCircle, MessageSquare, Sparkles, Loader2, Tag, ChevronRight, ChevronLeft,
-  Smile, Meh, Frown, AlertTriangle, RefreshCw
+  Smile, Meh, Frown, AlertTriangle, RefreshCw, Maximize2, Download
 } from 'lucide-react';
 import { useAgent } from '../context/AgentContext';
 import { MediaPreviewModal } from './MediaPreviewModal';
@@ -24,13 +24,36 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [playbackRate, setPlaybackRate] = useState(1);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Generate some deterministic random heights for the waveform based on src
+  const waveformBars = React.useMemo(() => {
+    let seed = 0;
+    for (let i = 0; i < src.length; i++) {
+      seed = src.charCodeAt(i) + ((seed << 5) - seed);
+    }
+    const bars = [];
+    for (let i = 0; i < 40; i++) {
+      const height = 20 + Math.abs((Math.sin(seed + i) * 80));
+      bars.push(height);
+    }
+    return bars;
+  }, [src]);
 
   const togglePlay = () => {
     if (audioRef.current) {
       if (isPlaying) audioRef.current.pause();
       else audioRef.current.play();
       setIsPlaying(!isPlaying);
+    }
+  };
+
+  const cyclePlaybackRate = () => {
+    if (audioRef.current) {
+      const nextRate = playbackRate === 1 ? 1.5 : playbackRate === 1.5 ? 2 : 1;
+      audioRef.current.playbackRate = nextRate;
+      setPlaybackRate(nextRate);
     }
   };
 
@@ -56,7 +79,7 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="min-w-[240px] py-1 flex items-center gap-3">
+    <div className="min-w-[260px] py-2 flex items-center gap-3">
       <audio
         ref={audioRef}
         src={src}
@@ -67,20 +90,46 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
       />
       <button 
         onClick={togglePlay}
-        className="w-10 h-10 bg-fluvius-blue-main/10 text-fluvius-blue-main rounded-full flex items-center justify-center hover:bg-fluvius-blue-main/20 transition-colors shrink-0"
+        className="w-10 h-10 bg-fluvius-blue-main text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors shadow-sm shrink-0"
       >
-        {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-1" />}
+        {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
       </button>
-      <div className="flex-1 flex flex-col gap-1.5">
-        <div className="h-1 bg-slate-200 rounded-full w-full relative">
-          <div 
-            className="absolute left-0 top-0 h-full bg-fluvius-blue-main rounded-full transition-all duration-100" 
-            style={{ width: `${progress}%` }} 
-          />
+      
+      <div className="flex-1 flex flex-col gap-1">
+        <div className="flex items-end gap-0.5 h-6 w-full cursor-pointer relative group" onClick={(e) => {
+            if (audioRef.current && duration) {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const pos = (e.clientX - rect.left) / rect.width;
+              audioRef.current.currentTime = pos * duration;
+            }
+          }}>
+          {waveformBars.map((height, i) => {
+            const barProgress = (i / waveformBars.length) * 100;
+            const isPlayed = progress >= barProgress;
+            return (
+              <div 
+                key={i} 
+                className={cn(
+                  "flex-1 rounded-full transition-all duration-100",
+                  isPlayed ? "bg-fluvius-blue-main" : "bg-slate-200 group-hover:bg-slate-300"
+                )} 
+                style={{ height: `${height}%`, minHeight: '4px' }} 
+              />
+            );
+          })}
         </div>
-        <div className="flex justify-between items-center text-[10px] text-slate-500 font-medium">
-          <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
+        
+        <div className="flex justify-between items-center text-[10px] text-slate-500 font-bold tracking-wider mt-1">
+          <span className="tabular-nums">{formatTime(currentTime)}</span>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={cyclePlaybackRate}
+              className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-[9px] transition-colors"
+            >
+              {playbackRate}x
+            </button>
+            <span className="tabular-nums opacity-60">{formatTime(duration)}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -124,7 +173,8 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
   const isSpectator = !!(conversation.assignee_id && currentAgent && conversation.assignee_id !== currentAgent.id);
   
   const [isDragging, setIsDragging] = useState(false);
-  const [previewFile, setPreviewFile] = useState<{ file: File; preview: string; type: string } | null>(null);
+  const [previewFiles, setPreviewFiles] = useState<{ file: File; preview: string; type: string }[] | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [newTag, setNewTag] = useState('');
   const [isUpdatingTags, setIsUpdatingTags] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
@@ -216,28 +266,49 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
     setIsDragging(false);
     if (conversation.status === 'resolved') return;
 
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
 
-    let type = 'document';
-    if (file.type.startsWith('image/')) type = 'image';
-    else if (file.type.startsWith('audio/')) type = 'audio';
-    else if (file.type.startsWith('video/')) type = 'video';
+    const newPreviewFiles: { file: File; preview: string; type: string }[] = [];
 
-    const preview = URL.createObjectURL(file);
-    setPreviewFile({ file, preview, type });
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      let type = 'document';
+      if (file.type.startsWith('image/')) type = 'image';
+      else if (file.type.startsWith('audio/')) type = 'audio';
+      else if (file.type.startsWith('video/')) type = 'video';
+
+      const preview = URL.createObjectURL(file);
+      newPreviewFiles.push({ file, preview, type });
+    }
+
+    if (newPreviewFiles.length > 0) {
+      setPreviewFiles((prev) => prev ? [...prev, ...newPreviewFiles] : newPreviewFiles);
+    }
   };
 
-  const handleFinalSend = (caption: string) => {
-    if (!previewFile) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      onSendMedia(base64String, previewFile.type, previewFile.file.type, caption);
-      setPreviewFile(null);
-    };
-    reader.readAsDataURL(previewFile.file);
+  const handleFinalSend = async (filesToSend: { file: File; preview: string; type: string; caption: string }[]) => {
+    setPreviewFiles(null);
+    for (const item of filesToSend) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = async () => {
+            try {
+              const base64String = reader.result as string;
+              await onSendMedia(base64String, item.type, item.file.type, item.caption);
+              resolve();
+            } catch (err) {
+              reject(err);
+            }
+          };
+          reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+          reader.readAsDataURL(item.file);
+        });
+      } catch (err) {
+        console.error('Erro ao enviar mídia:', err);
+      }
+    }
   };
 
   const renderStatusIcon = (status: string) => {
@@ -375,15 +446,39 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
           )}
         </AnimatePresence>
 
-        {previewFile && (
+        {previewFiles && (
           <MediaPreviewModal
-            file={previewFile.file}
-            preview={previewFile.preview}
-            type={previewFile.type}
-            onClose={() => setPreviewFile(null)}
+            files={previewFiles}
+            onClose={() => setPreviewFiles(null)}
             onSend={handleFinalSend}
           />
         )}
+
+        {/* Lightbox for Images */}
+        <AnimatePresence>
+          {lightboxImage && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4"
+              onClick={() => setLightboxImage(null)}
+            >
+              <button
+                onClick={() => setLightboxImage(null)}
+                className="absolute top-6 right-6 text-white/70 hover:text-white p-2 bg-black/50 hover:bg-black/80 rounded-full transition-all"
+              >
+                <X size={24} />
+              </button>
+              <img
+                src={lightboxImage}
+                alt="Fullscreen Media"
+                className="max-w-full max-h-full object-contain cursor-default"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Header - Minimalist & Functional */}
         <div className="h-14 flex items-center justify-between px-6 bg-white border-b border-slate-200 z-20 shrink-0">
@@ -468,7 +563,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                       return (
                         <div className="flex flex-col">
                           <div className="bg-black overflow-hidden rounded-sm">
-                            <video controls className="w-full max-w-[440px] block max-h-[500px]">
+                            <video controls controlsList="nodownload" disablePictureInPicture={false} className="w-full max-w-[440px] block max-h-[500px]">
                               <source src={mediaUrl || ''} type={msg.mime_type || 'video/mp4'} />
                             </video>
                           </div>
@@ -482,13 +577,19 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                     case 'image':
                       return (
                         <div className="flex flex-col">
-                          <div className="overflow-hidden rounded-sm">
+                          <div className="overflow-hidden rounded-sm relative group/image">
                             <img
                               src={mediaUrl || ''}
                               alt="Media"
                               className="w-full max-w-[440px] h-auto max-h-[500px] object-cover cursor-pointer hover:opacity-95 transition-opacity block"
-                              onClick={() => window.open(mediaUrl || '', '_blank')}
+                              onClick={() => setLightboxImage(mediaUrl || '')}
                             />
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setLightboxImage(mediaUrl || ''); }}
+                              className="absolute top-2 right-2 bg-black/50 text-white p-1.5 rounded-full opacity-0 group-hover/image:opacity-100 transition-opacity backdrop-blur-sm hover:bg-black/70 shadow-sm"
+                            >
+                              <Maximize2 size={16} />
+                            </button>
                           </div>
                           {msg.content && (
                             <div className="px-4 py-3">
@@ -499,18 +600,26 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                       );
                     case 'document':
                       return (
-                        <a
-                          href={mediaUrl || ''}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded hover:bg-slate-50 transition-colors m-1"
-                        >
-                          <FileText size={20} className="text-slate-400" />
-                          <div className="min-w-0">
-                            <p className="text-[12px] font-bold text-slate-700 truncate max-w-[200px]">Document</p>
-                            <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Download</p>
+                        <div className="flex flex-col gap-2 p-1 m-1">
+                          <div className="bg-slate-100 rounded-md border border-slate-200 flex items-center justify-center p-6 mb-1">
+                             <FileText size={40} className="text-slate-400 opacity-50" />
                           </div>
-                        </a>
+                          <div className="flex items-center justify-between gap-3 px-2">
+                            <div className="min-w-0">
+                              <p className="text-[12px] font-bold text-slate-700 truncate max-w-[180px]">Documento</p>
+                              <p className="text-[9px] text-slate-400 font-medium truncate uppercase">{msg.mime_type?.split('/')[1]?.toUpperCase() || 'PDF'}</p>
+                            </div>
+                            <a
+                              href={mediaUrl || ''}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-2 bg-white border border-slate-200 text-slate-500 rounded-full hover:text-fluvius-blue-main hover:bg-fluvius-blue-main/5 transition-colors shrink-0 shadow-sm"
+                              title="Baixar ou Visualizar"
+                            >
+                              <Download size={14} />
+                            </a>
+                          </div>
+                        </div>
                       );
                     default:
                       return (

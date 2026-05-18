@@ -26,7 +26,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [previewFile, setPreviewFile] = useState<{ file: File; preview: string; type: string } | null>(null);
+  const [previewFiles, setPreviewFiles] = useState<{ file: File; preview: string; type: string }[] | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -174,22 +174,30 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    if (file.size > MAX_FILE_SIZE) {
-      showError(`Arquivo muito grande! O limite é ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
-      e.target.value = '';
-      return;
+    const newPreviewFiles: { file: File; preview: string; type: string }[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.size > MAX_FILE_SIZE) {
+        showError(`Arquivo muito grande: ${file.name}! O limite é ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
+        continue;
+      }
+
+      let type = 'document';
+      if (file.type.startsWith('image/')) type = 'image';
+      else if (file.type.startsWith('audio/')) type = 'audio';
+      else if (file.type.startsWith('video/')) type = 'video';
+
+      const preview = URL.createObjectURL(file);
+      newPreviewFiles.push({ file, preview, type });
     }
 
-    let type = 'document';
-    if (file.type.startsWith('image/')) type = 'image';
-    else if (file.type.startsWith('audio/')) type = 'audio';
-    else if (file.type.startsWith('video/')) type = 'video';
-
-    const preview = URL.createObjectURL(file);
-    setPreviewFile({ file, preview, type });
+    if (newPreviewFiles.length > 0) {
+      setPreviewFiles((prev) => prev ? [...prev, ...newPreviewFiles] : newPreviewFiles);
+    }
     
     // Reset input value to allow selecting same file again
     e.target.value = '';
@@ -212,7 +220,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
         const file = new File([audioBlob], 'voice_note.ogg', { type: 'audio/ogg' });
         const preview = URL.createObjectURL(audioBlob);
-        setPreviewFile({ file, preview, type: 'audio' });
+        setPreviewFiles([{ file, preview, type: 'audio' }]);
         
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
@@ -233,23 +241,36 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
     }
   };
 
-  const handleFinalSend = (caption: string) => {
-    if (!previewFile) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      Promise.resolve(onSendMedia(base64String, previewFile.type, previewFile.file.type, caption))
-        .then(() => setPreviewFile(null))
-        .catch((err) => showError(err instanceof Error ? err.message : 'Erro ao enviar mídia'));
-    };
-    reader.readAsDataURL(previewFile.file);
+  const handleFinalSend = async (filesToSend: { file: File; preview: string; type: string; caption: string }[]) => {
+    setPreviewFiles(null);
+    for (const item of filesToSend) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = async () => {
+            try {
+              const base64String = reader.result as string;
+              await onSendMedia(base64String, item.type, item.file.type, item.caption);
+              resolve();
+            } catch (err) {
+              reject(err);
+            }
+          };
+          reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+          reader.readAsDataURL(item.file);
+        });
+      } catch (err) {
+        showError(err instanceof Error ? err.message : 'Erro ao enviar mídia');
+      }
+    }
   };
 
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     const items = e.clipboardData?.items;
     if (!items) return;
+
+    const newPreviewFiles: { file: File; preview: string; type: string }[] = [];
 
     for (let i = 0; i < items.length; i++) {
       if (items[i].kind === 'file') {
@@ -258,8 +279,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
           e.preventDefault(); // Stop text paste
 
           if (file.size > MAX_FILE_SIZE) {
-            showError(`Arquivo muito grande! O limite é ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
-            return;
+            showError(`Arquivo muito grande: ${file.name}! O limite é ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
+            continue;
           }
 
           let type = 'document';
@@ -268,10 +289,13 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
           else if (file.type.startsWith('video/')) type = 'video';
 
           const preview = URL.createObjectURL(file);
-          setPreviewFile({ file, preview, type });
-          return; // Process only the first file
+          newPreviewFiles.push({ file, preview, type });
         }
       }
+    }
+
+    if (newPreviewFiles.length > 0) {
+      setPreviewFiles((prev) => prev ? [...prev, ...newPreviewFiles] : newPreviewFiles);
     }
   };
 
@@ -284,12 +308,10 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
   return (
     <div className="relative flex flex-col w-full bg-white">
       {/* Media Preview Modal */}
-      {previewFile && (
+      {previewFiles && (
         <MediaPreviewModal
-          file={previewFile.file}
-          preview={previewFile.preview}
-          type={previewFile.type}
-          onClose={() => setPreviewFile(null)}
+          files={previewFiles}
+          onClose={() => setPreviewFiles(null)}
           onSend={handleFinalSend}
         />
       )}
@@ -456,6 +478,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
               ref={fileInputRef}
               onChange={handleFileChange}
               className="hidden"
+              multiple
             />
 
             <button
@@ -523,7 +546,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
                 onClick={() => {
                   setIsRecording(false);
                   mediaRecorderRef.current?.stop();
-                  setPreviewFile(null);
+                  setPreviewFiles(null);
                 }}
                 className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
               >

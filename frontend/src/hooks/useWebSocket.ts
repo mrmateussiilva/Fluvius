@@ -12,13 +12,19 @@ export const useWebSocket = (token: string | null, onEvent: (event: WSEvent) => 
   const connectTimeoutRef = useRef<number | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const shouldReconnectRef = useRef(false);
+  const tokenRef = useRef<string | null>(token);
+
+  useEffect(() => {
+    tokenRef.current = token;
+  }, [token]);
 
   useEffect(() => {
     onEventRef.current = onEvent;
   }, [onEvent]);
 
   const connect = useCallback(() => {
-    if (!token) return;
+    const currentToken = tokenRef.current;
+    if (!currentToken) return;
 
     if (reconnectTimeoutRef.current) {
       window.clearTimeout(reconnectTimeoutRef.current);
@@ -37,7 +43,7 @@ export const useWebSocket = (token: string | null, onEvent: (event: WSEvent) => 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const defaultWsHost = window.location.host.includes('localhost') ? 'localhost:8000' : window.location.host;
     const wsUrl = new URL(configuredWsUrl || `${protocol}//${defaultWsHost}/ws`);
-    wsUrl.searchParams.set('token', token);
+    wsUrl.searchParams.set('token', currentToken);
 
     console.log(`Connecting to WebSocket: ${wsUrl.origin}${wsUrl.pathname}`);
     const ws = new WebSocket(wsUrl.toString());
@@ -90,7 +96,7 @@ export const useWebSocket = (token: string | null, onEvent: (event: WSEvent) => 
       console.error('WebSocket error:', err);
       ws.close();
     };
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     shouldReconnectRef.current = Boolean(token);
