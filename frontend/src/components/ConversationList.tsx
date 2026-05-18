@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { NewChatModal } from './NewChatModal';
 import { MessageSquarePlus } from 'lucide-react';
+import { APP_VERSION } from '../version';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -221,6 +222,11 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 <LogOut size={16} />
              </button>
           </div>
+        </div>
+        {/* Version badge */}
+        <div className="px-3 pb-2 flex items-center gap-1.5">
+          <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">v{APP_VERSION}</span>
+          <span className="w-1 h-1 rounded-full bg-emerald-400" title="Sistema online" />
         </div>
 
         {/* Modals */}
