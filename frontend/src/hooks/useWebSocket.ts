@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 
 export type WSEvent = {
-  type: 'NEW_MESSAGE' | 'CONVERSATION_UPDATED' | 'MESSAGE_STATUS_UPDATED' | 'CONNECTION_STATUS_UPDATED';
+  type: 'NEW_MESSAGE' | 'CONVERSATION_UPDATED' | 'MESSAGE_STATUS_UPDATED' | 'CONNECTION_STATUS_UPDATED' | 'NEW_CONVERSATION';
   data: any;
   workspace_id?: string;
 };

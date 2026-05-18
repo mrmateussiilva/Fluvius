@@ -17,6 +17,14 @@ import { useWebSocket, type WSEvent } from '../hooks/useWebSocket';
 
 type TabFilter = 'all' | 'pending' | 'mine' | 'resolved';
 
+function mergeConversations(conversations: Conversation[]): Conversation[] {
+  const map = new Map<string, Conversation>();
+  conversations.forEach(c => {
+    map.set(c.id, c);
+  });
+  return Array.from(map.values());
+}
+
 export const InboxPage: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -65,7 +73,7 @@ export const InboxPage: React.FC = () => {
       const filtered = activeTab === 'mine' && currentAgent
         ? data.filter(c => c.assignee_id === currentAgent.id)
         : data;
-      setConversations(filtered);
+      setConversations(mergeConversations(filtered));
       if (selectedConversationIdRef.current) {
         const selected = data.find(c => c.id === selectedConversationIdRef.current);
         if (selected) {
@@ -113,7 +121,7 @@ export const InboxPage: React.FC = () => {
   useEffect(() => { loadMessages(); }, [loadMessages]);
 
   // WebSocket Event Handler
-  const handleWSEvent = useCallback((event: WSEvent) => {
+  const handleWSEvent = useCallback(async (event: WSEvent) => {
     console.log('WS Event Received:', event);
 
     switch (event.type) {
@@ -172,12 +180,16 @@ export const InboxPage: React.FC = () => {
           }
         }
         // Always refresh the conversation list to update previews and unread counts
-        loadConversations();
+        await loadConversations();
+        break;
+
+      case 'NEW_CONVERSATION':
+        await loadConversations();
         break;
 
       case 'CONVERSATION_UPDATED':
         // Someone assigned, resolved or re-queued a conversation
-        loadConversations();
+        await loadConversations();
         // If the updated conversation is the one we have open, we might need to refresh it
         if (event.data.id === selectedConversationId) {
           setSelectedConversation(prev => prev ? { ...prev, ...event.data } : prev);
@@ -228,7 +240,7 @@ export const InboxPage: React.FC = () => {
     if (!currentAgent) return;
     try {
       await assignConversation(conversationId, currentAgent.id);
-      // WS will handle the "CONVERSATION_UPDATED" event
+      await loadConversations();
     } catch (err) {
       console.error(err);
     }
@@ -238,6 +250,7 @@ export const InboxPage: React.FC = () => {
     try {
       await resolveConversation(conversationId);
       handleSelectConversation(null);
+      await loadConversations();
     } catch (err) {
       console.error(err);
     }
@@ -246,6 +259,7 @@ export const InboxPage: React.FC = () => {
   const handlePending = async (conversationId: string) => {
     try {
       await pendingConversation(conversationId);
+      await loadConversations();
     } catch (err) {
       console.error(err);
     }

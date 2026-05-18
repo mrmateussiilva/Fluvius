@@ -16,6 +16,7 @@ from app.models.conversation import Conversation
 from app.models.workspace import utcnow
 from app.models.contact import Contact
 from app.core.socket_manager import socket_manager
+from app.services.visibility_service import ConversationVisibilityService
 
 logger = logging.getLogger(__name__)
 
@@ -88,27 +89,35 @@ async def send_message_task(message_id: str, conversation_id: str, text: str, wo
                 
             MessageService.update_message_status(db, message_id, "sent", external_message_id=external_id)
             
-            await socket_manager.broadcast({
-                "type": "MESSAGE_STATUS_UPDATED",
-                "workspace_id": workspace_id,
-                "data": {
-                    "id": message_id,
-                    "conversation_id": conversation_id,
-                    "status": "sent"
+            await ConversationVisibilityService.broadcast_to_allowed_agents(
+                db,
+                conversation,
+                {
+                    "type": "MESSAGE_STATUS_UPDATED",
+                    "workspace_id": workspace_id,
+                    "data": {
+                        "id": message_id,
+                        "conversation_id": conversation_id,
+                        "status": "sent"
+                    }
                 }
-            })
+            )
         except Exception as e:
             logger.error(f"Error sending message: {e}")
             MessageService.update_message_status(db, message_id, "failed")
-            await socket_manager.broadcast({
-                "type": "MESSAGE_STATUS_UPDATED",
-                "workspace_id": workspace_id,
-                "data": {
-                    "id": message_id,
-                    "conversation_id": conversation_id,
-                    "status": "failed"
+            await ConversationVisibilityService.broadcast_to_allowed_agents(
+                db,
+                conversation,
+                {
+                    "type": "MESSAGE_STATUS_UPDATED",
+                    "workspace_id": workspace_id,
+                    "data": {
+                        "id": message_id,
+                        "conversation_id": conversation_id,
+                        "status": "failed"
+                    }
                 }
-            })
+            )
 
 @router.post("", response_model=MessageResponse)
 async def create_message(
@@ -154,7 +163,7 @@ async def create_message(
     db.commit()
     db.refresh(message)
     
-    await socket_manager.broadcast({
+    await ConversationVisibilityService.broadcast_to_allowed_agents(db, conversation, {
         "type": "NEW_MESSAGE",
         "workspace_id": current_agent.workspace_id,
         "data": {
@@ -227,19 +236,27 @@ async def send_media_task(message_id: str, conversation_id: str, media: str, med
                 external_id = result.get("key", {}).get("id")
                 
             MessageService.update_message_status(db, message_id, "sent", external_message_id=external_id)
-            await socket_manager.broadcast({
-                "type": "MESSAGE_STATUS_UPDATED",
-                "workspace_id": workspace_id,
-                "data": {"id": message_id, "conversation_id": conversation_id, "status": "sent"}
-            })
+            await ConversationVisibilityService.broadcast_to_allowed_agents(
+                db,
+                conversation,
+                {
+                    "type": "MESSAGE_STATUS_UPDATED",
+                    "workspace_id": workspace_id,
+                    "data": {"id": message_id, "conversation_id": conversation_id, "status": "sent"}
+                }
+            )
         except Exception as e:
             logger.exception(f"Error in send_media_task: {e}")
             MessageService.update_message_status(db, message_id, "failed")
-            await socket_manager.broadcast({
-                "type": "MESSAGE_STATUS_UPDATED",
-                "workspace_id": workspace_id,
-                "data": {"id": message_id, "conversation_id": conversation_id, "status": "failed"}
-            })
+            await ConversationVisibilityService.broadcast_to_allowed_agents(
+                db,
+                conversation,
+                {
+                    "type": "MESSAGE_STATUS_UPDATED",
+                    "workspace_id": workspace_id,
+                    "data": {"id": message_id, "conversation_id": conversation_id, "status": "failed"}
+                }
+            )
 
 
 @router.post("/media", response_model=MessageResponse)
@@ -297,7 +314,7 @@ async def create_media_message(
     db.commit()
     db.refresh(message)
     
-    await socket_manager.broadcast({
+    await ConversationVisibilityService.broadcast_to_allowed_agents(db, conversation, {
         "type": "NEW_MESSAGE",
         "workspace_id": current_agent.workspace_id,
         "data": {

@@ -17,6 +17,7 @@ from app.models.conversation import Conversation
 from app.models.inbox import Inbox
 from app.models.workspace import utcnow
 from app.core.socket_manager import socket_manager
+from app.services.visibility_service import ConversationVisibilityService
 
 class StartConversationRequest(BaseModel):
     phone: str
@@ -186,8 +187,7 @@ async def assign_conversation(
     db.commit()
     db.refresh(conversation)
 
-    # BROADCAST (Scoping to workspace in SocketManager later)
-    await socket_manager.broadcast({
+    await ConversationVisibilityService.broadcast_to_allowed_agents(db, conversation, {
         "type": "CONVERSATION_UPDATED",
         "workspace_id": current_agent.workspace_id,
         "data": {
@@ -240,7 +240,7 @@ async def transfer_conversation(
     db.commit()
     db.refresh(conversation)
 
-    await socket_manager.broadcast({
+    await ConversationVisibilityService.broadcast_to_allowed_agents(db, conversation, {
         "type": "CONVERSATION_UPDATED",
         "workspace_id": current_agent.workspace_id,
         "data": {
@@ -275,7 +275,7 @@ async def resolve_conversation(
     db.refresh(conversation)
 
     # BROADCAST
-    await socket_manager.broadcast({
+    await ConversationVisibilityService.broadcast_to_allowed_agents(db, conversation, {
         "type": "CONVERSATION_UPDATED",
         "workspace_id": current_agent.workspace_id,
         "data": {
@@ -353,7 +353,7 @@ async def start_conversation(
         conversation.contact = contact
         conversation.assignee = current_agent
         
-        await socket_manager.broadcast({
+        await ConversationVisibilityService.broadcast_to_allowed_agents(db, conversation, {
             "type": "NEW_CONVERSATION",
             "workspace_id": current_agent.workspace_id,
             "data": {
@@ -395,7 +395,7 @@ async def mark_as_read(
     db.refresh(conversation)
 
     # BROADCAST
-    await socket_manager.broadcast({
+    await ConversationVisibilityService.broadcast_to_allowed_agents(db, conversation, {
         "type": "CONVERSATION_UPDATED",
         "workspace_id": current_agent.workspace_id,
         "data": {
@@ -432,7 +432,7 @@ async def pending_conversation(
     db.refresh(conversation)
 
     # BROADCAST
-    await socket_manager.broadcast({
+    await ConversationVisibilityService.broadcast_to_allowed_agents(db, conversation, {
         "type": "CONVERSATION_UPDATED",
         "workspace_id": current_agent.workspace_id,
         "data": {

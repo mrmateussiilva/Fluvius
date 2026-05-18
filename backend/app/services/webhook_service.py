@@ -8,6 +8,7 @@ from app.models.message import Message
 from app.core.socket_manager import socket_manager
 from app.services.evolution_service import EvolutionService
 from app.services.sync_service import SyncService
+from app.services.visibility_service import ConversationVisibilityService
 import logging
 import asyncio
 
@@ -25,8 +26,8 @@ def contact_phone_from_remote_jid(remote_jid: str) -> str:
 
 class WebhookService:
     @staticmethod
-    async def _send_conversation_event(conversation: Conversation, message: dict):
-        await socket_manager.broadcast(message)
+    async def _send_conversation_event(db: Session, conversation: Conversation, message: dict):
+        await ConversationVisibilityService.broadcast_to_allowed_agents(db, conversation, message)
 
     @staticmethod
     async def process_webhook(db: Session, connection_id: str, payload: dict) -> WebhookEvent:
@@ -98,16 +99,19 @@ class WebhookService:
                         if status_order.get(new_status, 0) > status_order.get(existing_msg.status, 0):
                             existing_msg.status = new_status
                             db.commit()
-                            import asyncio
-                            asyncio.create_task(socket_manager.broadcast({
-                                "type": "MESSAGE_STATUS_UPDATED",
-                                "workspace_id": existing_msg.workspace_id,
-                                "data": {
-                                    "id": existing_msg.id,
-                                    "conversation_id": existing_msg.conversation_id,
-                                    "status": existing_msg.status
+                            await ConversationVisibilityService.broadcast_to_allowed_agents(
+                                db,
+                                existing_msg.conversation,
+                                {
+                                    "type": "MESSAGE_STATUS_UPDATED",
+                                    "workspace_id": existing_msg.workspace_id,
+                                    "data": {
+                                        "id": existing_msg.id,
+                                        "conversation_id": existing_msg.conversation_id,
+                                        "status": existing_msg.status
+                                    }
                                 }
-                            }))
+                            )
                 logger.debug(f"Message {external_id} already exists. Ignoring duplicate webhook.")
                 return
 
@@ -354,7 +358,7 @@ class WebhookService:
         if is_new_message:
             # BROADCAST WS EVENTS
             # 1. New Message
-            await WebhookService._send_conversation_event(conversation, {
+            await WebhookService._send_conversation_event(db, conversation, {
                 "type": "NEW_MESSAGE",
                 "workspace_id": connection.workspace_id,
                 "data": {
@@ -376,7 +380,7 @@ class WebhookService:
             })
 
             # 2. Conversation Updated (for the list)
-            await WebhookService._send_conversation_event(conversation, {
+            await WebhookService._send_conversation_event(db, conversation, {
                 "type": "CONVERSATION_UPDATED",
                 "workspace_id": connection.workspace_id,
                 "data": {
@@ -443,15 +447,19 @@ class WebhookService:
         message.status = new_status
         db.commit()
         
-        await socket_manager.broadcast({
-            "type": "MESSAGE_STATUS_UPDATED",
-            "workspace_id": message.workspace_id,
-            "data": {
-                "id": message.id,
-                "conversation_id": message.conversation_id,
-                "status": message.status
+        await ConversationVisibilityService.broadcast_to_allowed_agents(
+            db,
+            message.conversation,
+            {
+                "type": "MESSAGE_STATUS_UPDATED",
+                "workspace_id": message.workspace_id,
+                "data": {
+                    "id": message.id,
+                    "conversation_id": message.conversation_id,
+                    "status": message.status
+                }
             }
-        })
+        )
 
     @staticmethod
     async def _handle_connection_update(db: Session, connection_id: str, payload: dict):
