@@ -126,6 +126,27 @@ def summarize_conversation(
         raise HTTPException(status_code=500, detail="Internal server error in AI Service")
 
 
+@router.post("/{conversation_id}/sentiment")
+def analyze_sentiment(
+    conversation_id: str,
+    db: Session = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent)
+):
+    # Check if conversation belongs to workspace
+    conversation = ConversationService.get_conversation_by_id(db, conversation_id)
+    if not conversation or conversation.workspace_id != current_agent.workspace_id:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+        
+    try:
+        sentiment = AIService.analyze_sentiment(db, conversation_id)
+        return {"sentiment": sentiment}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error in AI Service")
+
+
+
 
 class AssignRequest(BaseModel):
     agent_id: str

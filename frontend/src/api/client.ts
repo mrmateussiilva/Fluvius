@@ -470,6 +470,19 @@ export const summarizeConversation = async (conversationId: string): Promise<str
   return data.summary;
 };
 
+export const analyzeSentiment = async (conversationId: string): Promise<string> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/conversations/${conversationId}/sentiment`, {
+    method: 'POST',
+  });
+  if (!response.ok) {
+    const errorMsg = await getErrorMessage(response, 'Falha ao analisar sentimento da conversa');
+    throw new Error(errorMsg);
+  }
+  const data = await response.json();
+  return data.sentiment;
+};
+
+
 export const updateConnection = async (connectionId: string, data: any): Promise<Connection> => {
   const response = await fetchWithAuth(`${API_BASE_URL}/connections/${connectionId}`, {
     method: 'PUT',

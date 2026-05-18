@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { updateContactTags, suggestReply, summarizeConversation, type Message, type Conversation, type Contact } from '../api/client';
+import { updateContactTags, suggestReply, summarizeConversation, analyzeSentiment, type Message, type Conversation, type Contact } from '../api/client';
 import { MessageInput } from './MessageInput';
 import { 
   User, Check, CheckCheck, Clock, UserCheck, CheckCircle2, 
   RotateCcw, Upload, Reply, Play, Pause, Plus, X, Eye, 
-  FileText, AlertCircle, MessageSquare, Sparkles, Loader2, Tag, ChevronRight
+  FileText, AlertCircle, MessageSquare, Sparkles, Loader2, Tag, ChevronRight,
+  Smile, Meh, Frown, AlertTriangle, RefreshCw
 } from 'lucide-react';
 import { useAgent } from '../context/AgentContext';
 import { MediaPreviewModal } from './MediaPreviewModal';
@@ -135,11 +136,38 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
-  // Reset summary states when selected conversation changes
+  // Sentiment Analysis states
+  const [sentiment, setSentiment] = useState<string | null>(null);
+  const [isLoadingSentiment, setIsLoadingSentiment] = useState(false);
+  const [sentimentError, setSentimentError] = useState<string | null>(null);
+
+  const handleAnalyzeSentiment = async () => {
+    setIsLoadingSentiment(true);
+    setSentimentError(null);
+    try {
+      const sentimentResult = await analyzeSentiment(conversation.id);
+      setSentiment(sentimentResult);
+    } catch (err) {
+      setSentimentError(err instanceof Error ? err.message : 'Falha ao analisar sentimento.');
+    } finally {
+      setIsLoadingSentiment(false);
+    }
+  };
+
+  // Reset summary and sentiment states when selected conversation changes
   useEffect(() => {
     setSummary(null);
     setSummaryError(null);
+    setSentiment(null);
+    setSentimentError(null);
   }, [conversation.id]);
+
+  // Auto-trigger sentiment analysis when sidebar is opened
+  useEffect(() => {
+    if (isSidebarOpen && !sentiment && !isLoadingSentiment && !sentimentError) {
+      handleAnalyzeSentiment();
+    }
+  }, [isSidebarOpen, conversation.id]);
 
   const handleGenerateSummary = async () => {
     setIsLoadingSummary(true);
@@ -593,6 +621,93 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
             </div>
             <h3 className="font-bold text-slate-800 text-[14px] leading-tight mb-1">{contactName}</h3>
             <p className="text-[11px] font-medium text-slate-500 tabular-nums">{contactPhone}</p>
+          </div>
+
+          {/* AI Sentiment Analysis Card */}
+          <div className="p-5 border-b border-slate-100 flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles size={12} className="text-blue-500" /> Humor do Cliente (IA)
+              </span>
+              <button
+                onClick={handleAnalyzeSentiment}
+                disabled={isLoadingSentiment}
+                className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors disabled:opacity-50"
+                title="Recalcular Sentimento"
+              >
+                <RefreshCw size={12} className={cn(isLoadingSentiment && "animate-spin")} />
+              </button>
+            </div>
+
+            {isLoadingSentiment && (
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 flex items-center gap-3 animate-pulse">
+                <Loader2 size={16} className="text-slate-400 animate-spin shrink-0" />
+                <div className="flex-1 flex flex-col gap-1.5">
+                  <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+                  <div className="h-2 bg-slate-200 rounded w-3/4"></div>
+                </div>
+              </div>
+            )}
+
+            {!isLoadingSentiment && sentimentError && (
+              <div className="bg-rose-50 border border-rose-100 text-rose-600 rounded-lg p-3 text-[11px] font-medium flex items-center gap-2">
+                <AlertCircle size={14} className="shrink-0" />
+                <span>{sentimentError}</span>
+              </div>
+            )}
+
+            {!isLoadingSentiment && !sentiment && !sentimentError && (
+              <button
+                onClick={handleAnalyzeSentiment}
+                className="w-full py-2 bg-slate-50 border border-dashed border-slate-200 rounded-lg text-[11px] font-bold text-slate-500 hover:bg-slate-100/70 transition-all flex items-center justify-center gap-1.5"
+              >
+                <Smile size={14} /> Analisar Sentimento
+              </button>
+            )}
+
+            {!isLoadingSentiment && sentiment && (
+              <div className={cn(
+                "border rounded-lg p-3.5 flex items-center gap-3.5 shadow-sm transition-all",
+                sentiment === 'POSITIVE' && "bg-emerald-50 border-emerald-100 text-emerald-800",
+                sentiment === 'NEUTRAL' && "bg-slate-50 border-slate-200/80 text-slate-700",
+                sentiment === 'NEGATIVE' && "bg-rose-50 border-rose-100 text-rose-800",
+                sentiment === 'URGENT' && "bg-amber-50 border-amber-100 text-amber-800"
+              )}>
+                <div className={cn(
+                  "w-9 h-9 rounded-full flex items-center justify-center shrink-0 border shadow-sm",
+                  sentiment === 'POSITIVE' && "bg-emerald-100/80 border-emerald-200 text-emerald-600",
+                  sentiment === 'NEUTRAL' && "bg-white border-slate-200 text-slate-500",
+                  sentiment === 'NEGATIVE' && "bg-rose-100/80 border-rose-200 text-rose-600",
+                  sentiment === 'URGENT' && "bg-amber-100/80 border-amber-200 text-amber-600"
+                )}>
+                  {sentiment === 'POSITIVE' && <Smile size={18} />}
+                  {sentiment === 'NEUTRAL' && <Meh size={18} />}
+                  {sentiment === 'NEGATIVE' && <Frown size={18} />}
+                  {sentiment === 'URGENT' && <AlertTriangle size={18} />}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12px] font-bold tracking-tight mb-0.5">
+                    {sentiment === 'POSITIVE' && 'Amigável / Satisfeito'}
+                    {sentiment === 'NEUTRAL' && 'Sentimento Neutro'}
+                    {sentiment === 'NEGATIVE' && 'Frustrado / Insatisfeito'}
+                    {sentiment === 'URGENT' && 'Urgente / Emergência'}
+                  </div>
+                  <p className={cn(
+                    "text-[10px] leading-tight font-medium",
+                    sentiment === 'POSITIVE' && "text-emerald-600/95",
+                    sentiment === 'NEUTRAL' && "text-slate-500",
+                    sentiment === 'NEGATIVE' && "text-rose-600/95",
+                    sentiment === 'URGENT' && "text-amber-600/95"
+                  )}>
+                    {sentiment === 'POSITIVE' && 'O cliente demonstra simpatia e satisfação no atendimento.'}
+                    {sentiment === 'NEUTRAL' && 'O cliente está calmo, objetivo e sem sinais de estresse.'}
+                    {sentiment === 'NEGATIVE' && 'O cliente expressa insatisfação, reclamação ou impaciência.'}
+                    {sentiment === 'URGENT' && 'O cliente exige atenção prioritária imediata para o problema.'}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* AI Summary Section */}
