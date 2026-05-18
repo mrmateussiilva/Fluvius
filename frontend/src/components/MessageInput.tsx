@@ -25,6 +25,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
   const [text, setText] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [previewFile, setPreviewFile] = useState<{ file: File; preview: string; type: string } | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -123,12 +124,16 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
     if (!conversationId || isGeneratingSuggestion) return;
     
     setIsGeneratingSuggestion(true);
+    setSuggestions([]);
     try {
-      const suggestion = await suggestReply(conversationId);
-      setText(suggestion);
-      inputRef.current?.focus();
+      const res = await suggestReply(conversationId);
+      if (res.suggestions && res.suggestions.length > 0) {
+        setSuggestions(res.suggestions);
+      } else if (res.suggestion) {
+        setSuggestions([res.suggestion]);
+      }
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'Erro ao gerar sugestão');
+      showError(err instanceof Error ? err.message : 'Erro ao gerar sugestões');
     } finally {
       setIsGeneratingSuggestion(false);
     }
@@ -371,6 +376,58 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
                   <span className="text-[12px] text-slate-700 truncate">{qr.content}</span>
                 </button>
               ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* AI Smart Replies Suggestions - Premium & Horizontal */}
+      <AnimatePresence>
+        {suggestions.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 5, scale: 0.98 }}
+            className="mx-2 mb-2 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 backdrop-blur-md border border-blue-100 rounded-xl p-3 flex flex-col gap-2 shadow-sm z-30"
+          >
+            <div className="flex items-center justify-between border-b border-blue-100/50 pb-1.5">
+              <div className="flex items-center gap-1.5 text-blue-700">
+                <Sparkles size={13} className="animate-pulse" />
+                <span className="text-[10px] font-extrabold uppercase tracking-wider">Sugestões do Copiloto de IA</span>
+              </div>
+              <button 
+                onClick={() => setSuggestions([])} 
+                className="p-1 rounded-full text-slate-400 hover:text-rose-500 hover:bg-white/80 transition-colors"
+                title="Limpar sugestões"
+              >
+                <X size={12} />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              {suggestions.map((suggestion, idx) => {
+                const label = idx === 0 ? "⚡ Resposta Curta" : idx === 1 ? "📝 Resposta Completa" : "💡 Adaptada / Híbrida";
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setText(suggestion);
+                      setSuggestions([]);
+                      inputRef.current?.focus();
+                    }}
+                    className="group relative flex flex-col text-left p-2.5 bg-white/90 hover:bg-white border border-blue-100 hover:border-blue-400 rounded-lg shadow-sm hover:shadow transition-all duration-200"
+                  >
+                    <span className="text-[9px] font-extrabold uppercase tracking-wider text-blue-600 mb-1 flex items-center justify-between">
+                      {label}
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[8px] font-bold text-slate-400">Usar ➜</span>
+                    </span>
+                    <span className="text-[11px] text-slate-700 font-medium line-clamp-3 leading-relaxed">
+                      {suggestion}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </motion.div>
         )}

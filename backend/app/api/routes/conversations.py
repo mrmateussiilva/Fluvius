@@ -98,8 +98,11 @@ def suggest_reply(
         raise HTTPException(status_code=404, detail="Conversation not found")
         
     try:
-        suggestion = AIService.suggest_reply(db, conversation_id)
-        return {"suggestion": suggestion}
+        suggestions = AIService.suggest_reply(db, conversation_id)
+        return {
+            "suggestion": suggestions[0] if suggestions else "",
+            "suggestions": suggestions
+        }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

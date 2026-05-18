@@ -86,7 +86,8 @@ class GeminiProvider:
 
 class AIService:
     @staticmethod
-    def suggest_reply(db: Session, conversation_id: str) -> str:
+    def suggest_reply(db: Session, conversation_id: str) -> List[str]:
+        import json
         try:
             api_key = settings.GEMINI_API_KEY
             provider = GeminiProvider(api_key)
@@ -101,17 +102,42 @@ class AIService:
             
             messages = db.query(Message).filter(
                 Message.conversation_id == conversation_id
-            ).order_by(Message.created_at.desc()).limit(20).all()
+            ).order_by(Message.created_at.desc()).limit(15).all()
             messages.reverse()
             
+            # Buscar respostas rápidas cadastradas no workspace
+            from app.models.quick_reply import QuickReply
+            quick_replies = db.query(QuickReply).filter(
+                QuickReply.workspace_id == conversation.workspace_id
+            ).limit(10).all()
+            
+            quick_replies_str = ""
+            if quick_replies:
+                quick_replies_str = "\nRESPOSTAS RÁPIDAS DA EMPRESA (Use-as como base para a Opção 3):\n"
+                for qr in quick_replies:
+                    quick_replies_str += f"- Atalho: /{qr.shortcut} | Conteúdo: {qr.content}\n"
+            
             if not messages:
-                return "Olá! Como posso ajudar você hoje?"
+                return [
+                    "Olá! Como posso ajudar você hoje?",
+                    f"Olá, {contact_name}! Seja muito bem-vindo ao nosso canal de atendimento. Em que posso ser útil hoje?",
+                    "Olá! Tudo bem? Me conte como posso ajudar você no dia de hoje."
+                ]
                 
             # Construção do Prompt
             prompt = (
-                "Você é um assistente de atendimento sênior. "
-                "Gere uma resposta curta, profissional e amigável em Português do Brasil. "
-                "Não use placeholders. Responda apenas com o texto sugerido.\n\n"
+                "Você é um assistente de atendimento sênior de suporte técnico e comercial (Copiloto de Atendimento).\n"
+                "Sua tarefa é analisar o histórico de mensagens e sugerir EXATAMENTE 3 opções de respostas distintas em Português do Brasil.\n\n"
+                "As 3 opções devem seguir rigorosamente este padrão:\n"
+                "1. Opção 1 (Direta): Uma resposta curta, simpática e muito direta para resolver rápido.\n"
+                "2. Opção 2 (Detalhada): Uma resposta mais explicativa, polida, profissional e empática.\n"
+                "3. Opção 3 (Híbrida/QuickReply): Se alguma das 'RESPOSTAS RÁPIDAS DA EMPRESA' abaixo se encaixar no contexto da dúvida do cliente, adapte-a de forma personalizada usando o nome do cliente. Caso nenhuma se encaixe perfeitamente, crie uma resposta alternativa proativa e engajadora.\n\n"
+                "REGRAS CRÍTICAS:\n"
+                "- Nunca utilize placeholders como [Nome do Cliente] ou {{nome}}. Substitua diretamente pelo nome do cliente real: " + contact_name + ".\n"
+                "- Escreva em Português do Brasil de forma extremamente natural.\n"
+                "- O retorno deve ser estritamente um array JSON contendo exatamente 3 strings. Exemplo de saída:\n"
+                '["sugestão curta", "sugestão detalhada", "sugestão baseada em template"]\n'
+                "- NÃO inclua markdown (como ```json ou ```), explicações ou textos fora do array JSON. Retorne apenas o JSON puro.\n\n"
                 "HISTÓRICO:\n"
             )
             
@@ -120,12 +146,39 @@ class AIService:
                 content = msg.content if msg.message_type == "text" else f"[{msg.message_type}]"
                 prompt += f"{sender}: {content}\n"
                 
-            prompt += "\nSugestão: "
+            if quick_replies_str:
+                prompt += quick_replies_str
+                
+            prompt += "\nRetorne o JSON de 3 sugestões: "
             
-            return provider.generate_suggestion(prompt)
+            response_text = provider.generate_suggestion(prompt)
+            
+            # Parse JSON robusto
+            try:
+                cleaned_res = response_text.replace("```json", "").replace("```", "").strip()
+                suggestions = json.loads(cleaned_res)
+                if isinstance(suggestions, list) and len(suggestions) >= 3:
+                    return [str(s).strip() for s in suggestions[:3]]
+            except Exception as e:
+                logger.warning(f"Erro ao parsear JSON de sugestões do Gemini: {e}. Texto retornado: {response_text}")
+                
+            # Fallback seguro caso falhe o parseamento JSON do Gemini
+            lines = [line.strip().strip('"').strip('[]",') for line in response_text.split('\n') if line.strip()]
+            valid_lines = [l for l in lines if len(l) > 5 and not l.startswith('[') and not l.endswith(']')]
+            if len(valid_lines) >= 3:
+                return valid_lines[:3]
+                
+            single_fallback = response_text.replace('[', '').replace(']', '').replace('"', '').strip()
+            if not single_fallback:
+                single_fallback = "Olá! Como posso ajudar você?"
+                
+            return [
+                single_fallback,
+                f"Olá, {contact_name}! {single_fallback}",
+                f"Com certeza! {single_fallback}"
+            ]
             
         except ValueError as ve:
-            # Erros de negócio ou configuração tratada
             raise ve
         except Exception as e:
             logger.exception("Erro crítico no AIService")
