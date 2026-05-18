@@ -929,7 +929,6 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
           </div>
         )}
       </div>
-      )}
     </div>
   );
 };
