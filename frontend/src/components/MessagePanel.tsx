@@ -595,232 +595,340 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
       </div>
 
       {/* Right Sidebar: Contact Info, AI Summary & Tags */}
-      {isSidebarOpen && (
-        <div className="w-[320px] bg-white border-l border-slate-200 flex flex-col shrink-0 overflow-y-auto">
-          {/* Header */}
-          <div className="h-14 border-b border-slate-200 flex items-center justify-between px-4 shrink-0 bg-white">
-            <span className="text-[12px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles size={14} className="text-amber-500 animate-pulse" /> Detalhes do Contato
-            </span>
-            <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
+      <div 
+        className={cn(
+          "bg-white border-l border-slate-200 flex flex-col shrink-0 transition-all duration-300 relative h-full overflow-hidden",
+          isSidebarOpen ? "w-[320px]" : "w-[64px]"
+        )}
+      >
+        {isSidebarOpen ? (
+          <div className="flex flex-col h-full overflow-y-auto w-full">
+            {/* Header */}
+            <div className="h-14 border-b border-slate-200 flex items-center justify-between px-4 shrink-0 bg-white">
+              <span className="text-[12px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles size={14} className="text-amber-500 animate-pulse" /> Detalhes do Contato
+              </span>
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
 
-          {/* Contact Details Card */}
-          <div className="p-5 border-b border-slate-100 flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200/50 mb-3 relative">
+            {/* Contact Details Card */}
+            <div className="p-5 border-b border-slate-100 flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200/50 mb-3 relative">
+                {conversation.contact?.avatar_url ? (
+                  <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover rounded" />
+                ) : (
+                  <User size={32} className="opacity-30" />
+                )}
+              </div>
+              <h3 className="font-bold text-slate-800 text-[14px] leading-tight mb-1">{contactName}</h3>
+              <p className="text-[11px] font-medium text-slate-500 tabular-nums">{contactPhone}</p>
+            </div>
+
+            {/* AI Sentiment Analysis Card */}
+            <div className="p-5 border-b border-slate-100 flex flex-col">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles size={12} className="text-blue-500" /> Humor do Cliente (IA)
+                </span>
+                <button
+                  onClick={handleAnalyzeSentiment}
+                  disabled={isLoadingSentiment}
+                  className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors disabled:opacity-50"
+                  title="Recalcular Sentimento"
+                >
+                  <RefreshCw size={12} className={cn(isLoadingSentiment && "animate-spin")} />
+                </button>
+              </div>
+
+              {isLoadingSentiment && (
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 flex items-center gap-3 animate-pulse">
+                  <Loader2 size={16} className="text-slate-400 animate-spin shrink-0" />
+                  <div className="flex-1 flex flex-col gap-1.5">
+                    <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+                    <div className="h-2 bg-slate-200 rounded w-3/4"></div>
+                  </div>
+                </div>
+              )}
+
+              {!isLoadingSentiment && sentimentError && (
+                <div className="bg-rose-50 border border-rose-100 text-rose-600 rounded-lg p-3 text-[11px] font-medium flex items-center gap-2">
+                  <AlertCircle size={14} className="shrink-0" />
+                  <span>{sentimentError}</span>
+                </div>
+              )}
+
+              {!isLoadingSentiment && !sentiment && !sentimentError && (
+                <button
+                  onClick={handleAnalyzeSentiment}
+                  className="w-full py-2 bg-slate-50 border border-dashed border-slate-200 rounded-lg text-[11px] font-bold text-slate-500 hover:bg-slate-100/70 transition-all flex items-center justify-center gap-1.5"
+                >
+                  <Smile size={14} /> Analisar Sentimento
+                </button>
+              )}
+
+              {!isLoadingSentiment && sentiment && (
+                <div className={cn(
+                  "border rounded-lg p-3.5 flex items-center gap-3.5 shadow-sm transition-all",
+                  sentiment === 'POSITIVE' && "bg-emerald-50 border-emerald-100 text-emerald-800",
+                  sentiment === 'NEUTRAL' && "bg-slate-50 border-slate-200/80 text-slate-700",
+                  sentiment === 'NEGATIVE' && "bg-rose-50 border-rose-100 text-rose-800",
+                  sentiment === 'URGENT' && "bg-amber-50 border-amber-100 text-amber-800"
+                )}>
+                  <div className={cn(
+                    "w-9 h-9 rounded-full flex items-center justify-center shrink-0 border shadow-sm",
+                    sentiment === 'POSITIVE' && "bg-emerald-100/80 border-emerald-200 text-emerald-600",
+                    sentiment === 'NEUTRAL' && "bg-white border-slate-200 text-slate-500",
+                    sentiment === 'NEGATIVE' && "bg-rose-100/80 border-rose-200 text-rose-600",
+                    sentiment === 'URGENT' && "bg-amber-100/80 border-amber-200 text-amber-600"
+                  )}>
+                    {sentiment === 'POSITIVE' && <Smile size={18} />}
+                    {sentiment === 'NEUTRAL' && <Meh size={18} />}
+                    {sentiment === 'NEGATIVE' && <Frown size={18} />}
+                    {sentiment === 'URGENT' && <AlertTriangle size={18} />}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] font-bold tracking-tight mb-0.5">
+                      {sentiment === 'POSITIVE' && 'Amigável / Satisfeito'}
+                      {sentiment === 'NEUTRAL' && 'Sentimento Neutro'}
+                      {sentiment === 'NEGATIVE' && 'Frustrado / Insatisfeito'}
+                      {sentiment === 'URGENT' && 'Urgente / Emergência'}
+                    </div>
+                    <p className={cn(
+                      "text-[10px] leading-tight font-medium",
+                      sentiment === 'POSITIVE' && "text-emerald-600/95",
+                      sentiment === 'NEUTRAL' && "text-slate-500",
+                      sentiment === 'NEGATIVE' && "text-rose-600/95",
+                      sentiment === 'URGENT' && "text-amber-600/95"
+                    )}>
+                      {sentiment === 'POSITIVE' && 'O cliente demonstra simpatia e satisfação no atendimento.'}
+                      {sentiment === 'NEUTRAL' && 'O cliente está calmo, objetivo e sem sinais de estresse.'}
+                      {sentiment === 'NEGATIVE' && 'O cliente expressa insatisfação, reclamação ou impaciência.'}
+                      {sentiment === 'URGENT' && 'O cliente exige atenção prioritária imediata para o problema.'}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* AI Summary Section */}
+            <div className="p-5 border-b border-slate-100 flex flex-col">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles size={12} className="text-amber-500" /> Resumo com IA
+                </span>
+                <button
+                  onClick={handleGenerateSummary}
+                  disabled={isLoadingSummary}
+                  className="text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-700 flex items-center gap-1 disabled:opacity-50"
+                >
+                  {isLoadingSummary ? (
+                    <>
+                      <Loader2 size={10} className="animate-spin" /> Gerando...
+                    </>
+                  ) : (
+                    <>
+                      {summary ? 'Atualizar' : 'Gerar'}
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {isLoadingSummary && (
+                <div className="bg-slate-50 border border-slate-200 rounded p-4 flex flex-col gap-2.5 animate-pulse">
+                  <div className="h-3 bg-slate-200 rounded w-3/4"></div>
+                  <div className="h-2.5 bg-slate-200 rounded w-full"></div>
+                </div>
+              )}
+
+              {!isLoadingSummary && summaryError && (
+                <div className="bg-rose-50 border border-rose-100 text-rose-600 rounded p-3 text-[11px] font-medium flex items-center gap-2">
+                  <AlertCircle size={14} className="shrink-0" />
+                  <span>{summaryError}</span>
+                </div>
+              )}
+
+              {!isLoadingSummary && !summary && !summaryError && (
+                <div className="bg-slate-50 border border-dashed border-slate-200 rounded-md p-5 flex flex-col items-center justify-center text-center">
+                  <Sparkles size={20} className="text-amber-500/50 mb-2" />
+                  <p className="text-[11px] text-slate-500 font-medium leading-relaxed mb-3">
+                    Gere um resumo executivo inteligente de toda a conversa recente usando IA em segundos.
+                  </p>
+                  <button
+                    onClick={handleGenerateSummary}
+                    className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all"
+                  >
+                    <Sparkles size={12} /> Resumir Conversa
+                  </button>
+                </div>
+              )}
+
+              {!isLoadingSummary && summary && (
+                <div className="bg-amber-50/50 border border-amber-100/80 rounded-md p-4 text-[12px] text-slate-700 leading-relaxed font-medium shadow-sm">
+                  <div className="whitespace-pre-line font-medium text-slate-700 select-text leading-relaxed">
+                    {summary}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Tags / Marcadores Section */}
+            <div className="p-5 flex flex-col flex-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-3">
+                <Tag size={12} className="text-slate-400" /> Marcadores (Tags)
+              </span>
+
+              {/* Marcadores List */}
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {contactTags.length === 0 ? (
+                  <span className="text-[11px] text-slate-400 italic">Sem marcadores atribuídos.</span>
+                ) : (
+                  contactTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase tracking-wider"
+                    >
+                      {tag}
+                      <button
+                        onClick={() => handleRemoveTag(tag)}
+                        disabled={isUpdatingTags}
+                        className="hover:text-rose-500 transition-colors shrink-0 disabled:opacity-50"
+                      >
+                        <X size={10} />
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
+
+              {/* Add Tag Form */}
+              <form onSubmit={handleAddTag} className="flex gap-1">
+                <input
+                  type="text"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  placeholder="Novo marcador..."
+                  disabled={isUpdatingTags || !conversation.contact}
+                  className="flex-1 px-2.5 py-1.5 border border-slate-200 rounded text-[11px] placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 bg-white"
+                />
+                <button
+                  type="submit"
+                  disabled={isUpdatingTags || !newTag.trim() || !conversation.contact}
+                  className="px-2.5 bg-blue-600 text-white rounded text-[11px] font-bold hover:bg-blue-700 transition-colors disabled:bg-slate-100 disabled:text-slate-400 shrink-0"
+                >
+                  {isUpdatingTags ? '...' : 'Add'}
+                </button>
+              </form>
+            </div>
+          </div>
+        ) : (
+          /* Collapsed Sidebar - Ultra Premium Vertical Icon Bar */
+          <div className="flex flex-col items-center py-4 gap-6 h-full bg-slate-50/20 w-full overflow-y-auto overflow-x-hidden shrink-0">
+            {/* Toggle Expand Button */}
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-full transition-all duration-200"
+              title="Expandir Detalhes"
+            >
+              <ChevronLeft size={20} className="hover:scale-110 transition-transform" />
+            </button>
+
+            {/* Profile Avatar */}
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="w-10 h-10 rounded bg-white flex items-center justify-center text-slate-400 border border-slate-200/80 shadow-sm relative group hover:border-blue-400 transition-colors shrink-0"
+            >
               {conversation.contact?.avatar_url ? (
                 <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover rounded" />
               ) : (
-                <User size={32} className="opacity-30" />
+                <User size={18} className="opacity-40" />
               )}
-            </div>
-            <h3 className="font-bold text-slate-800 text-[14px] leading-tight mb-1">{contactName}</h3>
-            <p className="text-[11px] font-medium text-slate-500 tabular-nums">{contactPhone}</p>
-          </div>
-
-          {/* AI Sentiment Analysis Card */}
-          <div className="p-5 border-b border-slate-100 flex flex-col">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles size={12} className="text-blue-500" /> Humor do Cliente (IA)
-              </span>
-              <button
-                onClick={handleAnalyzeSentiment}
-                disabled={isLoadingSentiment}
-                className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors disabled:opacity-50"
-                title="Recalcular Sentimento"
-              >
-                <RefreshCw size={12} className={cn(isLoadingSentiment && "animate-spin")} />
-              </button>
-            </div>
-
-            {isLoadingSentiment && (
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 flex items-center gap-3 animate-pulse">
-                <Loader2 size={16} className="text-slate-400 animate-spin shrink-0" />
-                <div className="flex-1 flex flex-col gap-1.5">
-                  <div className="h-3 bg-slate-200 rounded w-1/2"></div>
-                  <div className="h-2 bg-slate-200 rounded w-3/4"></div>
-                </div>
+              {/* Tooltip */}
+              <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                {contactName}
               </div>
-            )}
+            </button>
 
-            {!isLoadingSentiment && sentimentError && (
-              <div className="bg-rose-50 border border-rose-100 text-rose-600 rounded-lg p-3 text-[11px] font-medium flex items-center gap-2">
-                <AlertCircle size={14} className="shrink-0" />
-                <span>{sentimentError}</span>
-              </div>
-            )}
-
-            {!isLoadingSentiment && !sentiment && !sentimentError && (
+            {/* Sentiment Indicators */}
+            {sentiment && (
               <button
-                onClick={handleAnalyzeSentiment}
-                className="w-full py-2 bg-slate-50 border border-dashed border-slate-200 rounded-lg text-[11px] font-bold text-slate-500 hover:bg-slate-100/70 transition-all flex items-center justify-center gap-1.5"
-              >
-                <Smile size={14} /> Analisar Sentimento
-              </button>
-            )}
-
-            {!isLoadingSentiment && sentiment && (
-              <div className={cn(
-                "border rounded-lg p-3.5 flex items-center gap-3.5 shadow-sm transition-all",
-                sentiment === 'POSITIVE' && "bg-emerald-50 border-emerald-100 text-emerald-800",
-                sentiment === 'NEUTRAL' && "bg-slate-50 border-slate-200/80 text-slate-700",
-                sentiment === 'NEGATIVE' && "bg-rose-50 border-rose-100 text-rose-800",
-                sentiment === 'URGENT' && "bg-amber-50 border-amber-100 text-amber-800"
-              )}>
-                <div className={cn(
-                  "w-9 h-9 rounded-full flex items-center justify-center shrink-0 border shadow-sm",
-                  sentiment === 'POSITIVE' && "bg-emerald-100/80 border-emerald-200 text-emerald-600",
-                  sentiment === 'NEUTRAL' && "bg-white border-slate-200 text-slate-500",
-                  sentiment === 'NEGATIVE' && "bg-rose-100/80 border-rose-200 text-rose-600",
-                  sentiment === 'URGENT' && "bg-amber-100/80 border-amber-200 text-amber-600"
-                )}>
-                  {sentiment === 'POSITIVE' && <Smile size={18} />}
-                  {sentiment === 'NEUTRAL' && <Meh size={18} />}
-                  {sentiment === 'NEGATIVE' && <Frown size={18} />}
-                  {sentiment === 'URGENT' && <AlertTriangle size={18} />}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="text-[12px] font-bold tracking-tight mb-0.5">
-                    {sentiment === 'POSITIVE' && 'Amigável / Satisfeito'}
-                    {sentiment === 'NEUTRAL' && 'Sentimento Neutro'}
-                    {sentiment === 'NEGATIVE' && 'Frustrado / Insatisfeito'}
-                    {sentiment === 'URGENT' && 'Urgente / Emergência'}
-                  </div>
-                  <p className={cn(
-                    "text-[10px] leading-tight font-medium",
-                    sentiment === 'POSITIVE' && "text-emerald-600/95",
-                    sentiment === 'NEUTRAL' && "text-slate-500",
-                    sentiment === 'NEGATIVE' && "text-rose-600/95",
-                    sentiment === 'URGENT' && "text-amber-600/95"
-                  )}>
-                    {sentiment === 'POSITIVE' && 'O cliente demonstra simpatia e satisfação no atendimento.'}
-                    {sentiment === 'NEUTRAL' && 'O cliente está calmo, objetivo e sem sinais de estresse.'}
-                    {sentiment === 'NEGATIVE' && 'O cliente expressa insatisfação, reclamação ou impaciência.'}
-                    {sentiment === 'URGENT' && 'O cliente exige atenção prioritária imediata para o problema.'}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* AI Summary Section */}
-          <div className="p-5 border-b border-slate-100 flex flex-col">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles size={12} className="text-amber-500" /> Resumo com IA
-              </span>
-              <button
-                onClick={handleGenerateSummary}
-                disabled={isLoadingSummary}
-                className="text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-700 flex items-center gap-1 disabled:opacity-50"
-              >
-                {isLoadingSummary ? (
-                  <>
-                    <Loader2 size={10} className="animate-spin" /> Gerando...
-                  </>
-                ) : (
-                  <>
-                    {summary ? 'Atualizar' : 'Gerar'}
-                  </>
+                onClick={() => setIsSidebarOpen(true)}
+                className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center border shadow-sm relative group transition-all duration-300 animate-pulse hover:scale-105 shrink-0",
+                  sentiment === 'POSITIVE' && "bg-emerald-50 border-emerald-200 text-emerald-600 shadow-emerald-100/50",
+                  sentiment === 'NEUTRAL' && "bg-slate-50 border-slate-200 text-slate-500",
+                  sentiment === 'NEGATIVE' && "bg-rose-50 border-rose-200 text-rose-600 shadow-rose-100/50",
+                  sentiment === 'URGENT' && "bg-amber-50 border-amber-200 text-amber-600 shadow-amber-100/50"
                 )}
-              </button>
-            </div>
-
-            {isLoadingSummary && (
-              <div className="bg-slate-50 border border-slate-200 rounded p-4 flex flex-col gap-2.5 animate-pulse">
-                <div className="h-3 bg-slate-200 rounded w-3/4"></div>
-                <div className="h-2.5 bg-slate-200 rounded w-full"></div>
-                <div className="h-2.5 bg-slate-200 rounded w-5/6"></div>
-              </div>
-            )}
-
-            {!isLoadingSummary && summaryError && (
-              <div className="bg-rose-50 border border-rose-100 text-rose-600 rounded p-3 text-[11px] font-medium flex items-center gap-2">
-                <AlertCircle size={14} className="shrink-0" />
-                <span>{summaryError}</span>
-              </div>
-            )}
-
-            {!isLoadingSummary && !summary && !summaryError && (
-              <div className="bg-slate-50 border border-dashed border-slate-200 rounded-md p-5 flex flex-col items-center justify-center text-center">
-                <Sparkles size={20} className="text-amber-500/50 mb-2" />
-                <p className="text-[11px] text-slate-500 font-medium leading-relaxed mb-3">
-                  Gere um resumo executivo inteligente de toda a conversa recente usando IA em segundos.
-                </p>
-                <button
-                  onClick={handleGenerateSummary}
-                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all"
-                >
-                  <Sparkles size={12} /> Resumir Conversa
-                </button>
-              </div>
-            )}
-
-            {!isLoadingSummary && summary && (
-              <div className="bg-amber-50/50 border border-amber-100/80 rounded-md p-4 text-[12px] text-slate-700 leading-relaxed font-medium shadow-sm">
-                <div className="whitespace-pre-line font-medium text-slate-700 select-text leading-relaxed">
-                  {summary}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Tags / Marcadores Section */}
-          <div className="p-5 flex flex-col flex-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-3">
-              <Tag size={12} className="text-slate-400" /> Marcadores (Tags)
-            </span>
-
-            {/* Marcadores List */}
-            <div className="flex flex-wrap gap-1.5 mb-4">
-              {contactTags.length === 0 ? (
-                <span className="text-[11px] text-slate-400 italic">Sem marcadores atribuídos.</span>
-              ) : (
-                contactTags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase tracking-wider"
-                  >
-                    {tag}
-                    <button
-                      onClick={() => handleRemoveTag(tag)}
-                      disabled={isUpdatingTags}
-                      className="hover:text-rose-500 transition-colors shrink-0 disabled:opacity-50"
-                    >
-                      <X size={10} />
-                    </button>
-                  </span>
-                ))
-              )}
-            </div>
-
-            {/* Add Tag Form */}
-            <form onSubmit={handleAddTag} className="flex gap-1">
-              <input
-                type="text"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                placeholder="Novo marcador..."
-                disabled={isUpdatingTags || !conversation.contact}
-                className="flex-1 px-2.5 py-1.5 border border-slate-200 rounded text-[11px] placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 bg-white"
-              />
-              <button
-                type="submit"
-                disabled={isUpdatingTags || !newTag.trim() || !conversation.contact}
-                className="px-2.5 bg-blue-600 text-white rounded text-[11px] font-bold hover:bg-blue-700 transition-colors disabled:bg-slate-100 disabled:text-slate-400 shrink-0"
               >
-                {isUpdatingTags ? '...' : 'Add'}
+                {sentiment === 'POSITIVE' && <Smile size={18} />}
+                {sentiment === 'NEUTRAL' && <Meh size={18} />}
+                {sentiment === 'NEGATIVE' && <Frown size={18} />}
+                {sentiment === 'URGENT' && <AlertTriangle size={18} />}
+
+                {/* Tooltip */}
+                <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                  <span className="flex items-center gap-1.5">
+                    Humor: 
+                    <span className="underline">
+                      {sentiment === 'POSITIVE' && 'Amigável'}
+                      {sentiment === 'NEUTRAL' && 'Neutro'}
+                      {sentiment === 'NEGATIVE' && 'Frustrado'}
+                      {sentiment === 'URGENT' && 'Urgente'}
+                    </span>
+                  </span>
+                </div>
               </button>
-            </form>
+            )}
+
+            {/* Summary Indicator */}
+            {summary && (
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="w-10 h-10 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shadow-sm relative group hover:bg-amber-100 transition-colors shrink-0"
+              >
+                <Sparkles size={16} className="animate-pulse" />
+                <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                  Resumo de IA Disponível
+                </div>
+              </button>
+            )}
+
+            {/* Tags Indicator Dots */}
+            {contactTags.length > 0 && (
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="flex flex-col items-center gap-1 p-2 bg-slate-50 rounded-lg border border-slate-100 relative group hover:border-blue-200 transition-colors shrink-0"
+              >
+                <Tag size={12} className="text-slate-400 mb-0.5" />
+                <div className="flex flex-col gap-1 max-h-16 overflow-y-hidden">
+                  {contactTags.slice(0, 3).map((tag, i) => (
+                    <span 
+                      key={i} 
+                      className="w-2.5 h-2.5 rounded-full bg-blue-500 border border-white shrink-0 shadow-sm"
+                    />
+                  ))}
+                  {contactTags.length > 3 && (
+                    <span className="text-[7px] font-extrabold text-slate-400 leading-none">+{contactTags.length - 3}</span>
+                  )}
+                </div>
+                {/* Tooltip listing tags */}
+                <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[11px] font-bold px-2.5 py-1.5 rounded shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex flex-col gap-1 min-w-[100px]">
+                  <span className="text-[9px] text-slate-400 uppercase tracking-wider font-extrabold border-b border-slate-700 pb-0.5 mb-0.5">Tags ({contactTags.length})</span>
+                  {contactTags.map((tag, i) => (
+                    <span key={i} className="text-[10px] leading-tight">• {tag}</span>
+                  ))}
+                </div>
+              </button>
+            )}
           </div>
-        </div>
+        )}
+      </div>
       )}
     </div>
   );

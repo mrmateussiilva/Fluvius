@@ -29,6 +29,7 @@ export const InboxPage: React.FC = () => {
   const [connectionStatus, setConnectionStatus] = useState<string>('connecting');
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState(false);
   const { currentAgent } = useAgent();
   const { token } = useAuth();
   const navigate = useNavigate();
@@ -289,11 +290,13 @@ export const InboxPage: React.FC = () => {
       <div className="flex flex-1 overflow-hidden">
         <ConversationList
           conversations={conversations}
-        selectedId={selectedConversationId}
-        onSelect={handleSelectConversation}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
+          selectedId={selectedConversationId}
+          onSelect={handleSelectConversation}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          isCollapsed={isLeftSidebarCollapsed}
+          onToggleCollapse={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
+        />
       {selectedConversation ? (
         <MessagePanel
           messages={messages}
