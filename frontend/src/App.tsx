@@ -129,8 +129,13 @@ const AppContent = () => {
 };
 
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { APP_VERSION } from './version';
 
 function App() {
+  useEffect(() => {
+    document.title = `Fluvius - v${APP_VERSION}`;
+  }, []);
+
   return (
     <ErrorBoundary>
       <AuthProvider>

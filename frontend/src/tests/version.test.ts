@@ -12,4 +12,9 @@ describe('App Version Configuration', () => {
     const semverRegex = /^\d+\.\d+\.\d+$/;
     expect(APP_VERSION).toMatch(semverRegex);
   });
+
+  it('should set dynamic document title correctly', () => {
+    document.title = `Fluvius - v${APP_VERSION}`;
+    expect(document.title).toBe(`Fluvius - v${APP_VERSION}`);
+  });
 });
