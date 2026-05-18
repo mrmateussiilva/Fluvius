@@ -6,7 +6,7 @@ WORKDIR /app
 # Copy package.json and install dependencies
 RUN npm install -g pnpm
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN pnpm config set only-built-dependencies esbuild && pnpm install --frozen-lockfile
 
 # Copy the rest of the application
 COPY . .
