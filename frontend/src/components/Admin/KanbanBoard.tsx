@@ -3,11 +3,12 @@ import {
   fetchKanban, type KanbanResponse, type Conversation,
   pendingConversation, resolveConversation, transferConversation
 } from '../../api/client';
-import { User, Clock, CheckCircle2, GripVertical, AlertCircle, Sparkles } from 'lucide-react';
+import { User, Clock, CheckCircle2, GripVertical, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
-import { DndContext, DragEndEvent, DragOverlay, closestCorners, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
+import { DndContext, DragOverlay, closestCorners, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
 import { useDroppable } from '@dnd-kit/core';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
@@ -253,27 +254,26 @@ export const KanbanBoard: React.FC = () => {
     const conversationId = active.id as string;
     const destId = over.id as string; // 'queue', 'resolved', or `agent_${id}`
 
-    // Remove item from its current array
-    let movedConv: Conversation | null = null;
+    // Find the conversation first
+    const allConvs = [
+      ...data.queue,
+      ...data.by_agent.flatMap(a => a.open),
+      ...data.by_agent.flatMap(a => a.resolved)
+    ];
+    const foundConv = allConvs.find(c => c.id === conversationId);
+    if (!foundConv) return;
+    
+    // Create a copy to mutate
+    const movedConv: Conversation = { ...foundConv };
+
     const newData = { ...data };
 
-    // Find and remove
-    newData.queue = newData.queue.filter(c => {
-      if (c.id === conversationId) movedConv = c;
-      return c.id !== conversationId;
-    });
+    // Remove item from its current array
+    newData.queue = newData.queue.filter(c => c.id !== conversationId);
     newData.by_agent.forEach(agentGroup => {
-      agentGroup.open = agentGroup.open.filter(c => {
-        if (c.id === conversationId) movedConv = c;
-        return c.id !== conversationId;
-      });
-      agentGroup.resolved = agentGroup.resolved.filter(c => {
-        if (c.id === conversationId) movedConv = c;
-        return c.id !== conversationId;
-      });
+      agentGroup.open = agentGroup.open.filter(c => c.id !== conversationId);
+      agentGroup.resolved = agentGroup.resolved.filter(c => c.id !== conversationId);
     });
-
-    if (!movedConv) return;
 
     // Optimistic status update
     if (destId === 'queue') {
