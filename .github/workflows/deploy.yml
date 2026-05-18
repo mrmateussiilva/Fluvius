@@ -14,23 +14,18 @@ jobs:
         uses: actions/checkout@v4
 
       # --- Backend CI ---
-      - name: Configurar Python
-        uses: actions/setup-python@v5
+      - name: Configurar uv
+        uses: astral-sh/setup-uv-action@v5
         with:
-          python-version: '3.13'
-
-      - name: Instalar Dependências do Backend
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
-          pip install pytest pytest-asyncio
+          version: "latest"
+          enable-cache: true
 
       - name: Executar Testes de Backend (Pytest)
         env:
           DATABASE_URL: "sqlite:///:memory:"
         run: |
           cd backend
-          pytest
+          uv run --with pytest --with pytest-asyncio pytest
 
       # --- Frontend CI ---
       - name: Configurar Node.js
