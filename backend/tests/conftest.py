@@ -3,7 +3,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 
-from app.main import app
+# Import as 'fluvius_app' to avoid name collision with the 'app' package
+from app.main import app as fluvius_app
 from app.core.database import Base, get_db
 
 # Import ALL models so SQLAlchemy registers their tables before create_all()
@@ -43,7 +44,7 @@ def client(db_session):
         finally:
             pass
 
-    app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
+    fluvius_app.dependency_overrides[get_db] = override_get_db
+    with TestClient(fluvius_app) as test_client:
         yield test_client
-    app.dependency_overrides.clear()
+    fluvius_app.dependency_overrides.clear()
