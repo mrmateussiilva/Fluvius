@@ -113,7 +113,7 @@ class WebhookService:
                                     }
                                 }
                             )
-                logger.debug(f"Message {external_id} already exists. Ignoring duplicate webhook.")
+                logger.info(f"[Webhook] Mensagem duplicada {external_id} ignorada (idempotência OK)")
                 return
 
         # Determine if inbound or outbound
@@ -181,7 +181,11 @@ class WebhookService:
                     message=data["message"]
                 )
             except Exception as e:
-                logger.error(f"Failed to decrypt inbound media: {e}")
+                # 400 = mídia expirada ou formato não suportado pela instância — não é erro crítico
+                if "400" in str(e):
+                    logger.warning(f"[Media] Mídia não disponível (400) na instância {connection.instance_name} — continuando sem mídia")
+                else:
+                    logger.error(f"Failed to decrypt inbound media: {e}")
 
         if base64_data and mime_type:
             try:
@@ -194,6 +198,11 @@ class WebhookService:
                 media_url = await download_media(media_url, connection.api_key, mime_type)
             except Exception as e:
                 logger.error(f"Failed to download inbound media: {e}")
+
+        # Garantir que mensagens de mídia sem URL ainda aparecem na conversa
+        if message_type in ["image", "audio", "video", "document"] and not media_url and not content:
+            type_labels = {"image": "🖼️ Imagem", "audio": "🎵 Áudio", "video": "🎬 Vídeo", "document": "📄 Documento"}
+            content = type_labels.get(message_type, "📎 Mídia")
             
         # Check contextInfo for quoted message
         context_info = message_info.get("extendedTextMessage", {}).get("contextInfo", {})
