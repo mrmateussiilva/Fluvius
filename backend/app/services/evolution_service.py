@@ -72,14 +72,18 @@ async def _request(
     last_exc: Exception | None = None
 
     for attempt in range(1, max_retries + 1):
+        coro = None
         try:
             client = get_http_client()
             coro = getattr(client, method)(url, **kwargs)
             response: httpx.Response = await evolution_circuit_breaker.call(coro)
+            coro = None  # awaited com sucesso — não precisa fechar
             return response
 
         except CircuitBreakerError:
-            # Circuit aberto — não tentar mais
+            # Circuit aberto — fecha a coroutine para evitar RuntimeWarning
+            if coro is not None:
+                coro.close()
             raise
 
         except _RETRYABLE_EXCEPTIONS as exc:
@@ -96,11 +100,12 @@ async def _request(
                     f"[EvolutionService] Todas as {max_retries} tentativas falharam → {url}: {exc}"
                 )
 
-        except Exception as exc:
+        except Exception:
             # Erros não recuperáveis (4xx, 5xx, etc.) — não retentar
             raise
 
     raise last_exc  # type: ignore[misc]
+
 
 
 # ---------------------------------------------------------------------------
