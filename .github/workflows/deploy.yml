@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    name: Executar Testes e Validações (CI)
+    name: CI — Testes e Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Código
@@ -20,7 +20,7 @@ jobs:
           version: "latest"
           enable-cache: true
 
-      - name: Executar Testes de Backend (Pytest)
+      - name: Testes Backend (Pytest)
         env:
           DATABASE_URL: "sqlite:///:memory:"
         run: |
@@ -38,17 +38,17 @@ jobs:
         with:
           version: 9
 
-      - name: Instalar Dependências do Frontend
+      - name: Instalar Dependências Frontend
         run: |
           cd frontend
           pnpm install --frozen-lockfile
 
-      - name: Executar Testes de Frontend (Vitest)
+      - name: Testes Frontend (Vitest)
         run: |
           cd frontend
           pnpm run test
 
-      - name: Validar Build do Frontend
+      - name: Validar Build Frontend
         run: |
           cd frontend
           pnpm run build
@@ -58,15 +58,30 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - name: Executar Deploy via SSH
-        uses: appleboy/ssh-action@master
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
+          command_timeout: 15m
           script: |
-            cd /opt/apps/fluvius
-            git pull origin main
-            docker compose -f docker-compose-sistema.yml up -d --build backend frontend
+            set -e
 
+            cd /opt/apps/fluvius
+
+            echo "=== [1/4] Atualizando código ==="
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "=== [2/4] Rebuild das imagens ==="
+            docker compose -f docker-compose-sistema.yml build --parallel backend frontend
+
+            echo "=== [3/4] Reiniciando serviços ==="
+            docker compose -f docker-compose-sistema.yml up -d backend frontend
+
+            echo "=== [4/4] Limpeza de imagens antigas ==="
+            docker image prune -f
+
+            echo "✅ Deploy concluído com sucesso!"
