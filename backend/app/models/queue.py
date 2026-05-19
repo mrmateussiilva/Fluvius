@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Table
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Table, Integer
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import uuid
@@ -19,6 +19,7 @@ class Queue(Base):
     workspace_id = Column(String, ForeignKey("workspaces.id"), nullable=False, index=True)
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
+    sla_minutes = Column(Integer, nullable=True, default=30)  # Tempo máximo sem resposta (minutos)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
 

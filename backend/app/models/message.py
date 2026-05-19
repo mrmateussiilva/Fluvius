@@ -16,6 +16,8 @@ class Message(Base):
     message_type = Column(String, nullable=False)  # text, image, audio, video, document, unknown
     content = Column(String, nullable=True)  # Pode ser null se for só media
     is_private = Column(Boolean, default=False, nullable=False)
+    is_internal = Column(Boolean, default=False, nullable=False)  # Nota interna — visível só para agentes
+    author_agent_id = Column(String, ForeignKey("agents.id"), nullable=True)  # Quem escreveu a nota
     external_message_id = Column(String, nullable=True, index=True)
     status = Column(String, nullable=False, default="pending")  # received, pending, sent, delivered, read, failed
     media_url = Column(String, nullable=True)

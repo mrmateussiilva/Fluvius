@@ -7,6 +7,7 @@ class MessageBase(BaseModel):
 
 class MessageCreate(MessageBase):
     quoted_message_id: Optional[str] = None
+    is_internal: bool = False
 
 class MediaMessageCreate(BaseModel):
     media: str  # Base64 or URL
@@ -27,6 +28,8 @@ class MessageResponse(BaseModel):
     mime_type: Optional[str] = None
     external_message_id: Optional[str]
     status: str
+    is_internal: bool = False
+    author_agent_id: Optional[str] = None
     created_at: datetime
     quoted_message_id: Optional[str] = None
     quoted_content: Optional[str] = None

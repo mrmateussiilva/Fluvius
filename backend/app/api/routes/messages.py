@@ -135,9 +135,11 @@ async def create_message(
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-    contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
-    if not contact or not is_valid_whatsapp_destination(contact.phone):
-        raise HTTPException(status_code=400, detail="Contact does not have a valid WhatsApp destination")
+    # Notas internas nunca são enviadas ao WhatsApp — não precisam de número válido
+    if not message_in.is_internal:
+        contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
+        if not contact or not is_valid_whatsapp_destination(contact.phone):
+            raise HTTPException(status_code=400, detail="Contact does not have a valid WhatsApp destination")
         
     message_data = {
         "workspace_id": current_agent.workspace_id,
@@ -146,7 +148,9 @@ async def create_message(
         "direction": "outbound",
         "message_type": "text",
         "content": message_in.content,
-        "status": "pending"
+        "status": "sent" if message_in.is_internal else "pending",
+        "is_internal": message_in.is_internal,
+        "author_agent_id": current_agent.id if message_in.is_internal else None,
     }
     
     quoted_external_id = None
@@ -178,14 +182,19 @@ async def create_message(
             "mime_type": message.mime_type,
             "external_message_id": message.external_message_id,
             "status": message.status,
+            "is_internal": message.is_internal,
+            "author_agent_id": message.author_agent_id,
             "created_at": message.created_at.isoformat() + "Z" if message.created_at.tzinfo is None else message.created_at.isoformat(),
             "quoted_message_id": message.quoted_message_id,
             "quoted_content": message.quoted_content
         }
     })
 
-    background_tasks.add_task(send_message_task, message.id, conversation.id, message_in.content, current_agent.workspace_id, quoted_external_id)
+    # Notas internas não são enviadas via WhatsApp
+    if not message_in.is_internal:
+        background_tasks.add_task(send_message_task, message.id, conversation.id, message_in.content, current_agent.workspace_id, quoted_external_id)
     return message
+
 
 
 async def send_media_task(message_id: str, conversation_id: str, media: str, media_type: str, mimetype: str, caption: str, workspace_id: str, quoted_external_id: str = None):

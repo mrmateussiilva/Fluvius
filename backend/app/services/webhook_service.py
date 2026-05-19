@@ -9,6 +9,7 @@ from app.core.socket_manager import socket_manager
 from app.services.evolution_service import EvolutionService
 from app.services.sync_service import SyncService
 from app.services.visibility_service import ConversationVisibilityService
+from app.services.copilot_service import CopilotService
 import logging
 import asyncio
 
@@ -373,6 +374,7 @@ class WebhookService:
                     "mime_type": msg.mime_type,
                     "external_message_id": msg.external_message_id,
                     "status": msg.status,
+                    "is_internal": msg.is_internal,
                     "created_at": msg.created_at.isoformat() + "Z" if msg.created_at.tzinfo is None else msg.created_at.isoformat(),
                     "quoted_message_id": msg.quoted_message_id,
                     "quoted_content": msg.quoted_content
@@ -391,6 +393,23 @@ class WebhookService:
                     "assignee_id": conversation.assignee_id
                 }
             })
+
+            # 3. Copilot — analisa mensagem inbound em background (supervisionado)
+            if direction == "inbound":
+                async def _safe_copilot(conv_id: str = conversation.id, msg_content: str = content or ""):
+                    try:
+                        from app.core.database import SessionLocal
+                        with SessionLocal() as copilot_db:
+                            await CopilotService.analyze_conversation(
+                                db=copilot_db,
+                                conversation_id=conv_id,
+                                trigger_message=msg_content,
+                                trigger="inbound_message",
+                            )
+                    except Exception as exc:
+                        logger.error(f"[Copilot] Background analysis falhou para {conv_id}: {exc}")
+                asyncio.create_task(_safe_copilot())
+
 
     @staticmethod
     async def _handle_message_update(db: Session, connection_id: str, payload: dict):

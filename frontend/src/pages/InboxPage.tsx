@@ -14,6 +14,8 @@ import { MessageSquare } from 'lucide-react';
 import { useAgent } from '../context/AgentContext';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket, type WSEvent } from '../hooks/useWebSocket';
+import { CopilotPanel, type CopilotAlert } from '../components/CopilotPanel';
+
 
 type TabFilter = 'all' | 'pending' | 'mine' | 'resolved';
 
@@ -38,6 +40,9 @@ export const InboxPage: React.FC = () => {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState(false);
+  // Copilot alerts state
+  const [copilotAlerts, setCopilotAlerts] = useState<CopilotAlert[]>([]);
+
   const { currentAgent } = useAgent();
   const { token } = useAuth();
   const navigate = useNavigate();
@@ -207,6 +212,14 @@ export const InboxPage: React.FC = () => {
       case 'CONNECTION_STATUS_UPDATED':
         setConnectionStatus(event.data.status);
         break;
+
+      case 'COPILOT_ALERT':
+        setCopilotAlerts(prev => {
+          // Deduplicar por conversation_id — substitui alerta anterior da mesma conversa
+          const filtered = prev.filter(a => a.conversation_id !== event.data.conversation_id);
+          return [...filtered, { ...event.data, timestamp: Date.now() }];
+        });
+        break;
     }
   }, [selectedConversationId, loadConversations, loadMessages]);
 
@@ -326,6 +339,20 @@ export const InboxPage: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* CopilotPanel — botão flutuante no canto superior direito */}
+      <div className="absolute top-3 right-4 z-30">
+        <CopilotPanel
+          alerts={copilotAlerts}
+          onSelectConversation={(id) => {
+            handleSelectConversation(id);
+          }}
+          onDismissAlert={(conversationId) => {
+            setCopilotAlerts(prev => prev.filter(a => a.conversation_id !== conversationId));
+          }}
+          onClearAll={() => setCopilotAlerts([])}
+        />
+      </div>
 
       <div className="flex flex-1 overflow-hidden">
         <ConversationList
