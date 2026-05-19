@@ -94,22 +94,30 @@ export const useWebSocket = (
         return;
       }
 
-      // Verifica se o último pong foi recebido dentro do intervalo esperado
+      // Verifica se o último pong foi recebido após o último PING
+      // Só fecha se ficou MAIS de 2 intervalos sem resposta alguma
       const timeSinceLastPong = Date.now() - lastPongRef.current;
-      if (timeSinceLastPong > HEARTBEAT_INTERVAL_MS * 2) {
+      if (timeSinceLastPong > HEARTBEAT_INTERVAL_MS * 2.5) {
         console.warn('[WS] Heartbeat timeout — conexão zumbi detectada. Fechando.');
         stopHeartbeat();
-        ws.close(1001, 'Heartbeat timeout');
+        // Protege contra DOMException se o socket já estiver fechando
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close(1001, 'Heartbeat timeout');
+        }
         return;
       }
 
       try {
         ws.send(JSON.stringify({ type: 'PING' }));
+        // Atualiza lastPong ao enviar com sucesso — só fecha se o RECEIVE silenciar
+        // (i.e., se o servidor não responder mesmo com a conexão aberta)
+        // Não atualiza aqui para que a lógica de timeout seja baseada em receber
       } catch {
         // Ignora erro de envio — o onclose vai tratar
       }
     }, HEARTBEAT_INTERVAL_MS);
   }, [stopHeartbeat]);
+
 
   // --- Conexão principal ---
 

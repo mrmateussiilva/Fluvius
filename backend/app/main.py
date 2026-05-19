@@ -139,8 +139,13 @@ async def websocket_endpoint(
         
         try:
             while True:
-                # Keep connection alive
-                await websocket.receive_text()
+                data = await websocket.receive_text()
+                # Responde ao heartbeat do cliente
+                if data and "PING" in data:
+                    try:
+                        await websocket.send_text('{"type":"PONG"}')
+                    except Exception:
+                        pass  # Conexão pode ter fechado entre o receive e o send
         except WebSocketDisconnect:
             logger.info("WS: agent %s disconnected", agent_id)
             socket_manager.disconnect(websocket, workspace_id, agent_id)
