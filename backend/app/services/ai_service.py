@@ -266,7 +266,7 @@ class AIService:
 
         try:
             # Initialize Gemini provider
-            provider = GeminiProvider()
+            provider = GeminiProvider(settings.GEMINI_API_KEY)
             
             prompt = (
                 "Você é um analista de suporte sênior especialista em análise de sentimentos e comportamento do consumidor.\n"
