@@ -145,15 +145,18 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                       key={conv.id}
                       onClick={() => onSelect(conv.id)}
                       className={cn(
-                        "relative group flex items-center justify-center p-1 cursor-pointer transition-all rounded-xl w-12 h-12 hover:bg-slate-50 border-2 shrink-0",
+                        "relative group flex items-center justify-center p-1 cursor-pointer transition-all rounded-full w-12 h-12 hover:bg-slate-50 border shrink-0",
                         isSelected 
-                          ? "bg-slate-100/80 border-slate-800/80" 
+                          ? "bg-slate-100 border-slate-200 shadow-sm" 
                           : "bg-transparent border-transparent"
                       )}
                     >
+                      {/* Active indicator bar */}
+                      {isSelected && <div className="active-indicator !h-5" />}
+
                       {/* Compact Avatar with status indicator */}
                       <div className="relative shrink-0 w-9 h-9">
-                        <div className="w-full h-full rounded bg-slate-100 flex items-center justify-center text-slate-400 overflow-hidden border border-slate-200">
+                        <div className="w-full h-full rounded-full bg-slate-100 flex items-center justify-center text-slate-400 overflow-hidden border border-slate-200/60 shadow-sm">
                           {conv.contact?.avatar_url ? (
                             <img src={conv.contact.avatar_url} alt={contactName} className="w-full h-full object-cover" />
                           ) : (
@@ -161,17 +164,18 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                           )}
                         </div>
                         <span className={cn(
-                          "absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white",
+                          "absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm",
                           statusColor[conv.status] || 'bg-slate-300'
                         )} />
                       </div>
 
                       {/* Unread Count Badge overlay */}
                       {conv.unread_count > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-slate-800 text-white text-[9px] font-extrabold px-1 py-0.5 rounded-full min-w-[16px] text-center border-2 border-white shadow-sm z-10">
+                        <span className="absolute -top-0.5 -right-0.5 bg-emerald-500 text-white text-[9px] font-extrabold px-1 py-0.5 rounded-full min-w-[16px] text-center border-2 border-white shadow-sm z-10">
                           {conv.unread_count}
                         </span>
                       )}
+
 
                       {/* Tooltip with details */}
                       <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[11px] font-bold p-2.5 rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex flex-col gap-1 min-w-[140px] text-left">
@@ -273,25 +277,29 @@ export const ConversationList: React.FC<ConversationListProps> = ({
           </div>
 
           {/* Tabs - Minimalist Selectors */}
-          <div className="px-2 py-2 shrink-0 border-b border-slate-100">
-            <div className="flex bg-slate-50 rounded-md p-0.5">
-              {TABS.map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => onTabChange(tab.key)}
-                  className={cn(
-                    "flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded transition-all relative",
-                    activeTab === tab.key
-                      ? "text-blue-600 bg-white shadow-sm ring-1 ring-slate-200/50"
-                      : "text-slate-500 hover:text-slate-700 hover:bg-slate-100/50"
-                  )}
-                >
-                  {tab.label}
-                  {tab.key === 'pending' && conversations.filter(c => c.status === 'pending').length > 0 && (
-                    <span className="w-1 h-1 rounded-full bg-amber-500" />
-                  )}
-                </button>
-              ))}
+          <div className="px-3 py-2 shrink-0 border-b border-slate-100 bg-white">
+            <div className="flex gap-1 overflow-x-auto scrollbar-none">
+              {TABS.map(tab => {
+                const isSelected = activeTab === tab.key;
+                const hasPending = tab.key === 'pending' && conversations.filter(c => c.status === 'pending').length > 0;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => onTabChange(tab.key)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold rounded-md transition-all whitespace-nowrap relative shrink-0",
+                      isSelected
+                        ? "text-slate-800 bg-slate-100"
+                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                    )}
+                  >
+                    {tab.label}
+                    {hasPending && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -326,23 +334,26 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                       key={conv.id}
                       onClick={() => onSelect(conv.id)}
                       className={cn(
-                        "group relative flex items-center gap-3 px-3 py-2 cursor-pointer transition-all border-l-2 mb-1 rounded-r",
+                        "group relative flex items-center gap-3 px-4 py-3 cursor-pointer transition-all border-b border-slate-50/50 mb-0.5",
                         isSelected 
-                          ? "bg-slate-100/80 border-slate-800" 
-                          : "bg-transparent border-transparent hover:bg-slate-50"
+                          ? "bg-slate-100/70" 
+                          : "bg-transparent hover:bg-slate-50/60"
                       )}
                     >
+                      {/* Active indicator bar */}
+                      {isSelected && <div className="active-indicator" />}
+
                       {/* Compact Avatar */}
                       <div className="relative shrink-0">
-                        <div className="w-10 h-10 rounded bg-slate-100 flex items-center justify-center text-slate-400 overflow-hidden border border-slate-200">
+                        <div className="w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 overflow-hidden border border-slate-200/60 shadow-sm">
                           {conv.contact?.avatar_url ? (
                             <img src={conv.contact.avatar_url} alt={contactName} className="w-full h-full object-cover" />
                           ) : (
-                            <User size={16} className="opacity-40" />
+                            <User size={18} className="opacity-45" />
                           )}
                         </div>
                         <span className={cn(
-                          "absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white",
+                          "absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white shadow-sm",
                           statusColor[conv.status] || 'bg-slate-300'
                         )} />
                       </div>
@@ -351,12 +362,12 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-center mb-0.5">
                           <h3 className={cn(
-                            "font-bold truncate text-[13px] tracking-tight",
+                            "font-semibold truncate text-[14px] tracking-tight leading-snug",
                             isSelected ? "text-slate-900" : "text-slate-700 group-hover:text-slate-900 transition-colors"
                           )}>
                             {contactName}
                           </h3>
-                          <span className="text-[10px] font-bold text-slate-400 tabular-nums">
+                          <span className="text-[11px] font-medium text-slate-400 tabular-nums">
                             {timeStr}
                           </span>
                         </div>
@@ -364,14 +375,14 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                         <div className="flex justify-between items-center">
                           <div className="text-[11px] text-slate-500 truncate flex items-center gap-1.5">
                             {conv.assignee ? (
-                              <span className="truncate bg-slate-100 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider">{conv.assignee.name}</span>
+                              <span className="text-[11px] font-medium text-slate-400 truncate">Atribuído a {conv.assignee.name}</span>
                             ) : (
-                              <span className="text-slate-400 text-[9px] uppercase tracking-wider font-bold">Sem atribuição</span>
+                              <span className="text-slate-400 text-[11px] font-medium italic">Sem atendente</span>
                             )}
                           </div>
                           
                           {conv.unread_count > 0 && (
-                            <span className="bg-slate-800 text-white text-[9px] font-bold px-1.5 py-0.5 rounded min-w-[16px] text-center">
+                            <span className="bg-emerald-500 text-white text-[10px] font-bold h-5 min-w-[20px] px-1.5 rounded-full flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
                               {conv.unread_count}
                             </span>
                           )}
@@ -383,6 +394,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
               )}
             </AnimatePresence>
           </div>
+
 
           {/* Footer - Minimalist Identity */}
           <div className="mt-auto border-t border-slate-100 bg-slate-50/50">

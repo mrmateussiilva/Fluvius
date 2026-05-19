@@ -457,13 +457,13 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
 
       {/* Main Input Area */}
       <div className={cn(
-        "flex items-center gap-2 p-2.5 transition-colors border-t border-slate-200/60 z-20 shrink-0",
-        isRecording ? "bg-rose-50" : "bg-[#f0f2f5]"
+        "flex items-center gap-2 p-2.5 transition-colors border-t border-slate-200/50 z-20 shrink-0",
+        isRecording ? "bg-rose-50/50" : "bg-[#f0f2f5]"
       )}>
         {!isRecording ? (
           <>
-            <div className="flex items-center gap-1">
-              <button type="button" className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 rounded-full transition-colors">
+            <div className="flex items-center gap-0.5">
+              <button type="button" className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-200/40 rounded-full transition-all duration-200">
                 <Smile size={20} />
               </button>
               
@@ -471,8 +471,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
                 type="button"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className={cn(
-                  "p-2 rounded-full transition-colors",
-                  isMenuOpen ? "bg-slate-200 text-slate-800" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                  "p-2 rounded-full transition-all duration-200",
+                  isMenuOpen ? "bg-slate-200/80 text-slate-800" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/40"
                 )}
               >
                 <Paperclip size={20} />
@@ -490,7 +490,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
                 type="button"
                 onClick={handleSuggestReply}
                 disabled={isGeneratingSuggestion || !conversationId}
-                className="p-2 text-amber-500 hover:bg-amber-100/50 rounded-full transition-colors"
+                className="p-2 text-amber-500 hover:bg-amber-100/40 rounded-full transition-all duration-200 disabled:opacity-40"
                 title="Sugestão com IA"
               >
                 {isGeneratingSuggestion ? (
@@ -501,7 +501,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
               </button>
             </div>
             
-            <div className="flex-1 flex items-center bg-white rounded-lg px-3 py-1 border border-slate-200/40 shadow-sm">
+            <div className="flex-1 flex items-center bg-white rounded-full px-5 py-0.5 border border-slate-200/60 shadow-sm focus-within:border-slate-300 focus-within:shadow-[0_1px_3px_rgba(0,0,0,0.03)] transition-all duration-200">
               <input
                 ref={inputRef}
                 type="text"
@@ -510,26 +510,26 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
                 placeholder="Digite uma mensagem... (Use / para respostas rápidas)"
-                className="w-full bg-transparent outline-none py-1.5 text-[14px] text-slate-800 placeholder:text-slate-400"
+                className="w-full bg-transparent outline-none py-2 text-[14px] text-slate-800 placeholder:text-slate-400"
               />
             </div>
             
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1 shrink-0">
               {text.trim() ? (
                 <button
                   type="button"
                   onClick={handleSend}
-                  className="w-10 h-10 rounded-full bg-[#00a884] text-white flex items-center justify-center shadow-md hover:bg-[#008f72] transition-all active:scale-95 shrink-0"
+                  className="w-10 h-10 rounded-full bg-[#00a884] text-white flex items-center justify-center shadow-[0_2px_4px_rgba(0,168,132,0.2)] hover:bg-[#008f72] transition-all hover:scale-105 active:scale-95 shrink-0"
                   title="Enviar mensagem"
                 >
-                  <Send size={16} className="ml-0.5" />
+                  <Send size={15} className="ml-0.5" />
                 </button>
               ) : (
                 <>
                   <button 
                     type="button" 
                     onClick={() => fileInputRef.current?.click()} 
-                    className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 rounded-full transition-colors"
+                    className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-200/40 rounded-full transition-all duration-200"
                     title="Enviar anexo"
                   >
                     <ImageIcon size={20} />
@@ -540,10 +540,10 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
                     onMouseUp={stopRecording} 
                     onMouseLeave={stopRecording} 
                     className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0 shadow-sm",
+                      "w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0 shadow-sm border",
                       isRecording 
-                        ? "bg-rose-500 text-white animate-pulse" 
-                        : "bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-700 border border-slate-200"
+                        ? "bg-rose-500 text-white animate-pulse border-rose-500" 
+                        : "bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-700 border-slate-200"
                     )}
                     title="Segurar para gravar áudio"
                   >

@@ -355,7 +355,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
       return (
         <button
           onClick={onAssign}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded text-[11px] font-bold uppercase tracking-wider hover:bg-blue-700 transition-all"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-fluvius-blue-main text-white rounded-md text-[12px] font-semibold hover:bg-fluvius-blue-dark transition-all shadow-sm shadow-blue-100"
         >
           <UserCheck size={14} />
           Claim
@@ -368,49 +368,49 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
         return (
           <button
             onClick={onAssign}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded text-[11px] font-bold uppercase tracking-wider hover:bg-blue-700 transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-fluvius-blue-main hover:bg-fluvius-blue-dark text-white rounded-md text-[12px] font-semibold transition-all shadow-sm shadow-blue-100"
           >
             <UserCheck size={14} />
             Assumir
           </button>
         );
-        case 'open':
-          return (
-            <div className="flex items-center gap-2">
-              {onTransfer && (
-                <button
-                  onClick={onTransfer}
-                  className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-[11px] font-bold uppercase tracking-wider hover:bg-slate-50 transition-colors"
-                >
-                  Transferir
-                </button>
-              )}
+      case 'open':
+        return (
+          <div className="flex items-center gap-2">
+            {onTransfer && (
               <button
-                onClick={onPending}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-[11px] font-bold uppercase tracking-wider hover:bg-slate-50 transition-colors"
+                onClick={onTransfer}
+                className="px-3.5 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-md text-[12px] font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
               >
-                <RotateCcw size={14} />
-                Pausar
+                Transferir
               </button>
-              <button
-                onClick={onResolve}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded text-[11px] font-bold uppercase tracking-wider hover:bg-emerald-700 transition-all"
-              >
-                <CheckCircle2 size={14} />
-                Resolver
-              </button>
-            </div>
-          );
+            )}
+            <button
+              onClick={onPending}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-md text-[12px] font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
+            >
+              <RotateCcw size={14} />
+              Pausar
+            </button>
+            <button
+              onClick={onResolve}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 text-white rounded-md text-[12px] font-semibold hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-100"
+            >
+              <CheckCircle2 size={14} />
+              Resolver
+            </button>
+          </div>
+        );
       case 'resolved':
         return (
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-emerald-600 px-2 py-1 bg-emerald-50 rounded">
-              <CheckCircle2 size={12} />
+            <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 px-2.5 py-1 bg-emerald-50 rounded-md border border-emerald-100/50">
+              <CheckCircle2 size={13} />
               Resolvido
             </div>
             <button
               onClick={onAssign}
-              className="text-[11px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-800 transition-colors"
+              className="text-[12px] font-semibold text-slate-500 hover:text-slate-800 transition-colors"
             >
               Reabrir
             </button>
@@ -481,21 +481,21 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
         </AnimatePresence>
 
         {/* Header - Minimalist & Functional */}
-        <div className="h-14 flex items-center justify-between px-6 bg-white border-b border-slate-200 z-20 shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-400 shrink-0 border border-slate-200/50">
+        <div className="h-14 flex items-center justify-between px-6 bg-white border-b border-slate-200/80 z-20 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 shrink-0 border border-slate-200/60 shadow-sm overflow-hidden">
               {conversation.contact?.avatar_url ? (
-                <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover rounded" />
+                <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover" />
               ) : (
-                <User size={20} className="opacity-40" />
+                <User size={20} className="opacity-45" />
               )}
             </div>
             
             <div className="min-w-0">
-              <div className="flex items-center gap-3">
-                <h2 className="font-bold text-slate-800 text-[14px] leading-tight">{contactName}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-semibold text-slate-800 text-[14px] leading-tight">{contactName}</h2>
                 {conversation.assignee && (
-                  <span className="text-[9px] font-bold text-blue-600 px-1.5 py-0.5 bg-blue-50 rounded uppercase tracking-wider">
+                  <span className="text-[10px] font-semibold text-blue-600 px-1.5 py-0.5 bg-blue-50/80 border border-blue-100/30 rounded uppercase tracking-wider">
                      {conversation.assignee.name}
                   </span>
                 )}
@@ -503,19 +503,19 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {renderActionBar()}
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className={cn(
-                "flex items-center justify-center p-2 rounded transition-all border shrink-0",
+                "flex items-center justify-center p-2 rounded-md transition-all border shrink-0",
                 isSidebarOpen 
-                  ? "bg-amber-50 border-amber-200 text-amber-600 shadow-sm" 
+                  ? "bg-amber-50 border-amber-200 text-amber-600 shadow-sm shadow-amber-50/50" 
                   : "bg-white border-slate-200 text-slate-500 hover:text-slate-700 hover:bg-slate-50"
               )}
               title="Detalhes & IA Resumo"
             >
-              <Sparkles size={16} />
+              <Sparkles size={15} />
             </button>
           </div>
         </div>
@@ -528,6 +528,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
             </span>
           </div>
         )}
+
 
         {/* Messages Feed - High Density */}
         <div 
@@ -636,9 +637,9 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                   <div
                     key={msg.id}
                     className={cn(
-                      "flex flex-col max-w-[90%] sm:max-w-[80%]",
+                      "flex flex-col max-w-[78%] md:max-w-[70%]",
                       isOutbound ? "self-end items-end" : "self-start items-start",
-                      isSameSenderAsPrev ? "mt-0.5" : "mt-4"
+                      isSameSenderAsPrev ? "mt-0.5" : "mt-3"
                     )}
                   >
                     <div className={cn(
@@ -710,33 +711,33 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
         {isSidebarOpen ? (
           <div className="flex flex-col h-full overflow-y-auto w-full">
             {/* Header */}
-            <div className="h-14 border-b border-slate-200 flex items-center justify-between px-4 shrink-0 bg-white">
+            <div className="h-14 border-b border-slate-100 flex items-center justify-between px-4 shrink-0 bg-white">
               <span className="text-[12px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles size={14} className="text-amber-500 animate-pulse" /> Detalhes do Contato
               </span>
               <button
                 onClick={() => setIsSidebarOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-md transition-colors hover:bg-slate-50"
               >
                 <ChevronRight size={18} />
               </button>
             </div>
 
             {/* Contact Details Card */}
-            <div className="p-5 border-b border-slate-100 flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200/50 mb-3 relative">
+            <div className="p-4 border-b border-slate-100 flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200/50 mb-3 relative overflow-hidden shadow-sm">
                 {conversation.contact?.avatar_url ? (
-                  <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover rounded" />
+                  <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover" />
                 ) : (
                   <User size={32} className="opacity-30" />
                 )}
               </div>
-              <h3 className="font-bold text-slate-800 text-[14px] leading-tight mb-1">{contactName}</h3>
+              <h3 className="font-semibold text-slate-800 text-[14px] leading-tight mb-1">{contactName}</h3>
               <p className="text-[11px] font-medium text-slate-500 tabular-nums">{contactPhone}</p>
             </div>
 
             {/* AI Sentiment Analysis Card */}
-            <div className="p-5 border-b border-slate-100 flex flex-col">
+            <div className="p-4 border-b border-slate-100 flex flex-col">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                   <Sparkles size={12} className="text-blue-500" /> Humor do Cliente (IA)
@@ -744,7 +745,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                 <button
                   onClick={handleAnalyzeSentiment}
                   disabled={isLoadingSentiment}
-                  className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors disabled:opacity-50"
+                  className="p-1 text-slate-400 hover:text-blue-600 rounded-md transition-colors disabled:opacity-50 hover:bg-slate-50"
                   title="Recalcular Sentimento"
                 >
                   <RefreshCw size={12} className={cn(isLoadingSentiment && "animate-spin")} />
@@ -752,7 +753,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
               </div>
 
               {isLoadingSentiment && (
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 flex items-center gap-3 animate-pulse">
+                <div className="bg-slate-50 border border-slate-100 rounded-lg p-3.5 flex items-center gap-3 animate-pulse">
                   <Loader2 size={16} className="text-slate-400 animate-spin shrink-0" />
                   <div className="flex-1 flex flex-col gap-1.5">
                     <div className="h-3 bg-slate-200 rounded w-1/2"></div>
@@ -762,7 +763,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
               )}
 
               {!isLoadingSentiment && sentimentError && (
-                <div className="bg-rose-50 border border-rose-100 text-rose-600 rounded-lg p-3 text-[11px] font-medium flex items-center gap-2">
+                <div className="bg-rose-50 border border-rose-100/60 text-rose-600 rounded-lg p-3 text-[11px] font-medium flex items-center gap-2">
                   <AlertCircle size={14} className="shrink-0" />
                   <span>{sentimentError}</span>
                 </div>
@@ -771,7 +772,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
               {!isLoadingSentiment && !sentiment && !sentimentError && (
                 <button
                   onClick={handleAnalyzeSentiment}
-                  className="w-full py-2 bg-slate-50 border border-dashed border-slate-200 rounded-lg text-[11px] font-bold text-slate-500 hover:bg-slate-100/70 transition-all flex items-center justify-center gap-1.5"
+                  className="w-full py-2 bg-slate-50 border border-dashed border-slate-200 rounded-lg text-[11px] font-bold text-slate-500 hover:bg-slate-100/70 hover:border-slate-300 transition-all flex items-center justify-center gap-1.5"
                 >
                   <Smile size={14} /> Analisar Sentimento
                 </button>
@@ -779,11 +780,11 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
 
               {!isLoadingSentiment && sentiment && (
                 <div className={cn(
-                  "border rounded-lg p-3.5 flex items-center gap-3.5 shadow-sm transition-all",
-                  sentiment === 'POSITIVE' && "bg-emerald-50 border-emerald-100 text-emerald-800",
-                  sentiment === 'NEUTRAL' && "bg-slate-50 border-slate-200/80 text-slate-700",
-                  sentiment === 'NEGATIVE' && "bg-rose-50 border-rose-100 text-rose-800",
-                  sentiment === 'URGENT' && "bg-amber-50 border-amber-100 text-amber-800"
+                  "border rounded-lg p-3 flex items-center gap-3 shadow-sm transition-all",
+                  sentiment === 'POSITIVE' && "bg-emerald-50/50 border-emerald-100 text-emerald-800",
+                  sentiment === 'NEUTRAL' && "bg-slate-50/50 border-slate-100 text-slate-700",
+                  sentiment === 'NEGATIVE' && "bg-rose-50/50 border-rose-100/60 text-rose-800",
+                  sentiment === 'URGENT' && "bg-amber-50/50 border-amber-100/60 text-amber-800"
                 )}>
                   <div className={cn(
                     "w-9 h-9 rounded-full flex items-center justify-center shrink-0 border shadow-sm",
@@ -799,7 +800,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="text-[12px] font-bold tracking-tight mb-0.5">
+                    <div className="text-[12px] font-semibold tracking-tight mb-0.5">
                       {sentiment === 'POSITIVE' && 'Amigável / Satisfeito'}
                       {sentiment === 'NEUTRAL' && 'Sentimento Neutro'}
                       {sentiment === 'NEGATIVE' && 'Frustrado / Insatisfeito'}
@@ -807,10 +808,10 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                     </div>
                     <p className={cn(
                       "text-[10px] leading-tight font-medium",
-                      sentiment === 'POSITIVE' && "text-emerald-600/95",
+                      sentiment === 'POSITIVE' && "text-emerald-600/90",
                       sentiment === 'NEUTRAL' && "text-slate-500",
-                      sentiment === 'NEGATIVE' && "text-rose-600/95",
-                      sentiment === 'URGENT' && "text-amber-600/95"
+                      sentiment === 'NEGATIVE' && "text-rose-600/90",
+                      sentiment === 'URGENT' && "text-amber-600/90"
                     )}>
                       {sentiment === 'POSITIVE' && 'O cliente demonstra simpatia e satisfação no atendimento.'}
                       {sentiment === 'NEUTRAL' && 'O cliente está calmo, objetivo e sem sinais de estresse.'}
@@ -823,7 +824,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
             </div>
 
             {/* AI Summary Section */}
-            <div className="p-5 border-b border-slate-100 flex flex-col">
+            <div className="p-4 border-b border-slate-100 flex flex-col">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                   <Sparkles size={12} className="text-amber-500" /> Resumo com IA
@@ -831,7 +832,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                 <button
                   onClick={handleGenerateSummary}
                   disabled={isLoadingSummary}
-                  className="text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-700 flex items-center gap-1 disabled:opacity-50"
+                  className="text-[11px] font-semibold uppercase tracking-wider text-blue-600 hover:text-blue-700 flex items-center gap-1 disabled:opacity-50"
                 >
                   {isLoadingSummary ? (
                     <>
@@ -846,28 +847,28 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
               </div>
 
               {isLoadingSummary && (
-                <div className="bg-slate-50 border border-slate-200 rounded p-4 flex flex-col gap-2.5 animate-pulse">
+                <div className="bg-slate-50 border border-slate-100 rounded p-4 flex flex-col gap-2.5 animate-pulse">
                   <div className="h-3 bg-slate-200 rounded w-3/4"></div>
                   <div className="h-2.5 bg-slate-200 rounded w-full"></div>
                 </div>
               )}
 
               {!isLoadingSummary && summaryError && (
-                <div className="bg-rose-50 border border-rose-100 text-rose-600 rounded p-3 text-[11px] font-medium flex items-center gap-2">
+                <div className="bg-rose-50 border border-rose-100/60 text-rose-600 rounded p-3 text-[11px] font-medium flex items-center gap-2">
                   <AlertCircle size={14} className="shrink-0" />
                   <span>{summaryError}</span>
                 </div>
               )}
 
               {!isLoadingSummary && !summary && !summaryError && (
-                <div className="bg-slate-50 border border-dashed border-slate-200 rounded-md p-5 flex flex-col items-center justify-center text-center">
-                  <Sparkles size={20} className="text-amber-500/50 mb-2" />
+                <div className="bg-slate-50 border border-dashed border-slate-200 rounded-md p-4 flex flex-col items-center justify-center text-center">
+                  <Sparkles size={18} className="text-amber-500/50 mb-2" />
                   <p className="text-[11px] text-slate-500 font-medium leading-relaxed mb-3">
                     Gere um resumo executivo inteligente de toda a conversa recente usando IA em segundos.
                   </p>
                   <button
                     onClick={handleGenerateSummary}
-                    className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all"
+                    className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-md text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all"
                   >
                     <Sparkles size={12} /> Resumir Conversa
                   </button>
@@ -875,7 +876,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
               )}
 
               {!isLoadingSummary && summary && (
-                <div className="bg-amber-50/50 border border-amber-100/80 rounded-md p-4 text-[12px] text-slate-700 leading-relaxed font-medium shadow-sm">
+                <div className="bg-amber-50/30 border border-amber-100/50 rounded-md p-3 text-[12px] text-slate-700 leading-relaxed font-medium shadow-sm">
                   <div className="whitespace-pre-line font-medium text-slate-700 select-text leading-relaxed">
                     {summary}
                   </div>
@@ -884,7 +885,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
             </div>
 
             {/* Tags / Marcadores Section */}
-            <div className="p-5 flex flex-col flex-1">
+            <div className="p-4 flex flex-col flex-1">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-3">
                 <Tag size={12} className="text-slate-400" /> Marcadores (Tags)
               </span>
@@ -897,13 +898,13 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                   contactTags.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase tracking-wider"
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-600 bg-blue-50/50 border border-blue-100/60 px-2 py-0.5 rounded uppercase tracking-wider"
                     >
                       {tag}
                       <button
                         onClick={() => handleRemoveTag(tag)}
                         disabled={isUpdatingTags}
-                        className="hover:text-rose-500 transition-colors shrink-0 disabled:opacity-50"
+                        className="hover:text-rose-500 transition-colors shrink-0 disabled:opacity-50 ml-0.5"
                       >
                         <X size={10} />
                       </button>
@@ -913,19 +914,19 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
               </div>
 
               {/* Add Tag Form */}
-              <form onSubmit={handleAddTag} className="flex gap-1">
+              <form onSubmit={handleAddTag} className="flex gap-1.5">
                 <input
                   type="text"
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
                   placeholder="Novo marcador..."
                   disabled={isUpdatingTags || !conversation.contact}
-                  className="flex-1 px-2.5 py-1.5 border border-slate-200 rounded text-[11px] placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 bg-white"
+                  className="flex-1 px-2.5 py-1.5 border border-slate-200 rounded-md text-[11px] placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 bg-white transition-all"
                 />
                 <button
                   type="submit"
                   disabled={isUpdatingTags || !newTag.trim() || !conversation.contact}
-                  className="px-2.5 bg-blue-600 text-white rounded text-[11px] font-bold hover:bg-blue-700 transition-colors disabled:bg-slate-100 disabled:text-slate-400 shrink-0"
+                  className="px-3 bg-blue-600 text-white rounded-md text-[11px] font-semibold hover:bg-blue-700 transition-colors disabled:bg-slate-100 disabled:text-slate-400 shrink-0"
                 >
                   {isUpdatingTags ? '...' : 'Add'}
                 </button>
@@ -947,10 +948,10 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
             {/* Profile Avatar */}
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="w-10 h-10 rounded bg-white flex items-center justify-center text-slate-400 border border-slate-200/80 shadow-sm relative group hover:border-blue-400 transition-colors shrink-0"
+              className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-slate-400 border border-slate-200/80 shadow-sm relative group hover:border-blue-400 transition-colors shrink-0 overflow-hidden"
             >
               {conversation.contact?.avatar_url ? (
-                <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover rounded" />
+                <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover" />
               ) : (
                 <User size={18} className="opacity-40" />
               )}
