@@ -457,45 +457,51 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
 
       {/* Main Input Area */}
       <div className={cn(
-        "flex items-center gap-1 p-1 transition-colors",
-        isRecording ? "bg-rose-50" : "bg-white"
+        "flex items-center gap-2 p-2.5 transition-colors border-t border-slate-200/60 z-20 shrink-0",
+        isRecording ? "bg-rose-50" : "bg-[#f0f2f5]"
       )}>
         {!isRecording ? (
           <>
-            <button
-              type="button"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className={cn(
-                "p-2 rounded transition-colors",
-                isMenuOpen ? "bg-slate-100 text-slate-800" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
-              )}
-            >
-              <Paperclip size={18} />
-            </button>
-            
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-              multiple
-            />
+            <div className="flex items-center gap-1">
+              <button type="button" className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 rounded-full transition-colors">
+                <Smile size={20} />
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className={cn(
+                  "p-2 rounded-full transition-colors",
+                  isMenuOpen ? "bg-slate-200 text-slate-800" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                )}
+              >
+                <Paperclip size={20} />
+              </button>
+              
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                multiple
+              />
 
-            <button
-              type="button"
-              onClick={handleSuggestReply}
-              disabled={isGeneratingSuggestion || !conversationId}
-              className="p-2 text-amber-500 hover:bg-amber-50 rounded transition-colors"
-              title="Sugestão com IA"
-            >
-              {isGeneratingSuggestion ? (
-                <Loader2 size={18} className="animate-spin" />
-              ) : (
-                <Sparkles size={18} />
-              )}
-            </button>
+              <button
+                type="button"
+                onClick={handleSuggestReply}
+                disabled={isGeneratingSuggestion || !conversationId}
+                className="p-2 text-amber-500 hover:bg-amber-100/50 rounded-full transition-colors"
+                title="Sugestão com IA"
+              >
+                {isGeneratingSuggestion ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  <Sparkles size={20} />
+                )}
+              </button>
+            </div>
             
-            <div className="flex-1 flex items-center mx-1">
+            <div className="flex-1 flex items-center bg-white rounded-lg px-3 py-1 border border-slate-200/40 shadow-sm">
               <input
                 ref={inputRef}
                 type="text"
@@ -504,31 +510,45 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
                 placeholder="Digite uma mensagem... (Use / para respostas rápidas)"
-                className="w-full bg-transparent outline-none px-2 py-2 text-[13px] text-slate-800 placeholder:text-slate-400"
+                className="w-full bg-transparent outline-none py-1.5 text-[14px] text-slate-800 placeholder:text-slate-400"
               />
             </div>
             
-            <div className="flex items-center gap-1">
-              <button type="button" className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
-                <Smile size={18} />
-              </button>
-              
+            <div className="flex items-center gap-1.5 shrink-0">
               {text.trim() ? (
                 <button
                   type="button"
                   onClick={handleSend}
-                  className="px-3 py-1.5 bg-blue-600 text-white rounded text-[11px] font-bold uppercase tracking-wider hover:bg-blue-700 transition-all"
+                  className="w-10 h-10 rounded-full bg-[#00a884] text-white flex items-center justify-center shadow-md hover:bg-[#008f72] transition-all active:scale-95 shrink-0"
+                  title="Enviar mensagem"
                 >
-                  Enviar
+                  <Send size={16} className="ml-0.5" />
                 </button>
               ) : (
                 <>
-                <button type="button" onClick={() => fileInputRef.current?.click()} className="text-[9px] font-bold uppercase tracking-wider text-slate-500 hover:text-fluvius-blue-main hover:bg-slate-50 px-2 py-1.5 rounded transition-colors flex items-center gap-1.5">
-                  <ImageIcon size={14} /> Anexo
-                </button>
-                <button type="button" onMouseDown={startRecording} onMouseUp={stopRecording} onMouseLeave={stopRecording} className={`text-[9px] font-bold uppercase tracking-wider px-2 py-1.5 rounded transition-colors flex items-center gap-1.5 ${isRecording ? 'text-rose-500 bg-rose-50 animate-pulse' : 'text-slate-500 hover:text-fluvius-blue-main hover:bg-slate-50'}`}>
-                  <Mic size={14} /> Áudio
-                </button>
+                  <button 
+                    type="button" 
+                    onClick={() => fileInputRef.current?.click()} 
+                    className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 rounded-full transition-colors"
+                    title="Enviar anexo"
+                  >
+                    <ImageIcon size={20} />
+                  </button>
+                  <button 
+                    type="button" 
+                    onMouseDown={startRecording} 
+                    onMouseUp={stopRecording} 
+                    onMouseLeave={stopRecording} 
+                    className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0 shadow-sm",
+                      isRecording 
+                        ? "bg-rose-500 text-white animate-pulse" 
+                        : "bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-700 border border-slate-200"
+                    )}
+                    title="Segurar para gravar áudio"
+                  >
+                    <Mic size={18} />
+                  </button>
                 </>
               )}
             </div>
@@ -536,27 +556,27 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
         ) : (
           <div className="flex-1 flex items-center justify-between px-3 py-1.5">
             <div className="flex items-center gap-3">
-              <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
-              <span className="text-[11px] font-bold text-rose-600 uppercase tracking-widest tabular-nums">
-                {formatDuration(recordingDuration)}
+              <div className="w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse" />
+              <span className="text-[13px] font-bold text-rose-600 uppercase tracking-widest tabular-nums">
+                Gravando: {formatDuration(recordingDuration)}
               </span>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => {
                   setIsRecording(false);
                   mediaRecorderRef.current?.stop();
                   setPreviewFiles(null);
                 }}
-                className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
+                className="px-3 py-1.5 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors"
               >
-                <X size={16} />
+                Cancelar
               </button>
               <button
                 onClick={stopRecording}
-                className="px-3 py-1 bg-rose-600 text-white rounded text-[10px] font-bold uppercase tracking-wider"
+                className="px-4 py-1.5 bg-rose-600 text-white rounded-lg text-[11px] font-bold uppercase tracking-wider hover:bg-rose-700 shadow-sm transition-colors"
               >
-                Feito
+                Concluir
               </button>
             </div>
           </div>

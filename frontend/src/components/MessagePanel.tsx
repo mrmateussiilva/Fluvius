@@ -316,7 +316,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
       case 'pending': return <Clock size={10} className="text-slate-400" />;
       case 'sent': return <Check size={10} className="text-slate-400" />;
       case 'delivered': return <CheckCheck size={10} className="text-slate-400" />;
-      case 'read': return <CheckCheck size={10} className="text-blue-500" />;
+      case 'read': return <CheckCheck size={10} className="text-[#53bdeb]" />;
       case 'failed': return <AlertCircle size={10} className="text-rose-500" />;
       default: return null;
     }
@@ -425,7 +425,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
     <div className="flex-1 flex overflow-hidden bg-slate-50 relative">
       {/* Main Chat Area */}
       <div 
-        className="flex-1 flex flex-col min-w-0 relative bg-slate-50 overflow-hidden"
+        className="flex-1 flex flex-col min-w-0 relative bg-whatsapp-doodle overflow-hidden"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -642,11 +642,10 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                     )}
                   >
                     <div className={cn(
-                      "relative overflow-hidden transition-colors shadow-sm group/bubble",
-                      isMedia ? "p-1" : "p-0",
-                      isOutbound 
-                        ? "bg-slate-800 text-white rounded-lg rounded-tr-none" 
-                        : "bg-white text-slate-800 rounded-lg rounded-tl-none border border-slate-200"
+                      "relative transition-all shadow-[0_1px_0.5px_rgba(0,0,0,0.13)] group/bubble",
+                      isMedia ? "p-1 rounded-lg" : "p-0 rounded-lg",
+                      isOutbound ? "bubble-out" : "bubble-in",
+                      !isSameSenderAsPrev ? (isOutbound ? "bubble-out-tail" : "bubble-in-tail") : (isOutbound ? "rounded-tr-lg" : "rounded-tl-lg")
                     )}>
                       {/* Botão Responder (visível no hover) */}
                       <div className={cn(
@@ -665,7 +664,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                       {msg.quoted_content && (
                         <div className={cn(
                           "rounded p-2 m-2 border-l-2 text-[11px] italic opacity-80",
-                          isOutbound ? "bg-black/20 border-white/40" : "bg-slate-50 border-slate-300"
+                          isOutbound ? "bg-black/5 border-slate-400/30 text-slate-700" : "bg-slate-50 border-slate-300 text-slate-600"
                         )}>
                           "{msg.quoted_content}"
                         </div>
@@ -674,9 +673,9 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                       <div className={cn(
                         "flex items-center gap-1.5 px-3 pb-1.5 justify-end",
                         isMedia && !msg.content ? "absolute bottom-2 right-2 bg-black/30 backdrop-blur-sm px-1.5 py-0.5 rounded text-white" : "",
-                        !isMedia || msg.content ? (isOutbound ? "text-white/60" : "text-slate-400") : "text-white"
+                        !isMedia || msg.content ? "text-[#667781]" : "text-white"
                       )}>
-                        <span className="text-[9px] font-bold tabular-nums">{timeString}</span>
+                        <span className="text-[9px] font-medium tabular-nums">{timeString}</span>
                         {isOutbound && renderStatusIcon(msg.status)}
                       </div>
                     </div>
@@ -689,17 +688,15 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
         </div>
 
         {/* Message Input - Integrated & Minimal */}
-        <div className="px-6 pb-6 pt-2 shrink-0">
-          <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-            <MessageInput
-              onSend={onSendMessage}
-              onSendMedia={onSendMedia}
-              conversationId={conversation.id}
-              replyingTo={replyingTo}
-              onCancelReply={() => onSetReplyingTo?.(null)}
-              contactName={conversation.contact?.name || conversation.contact?.phone || 'Contato'}
-            />
-          </div>
+        <div className="shrink-0 z-20">
+          <MessageInput
+            onSend={onSendMessage}
+            onSendMedia={onSendMedia}
+            conversationId={conversation.id}
+            replyingTo={replyingTo}
+            onCancelReply={() => onSetReplyingTo?.(null)}
+            contactName={conversation.contact?.name || conversation.contact?.phone || 'Contato'}
+          />
         </div>
       </div>
 
