@@ -123,6 +123,11 @@ class WebhookService:
         # Phone extraction
         remote_jid = key.get("remoteJid", "")
         remote_jid_alt = key.get("remoteJidAlt")
+
+        # --- Ignorar mensagens de GRUPOS (@g.us) — helpdesk processa apenas chats individuais ---
+        if remote_jid.endswith("@g.us"):
+            logger.debug(f"[Webhook] Ignorando mensagem de grupo: {remote_jid}")
+            return
         
         # If remoteJid is a LID (Linked ID), try to use the alternative JID which is usually the real phone number
         if "@lid" in remote_jid and remote_jid_alt and "@s.whatsapp.net" in remote_jid_alt:
