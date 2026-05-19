@@ -408,21 +408,8 @@ class WebhookService:
                 }
             })
 
-            # 3. Copilot — analisa mensagem inbound em background (supervisionado)
-            if direction == "inbound":
-                async def _safe_copilot(conv_id: str = conversation.id, msg_content: str = content or ""):
-                    try:
-                        from app.core.database import SessionLocal
-                        with SessionLocal() as copilot_db:
-                            await CopilotService.analyze_conversation(
-                                db=copilot_db,
-                                conversation_id=conv_id,
-                                trigger_message=msg_content,
-                                trigger="inbound_message",
-                            )
-                    except Exception as exc:
-                        logger.error(f"[Copilot] Background analysis falhou para {conv_id}: {exc}")
-                asyncio.create_task(_safe_copilot())
+            # NOTA: Copilot desabilitado automaticamente.
+            # Análise só roda quando o agente solicita via API (POST /copilot/analyze).
 
 
     @staticmethod

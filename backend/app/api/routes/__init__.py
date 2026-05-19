@@ -9,6 +9,7 @@ from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.queues import router as queues_router
 from app.api.routes.quick_replies import router as quick_replies_router
+from app.api.routes.copilot import router as copilot_router
 
 __all__ = [
     "health_router",
@@ -22,4 +23,5 @@ __all__ = [
     "auth_router",
     "queues_router",
     "quick_replies_router",
+    "copilot_router",
 ]

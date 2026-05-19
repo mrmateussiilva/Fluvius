@@ -118,12 +118,6 @@ class ConnectionHealthService:
         except Exception as e:
             logger.error(f"[HealthCheck] Erro geral durante verificação: {e}")
         finally:
-            # Verificar SLA de conversas pendentes
-            try:
-                from app.services.copilot_service import CopilotService
-                await CopilotService.check_sla_breaches(db)
-            except Exception as e:
-                logger.error(f"[HealthCheck] Erro no SLA check: {e}")
             db.close()
 
 
