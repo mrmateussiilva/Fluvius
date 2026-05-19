@@ -210,8 +210,8 @@ export const InboxPage: React.FC = () => {
     }
   }, [selectedConversationId, loadConversations, loadMessages]);
 
-  // Connect WebSocket
-  useWebSocket(token, handleWSEvent);
+  // Connect WebSocket — captura o estado de reconexão
+  const wsStatus = useWebSocket(token, handleWSEvent);
 
 
   const handleSendMessage = async (content: string) => {
@@ -307,11 +307,26 @@ export const InboxPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-fluvius-bg text-fluvius-text-main">
+      {/* Banner: WhatsApp desconectado (via evento CONNECTION_UPDATE) */}
       {connectionStatus === 'disconnected' && (
         <div className="bg-red-500 text-white text-center py-2 text-sm font-medium shrink-0 flex items-center justify-center gap-2">
           <span>⚠️ Atenção: O WhatsApp foi desconectado. Verifique a Evolution API.</span>
         </div>
       )}
+
+      {/* Banner: WebSocket do Fluvius perdeu conexão com o backend */}
+      {(wsStatus === 'reconnecting' || wsStatus === 'closed') && connectionStatus !== 'disconnected' && (
+        <div className={`text-white text-center py-1.5 text-xs font-medium shrink-0 flex items-center justify-center gap-2 ${
+          wsStatus === 'reconnecting' ? 'bg-amber-500' : 'bg-red-600'
+        }`}>
+          {wsStatus === 'reconnecting' ? (
+            <><span className="animate-spin inline-block">↻</span> Reconectando ao servidor...</>
+          ) : (
+            <>🔴 Sem conexão com o servidor. Recarregue a página.</>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-1 overflow-hidden">
         <ConversationList
           conversations={conversations}

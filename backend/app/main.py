@@ -2,7 +2,9 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
+from contextlib import asynccontextmanager
 from jose import jwt
+import asyncio
 import os
 import logging
 
@@ -28,9 +30,40 @@ from app.api.routes import (
 
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Gerencia o ciclo de vida da aplicação (startup e shutdown)."""
+    # --- STARTUP ---
+    from app.services.connection_health_service import (
+        ConnectionHealthService,
+        HEALTH_CHECK_INTERVAL,
+    )
+    from app.services.evolution_service import close_http_client
+
+    health_task = asyncio.create_task(
+        ConnectionHealthService.start_background_health_check(
+            interval_seconds=HEALTH_CHECK_INTERVAL
+        )
+    )
+    logger.info("Health-check de conexões iniciado.")
+
+    yield  # Aplicação em execução
+
+    # --- SHUTDOWN ---
+    health_task.cancel()
+    try:
+        await health_task
+    except asyncio.CancelledError:
+        pass
+
+    await close_http_client()
+    logger.info("Pool HTTP e health-check encerrados.")
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan,
 )
 
 # Set all CORS enabled origins

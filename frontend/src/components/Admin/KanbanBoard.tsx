@@ -108,7 +108,7 @@ const DraggableCard: React.FC<{ conversation: Conversation; isOverlay?: boolean 
       ref={setNodeRef}
       style={style}
       className={cn(
-        "bg-white p-4 rounded-[12px] border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.01),0_1px_2px_rgba(0,0,0,0.02)] mb-3 flex flex-col gap-3 group transition-all duration-300 relative select-none cursor-default",
+        "bg-white p-3 sm:p-4 rounded-[12px] border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.01),0_1px_2px_rgba(0,0,0,0.02)] mb-2.5 sm:mb-3 flex flex-col gap-2.5 sm:gap-3 group transition-all duration-300 relative select-none cursor-default",
         isDragging && !isOverlay ? "opacity-30 border-blue-200 bg-blue-50/10 scale-[0.98]" : "hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.08),0_2px_6px_rgba(0,0,0,0.02)] hover:border-slate-350 hover:-translate-y-0.5",
         isOverlay && "shadow-2xl scale-[1.03] border-blue-500 ring-8 ring-blue-500/10 cursor-grabbing bg-white",
         conversation.unread_count > 0 && "border-blue-200 shadow-[0_2px_8px_-4px_rgba(30,167,255,0.08)] bg-gradient-to-r from-white to-blue-50/5"
@@ -260,7 +260,7 @@ const DroppableColumn: React.FC<{
   const theme = colors[colorScheme];
 
   return (
-    <div className="w-[310px] flex flex-col shrink-0 h-full select-none">
+    <div className="w-[280px] sm:w-[320px] flex flex-col shrink-0 h-full select-none">
       {/* Sticky Premium Header */}
       <div className={cn("px-4 py-3 rounded-t-[12px] border-x border-t flex items-center justify-between mb-0 shadow-[0_1px_2px_rgba(0,0,0,0.01)] z-10 relative select-none", theme.header)}>
         <div className="flex items-center gap-2.5 min-w-0">
@@ -441,57 +441,57 @@ export const KanbanBoard: React.FC = () => {
   return (
     <div className="h-full flex flex-col bg-slate-50/50">
       {/* Premium Header */}
-      <div className="p-8 pb-6 shrink-0 bg-white border-b border-slate-200/60 shadow-sm z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
+      <div className="p-4 sm:p-6 lg:p-8 pb-4 lg:pb-6 shrink-0 bg-white border-b border-slate-200/60 shadow-sm z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 sm:gap-6">
         <div className="space-y-1">
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
             Fluxo Kanban
             <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-600 text-[9px] uppercase tracking-widest px-2.5 py-1 rounded-full font-extrabold border border-blue-150/40 shadow-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
               Realtime
             </span>
           </h1>
-          <p className="text-slate-500 text-[13px] font-medium leading-relaxed max-w-2xl">
+          <p className="text-slate-500 text-[12px] sm:text-[13px] font-medium leading-relaxed max-w-2xl">
             Gerenciamento visual e inteligente de atendimentos. Arraste e solte os cartões entre as colunas para atualizar filas, atribuir operadores ou concluir conversas instantaneamente.
           </p>
         </div>
 
         {/* KPIs Strip */}
-        <div className="flex flex-wrap items-center gap-4 bg-slate-50/70 p-2.5 rounded-[12px] border border-slate-200/50 text-slate-650 shrink-0">
-          <div className="flex items-center gap-2 px-3 py-1 border-r border-slate-200/60 last:border-0 last:pr-0">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total</span>
-            <span className="text-sm font-extrabold text-slate-800">{totalConversations}</span>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 bg-slate-50/70 p-2 sm:p-2.5 rounded-[12px] border border-slate-200/50 text-slate-650 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 border-r border-slate-200/60 last:border-0 last:pr-0">
+            <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-wider text-slate-400">Total</span>
+            <span className="text-xs sm:text-sm font-extrabold text-slate-800">{totalConversations}</span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1 border-r border-slate-200/60 last:border-0 last:pr-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 border-r border-slate-200/60 last:border-0 last:pr-0">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Fila</span>
-            <span className="text-sm font-extrabold text-slate-800">{queueCount}</span>
+            <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-wider text-slate-400">Fila</span>
+            <span className="text-xs sm:text-sm font-extrabold text-slate-800">{queueCount}</span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1 border-r border-slate-200/60 last:border-0 last:pr-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 border-r border-slate-200/60 last:border-0 last:pr-0">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Ativos</span>
-            <span className="text-sm font-extrabold text-slate-800">{activeCount}</span>
+            <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-wider text-slate-400">Ativos</span>
+            <span className="text-xs sm:text-sm font-extrabold text-slate-800">{activeCount}</span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1 border-r border-slate-200/60 last:border-0 last:pr-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 border-r border-slate-200/60 last:border-0 last:pr-0">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Concluídas</span>
-            <span className="text-sm font-extrabold text-slate-800">{resolvedCount}</span>
+            <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-wider text-slate-400">Concluídas</span>
+            <span className="text-xs sm:text-sm font-extrabold text-slate-800">{resolvedCount}</span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1">
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1">
             <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Operadores</span>
-            <span className="text-sm font-extrabold text-slate-800">{onlineAgentsCount}/{totalAgents}</span>
+            <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-wider text-slate-400">Operadores</span>
+            <span className="text-xs sm:text-sm font-extrabold text-slate-800">{onlineAgentsCount}/{totalAgents}</span>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-x-auto p-8 pt-6 fluvius-scroll">
+      <div className="flex-1 overflow-x-auto p-4 sm:p-6 lg:p-8 pt-4 lg:pt-6 fluvius-scroll">
         <DndContext 
           sensors={sensors}
           collisionDetection={closestCorners} 
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-6 h-full min-w-max pb-4 items-start">
+          <div className="flex gap-4 sm:gap-6 h-full min-w-max pb-4 items-start">
             
             {/* Column: Queue */}
             <DroppableColumn 

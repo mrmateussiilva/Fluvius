@@ -495,5 +495,12 @@ class WebhookService:
             })
             
             if new_status == "connected":
-                # Trigger historical sync in the background
-                asyncio.create_task(SyncService.sync_connection(connection.id))
+                # Trigger historical sync in the background (supervisionado)
+                async def _safe_sync(connection_id: str = connection.id):
+                    try:
+                        await SyncService.sync_connection(connection_id)
+                    except Exception as exc:
+                        logger.error(
+                            f"Background sync falhou para {connection_id}: {exc}"
+                        )
+                asyncio.create_task(_safe_sync())
