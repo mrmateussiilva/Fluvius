@@ -22,7 +22,8 @@ export type WSEvent = {
     | 'MESSAGE_STATUS_UPDATED'
     | 'CONNECTION_STATUS_UPDATED'
     | 'NEW_CONVERSATION'
-    | 'COPILOT_ALERT';
+    | 'COPILOT_ALERT'
+    | 'TYPING_STATUS';
   data: any;
   workspace_id?: string;
 };
