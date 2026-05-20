@@ -13,25 +13,22 @@ class ConversationVisibilityService:
             Agent.role == "admin"
         ).all()
 
-        if not conversation.assignee_id:
-            # Sem responsável -> apenas admins
-            return admins
-
-        assignee = db.query(Agent).filter(
-            Agent.id == conversation.assignee_id
-        ).first()
-
-        if not assignee:
-            # Responsável não encontrado ou inválido -> apenas admins
-            return admins
-
-        if assignee.role == "admin":
-            # Se for admin, já está incluído na lista de admins
-            return admins
-
-        # Se for operador normal -> admins + operador responsável
         agent_map = {agent.id: agent for agent in admins}
-        agent_map[assignee.id] = assignee
+
+        if conversation.assignee_id:
+            assignee = db.query(Agent).filter(
+                Agent.id == conversation.assignee_id
+            ).first()
+            if assignee:
+                agent_map[assignee.id] = assignee
+
+        if conversation.queue_id:
+            from app.models.queue import Queue
+            queue = db.query(Queue).filter(Queue.id == conversation.queue_id).first()
+            if queue:
+                for agent in queue.agents:
+                    agent_map[agent.id] = agent
+
         return list(agent_map.values())
 
     @staticmethod

@@ -51,6 +51,8 @@ class WebhookService:
                 await WebhookService._handle_message_update(db, connection_id, payload)
             elif event.event_type == "connection.update":
                 await WebhookService._handle_connection_update(db, connection_id, payload)
+            elif event.event_type == "presence.update":
+                await WebhookService._handle_presence_update(db, connection_id, payload)
             else:
                 logger.debug(f"Ignoring event type: {event.event_type}")
             
@@ -62,6 +64,57 @@ class WebhookService:
             db.commit()
             
         return event
+
+    @staticmethod
+    async def _handle_presence_update(db: Session, connection_id: str, payload: dict):
+        connection = db.query(Connection).filter(Connection.id == connection_id).first()
+        if not connection:
+            return
+            
+        data = payload.get("data", {})
+        remote_jid = data.get("id") or data.get("remoteJid")
+        if not remote_jid:
+            return
+            
+        phone = contact_phone_from_remote_jid(remote_jid)
+        contact = db.query(Contact).filter(
+            Contact.workspace_id == connection.workspace_id,
+            Contact.phone == phone
+        ).first()
+        
+        if not contact:
+            return
+            
+        conversation = db.query(Conversation).filter(
+            Conversation.inbox_id == connection.inbox_id,
+            Conversation.contact_id == contact.id
+        ).first()
+        
+        if not conversation:
+            return
+            
+        is_typing = False
+        presence_val = data.get("presence") or data.get("lastKnownPresence")
+        
+        if not presence_val:
+            presences = data.get("presences", {})
+            for k, v in presences.items():
+                if v.get("lastKnownPresence") in ["composing", "recording"]:
+                    is_typing = True
+                    break
+        else:
+            if presence_val in ["composing", "recording"]:
+                is_typing = True
+                
+        await ConversationVisibilityService.broadcast_to_allowed_agents(db, conversation, {
+            "type": "TYPING_STATUS",
+            "workspace_id": connection.workspace_id,
+            "data": {
+                "conversation_id": conversation.id,
+                "is_typing": is_typing,
+                "contact_id": contact.id
+            }
+        })
 
     @staticmethod
     async def _handle_message_upsert(db: Session, connection_id: str, payload: dict):
@@ -305,6 +358,23 @@ class WebhookService:
             db.commit()
             db.refresh(conversation)
             
+            await socket_manager.broadcast({
+                "type": "NEW_CONVERSATION",
+                "workspace_id": connection.workspace_id,
+                "data": {
+                    "id": conversation.id,
+                    "status": conversation.status,
+                    "contact": {
+                        "id": contact.id,
+                        "name": contact.name,
+                        "phone": contact.phone,
+                        "avatar_url": contact.avatar_url
+                    },
+                    "unread_count": 0,
+                    "last_message_at": None
+                }
+            })
+            
         # At this point we know the external_id does not exist in the DB (due to idempotency check at the top).
         msg = None
         is_new_message = False
@@ -408,8 +478,20 @@ class WebhookService:
                 }
             })
 
-            # NOTA: Copilot desabilitado automaticamente.
-            # Análise só roda quando o agente solicita via API (POST /copilot/analyze).
+            # 3. Análise Proativa Copilot
+            if direction == "inbound":
+                async def _run_copilot(conv_id: str, msg_content: str):
+                    from app.core.database import SessionLocal
+                    from app.services.copilot_service import CopilotService
+                    with SessionLocal() as copilot_db:
+                        await CopilotService.analyze_conversation(
+                            db=copilot_db,
+                            conversation_id=conv_id,
+                            trigger_message=msg_content,
+                            trigger="inbound_message"
+                        )
+                asyncio.create_task(_run_copilot(conversation.id, content))
+
 
 
     @staticmethod

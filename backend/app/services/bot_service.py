@@ -1,6 +1,7 @@
 import logging
 from sqlalchemy.orm import Session
 from app.models.conversation import Conversation
+from app.models.message import Message
 from app.models.inbox import Inbox
 from app.models.queue import Queue
 from app.services.evolution_service import EvolutionService

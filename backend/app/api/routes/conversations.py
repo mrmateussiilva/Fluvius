@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional
@@ -18,6 +18,8 @@ from app.models.inbox import Inbox
 from app.models.workspace import utcnow
 from app.core.socket_manager import socket_manager
 from app.services.visibility_service import ConversationVisibilityService
+from app.services.evolution_service import EvolutionService
+from app.models.message import Message
 
 class StartConversationRequest(BaseModel):
     phone: str
@@ -379,6 +381,7 @@ async def start_conversation(
 @router.patch("/{conversation_id}/read", response_model=ConversationResponse)
 async def mark_as_read(
     conversation_id: str, 
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_agent: Agent = Depends(get_current_agent)
 ):
@@ -393,6 +396,27 @@ async def mark_as_read(
     conversation.unread_count = 0
     db.commit()
     db.refresh(conversation)
+
+    # Fetch last inbound message to mark as read in WhatsApp
+    last_inbound = db.query(Message).filter(
+        Message.conversation_id == conversation.id,
+        Message.direction == "inbound",
+        Message.external_message_id != None
+    ).order_by(Message.created_at.desc()).first()
+
+    if last_inbound:
+        connection = db.query(Connection).filter(Connection.inbox_id == conversation.inbox_id).first()
+        contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
+        if connection and connection.base_url and contact:
+            remote_jid = contact.phone if contact.phone.endswith("@g.us") else f"{contact.phone}@s.whatsapp.net"
+            background_tasks.add_task(
+                EvolutionService.send_read_receipt,
+                base_url=connection.base_url,
+                api_key=connection.api_key,
+                instance_name=connection.instance_name,
+                remote_jid=remote_jid,
+                message_id=last_inbound.external_message_id
+            )
 
     # BROADCAST
     await ConversationVisibilityService.broadcast_to_allowed_agents(db, conversation, {

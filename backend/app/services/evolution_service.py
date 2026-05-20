@@ -114,6 +114,30 @@ async def _request(
 class EvolutionService:
 
     @staticmethod
+    async def send_read_receipt(
+        base_url: str, api_key: str, instance_name: str,
+        remote_jid: str, message_id: str
+    ) -> dict:
+        url = f"{base_url.rstrip('/')}/chat/markMessageAsRead/{instance_name}"
+        headers = {"apikey": api_key, "Content-Type": "application/json"}
+        payload = {"readMessages": [{"remoteJid": remote_jid, "id": message_id}]}
+        response = await _request("put", url, headers=headers, json=payload)
+        response.raise_for_status()
+        return response.json()
+
+    @staticmethod
+    async def send_presence(
+        base_url: str, api_key: str, instance_name: str,
+        remote_jid: str, presence: str = "composing"
+    ) -> dict:
+        url = f"{base_url.rstrip('/')}/chat/sendPresence/{instance_name}"
+        headers = {"apikey": api_key, "Content-Type": "application/json"}
+        payload = {"number": remote_jid, "presence": presence}
+        response = await _request("post", url, headers=headers, json=payload, max_retries=1)
+        response.raise_for_status()
+        return response.json()
+
+    @staticmethod
     async def send_text_message(
         base_url: str,
         api_key: str,
@@ -495,6 +519,7 @@ class EvolutionService:
                     "MESSAGES_DELETE",
                     "SEND_MESSAGE",
                     "CONNECTION_UPDATE",
+                    "PRESENCE_UPDATE",
                 ],
             }
         }

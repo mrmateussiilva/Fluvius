@@ -282,6 +282,21 @@ class SyncService:
                 f"Synced {synced_chats} chats, {synced_groups} groups and {synced_messages} messages. "
                 f"Skipped {skipped_chats} chats."
             )
+
+            if synced_chats > 0 or synced_groups > 0:
+                from app.core.socket_manager import socket_manager
+                # Using a fire-and-forget task since we are in an async function (Wait, sync_connection is an async def, but it is called from background_tasks which runs sync/async depending on def. Let's check if sync_connection is async)
+                # Ah, sync_connection is async. I can just await.
+                await socket_manager.broadcast({
+                    "type": "CONVERSATION_UPDATED",
+                    "workspace_id": connection.workspace_id,
+                    "data": {
+                        "sync_completed": True,
+                        "synced_chats": synced_chats,
+                        "synced_messages": synced_messages
+                    }
+                })
+
             return {
                 "synced_chats": synced_chats,
                 "synced_groups": synced_groups,
