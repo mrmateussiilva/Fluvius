@@ -5,7 +5,7 @@ import {
   User, Check, CheckCheck, Clock, UserCheck, CheckCircle2, 
   RotateCcw, Upload, Reply, Play, Pause, Plus, X, Eye, 
   FileText, AlertCircle, MessageSquare, Sparkles, Loader2, Tag, ChevronRight, ChevronLeft,
-  Smile, Meh, Frown, AlertTriangle, RefreshCw, Maximize2, Download
+  Smile, Meh, Frown, AlertTriangle, RefreshCw, Maximize2, Download, Lock
 } from 'lucide-react';
 import { useAgent } from '../context/AgentContext';
 import { MediaPreviewModal } from './MediaPreviewModal';
@@ -151,11 +151,14 @@ interface MessagePanelProps {
   onLoadMore?: () => void;
   hasMore?: boolean;
   isLoadingMore?: boolean;
+  onSendInternalNote?: (content: string) => Promise<void> | void;
+  isTyping?: boolean;
 }
 
 export const MessagePanel: React.FC<MessagePanelProps> = ({
   messages,
   onSendMessage,
+  onSendInternalNote,
   onSendMedia,
   conversation,
   onAssign,
@@ -168,6 +171,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
   onLoadMore,
   hasMore,
   isLoadingMore,
+  isTyping,
 }) => {
   const { currentAgent } = useAgent();
   const isSpectator = !!(conversation.assignee_id && currentAgent && conversation.assignee_id !== currentAgent.id);
@@ -665,9 +669,15 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                     <div className={cn(
                       "relative transition-all shadow-[0_1px_0.5px_rgba(0,0,0,0.13)] group/bubble",
                       isMedia ? "p-1 rounded-lg" : "p-0 rounded-lg",
-                      isOutbound ? "bubble-out" : "bubble-in",
+                      msg.is_internal ? "bg-amber-50 border border-amber-400 text-amber-900" : (isOutbound ? "bubble-out" : "bubble-in"),
                       !isSameSenderAsPrev ? (isOutbound ? "bubble-out-tail" : "bubble-in-tail") : (isOutbound ? "rounded-tr-lg" : "rounded-tl-lg")
                     )}>
+                      {msg.is_internal && (
+                        <div className="flex items-center gap-1 text-amber-600 bg-amber-100/50 px-2 py-1 rounded-t-lg text-[10px] font-bold uppercase tracking-wider border-b border-amber-200/50">
+                          <Lock size={10} />
+                          Nota Interna
+                        </div>
+                      )}
                       {/* Botão Responder (visível no hover) */}
                       <div className={cn(
                         "absolute top-1 z-10 opacity-0 group-hover/bubble:opacity-100 transition-opacity",
@@ -705,6 +715,14 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
               })
             )}
           </AnimatePresence>
+          {isTyping && (
+             <div className="self-start mt-2 ml-2 flex items-center gap-1.5 px-3 py-2 bg-slate-100 rounded-xl rounded-tl-sm text-slate-500 shadow-sm w-fit group">
+               <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+               <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+               <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
+               <span className="text-[10px] font-medium ml-1">Digitando...</span>
+             </div>
+          )}
           <div ref={endRef} />
         </div>
 

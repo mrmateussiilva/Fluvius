@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Smile, Paperclip, Image as ImageIcon, Music, FileText, Camera, Mic, Square, AlertCircle, X, Sparkles, Loader2, Zap } from 'lucide-react';
+import { Send, Smile, Paperclip, Image as ImageIcon, Music, FileText, Camera, Mic, Square, AlertCircle, X, Sparkles, Loader2, Zap, Lock } from 'lucide-react';
 import { suggestReply, type Message, fetchQuickReplies, type QuickReply } from '../api/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MediaPreviewModal } from './MediaPreviewModal';
@@ -14,6 +14,7 @@ const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB
 
 interface MessageInputProps {
   onSend: (content: string) => Promise<void> | void;
+  onSendInternalNote?: (content: string) => Promise<void> | void;
   onSendMedia: (media: string, mediaType: string, mimetype: string, caption?: string) => Promise<void> | void;
   replyingTo?: Message | null;
   onCancelReply?: () => void;
@@ -21,8 +22,9 @@ interface MessageInputProps {
   contactName?: string;
 }
 
-export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia, replyingTo, onCancelReply, conversationId, contactName }) => {
+export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendInternalNote, onSendMedia, replyingTo, onCancelReply, conversationId, contactName }) => {
   const [text, setText] = useState('');
+  const [isInternal, setIsInternal] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -111,8 +113,13 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
   const handleSend = async () => {
     if (text.trim()) {
       try {
-        await onSend(text.trim());
+        if (isInternal && onSendInternalNote) {
+          await onSendInternalNote(text.trim());
+        } else {
+          await onSend(text.trim());
+        }
         setText('');
+        setIsInternal(false);
         inputRef.current?.focus();
       } catch (err) {
         showError(err instanceof Error ? err.message : 'Erro ao enviar mensagem');
@@ -499,9 +506,23 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
                   <Sparkles size={20} />
                 )}
               </button>
+              <button
+                type="button"
+                onClick={() => setIsInternal(!isInternal)}
+                className={cn(
+                  "p-2 rounded-full transition-all duration-200",
+                  isInternal ? "bg-amber-100 text-amber-600" : "text-slate-500 hover:text-amber-500 hover:bg-amber-50"
+                )}
+                title="Nota Interna (Oculta para o cliente)"
+              >
+                <Lock size={20} />
+              </button>
             </div>
             
-            <div className="flex-1 flex items-center bg-white rounded-full px-5 py-0.5 border border-slate-200/60 shadow-sm focus-within:border-slate-300 focus-within:shadow-[0_1px_3px_rgba(0,0,0,0.03)] transition-all duration-200">
+            <div className={cn(
+              "flex-1 flex items-center rounded-full px-5 py-0.5 border shadow-sm focus-within:shadow-[0_1px_3px_rgba(0,0,0,0.03)] transition-all duration-200",
+              isInternal ? "bg-amber-50 border-amber-300 focus-within:border-amber-400" : "bg-white border-slate-200/60 focus-within:border-slate-300"
+            )}>
               <input
                 ref={inputRef}
                 type="text"
@@ -509,8 +530,11 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendMedia,
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
-                placeholder="Digite uma mensagem... (Use / para respostas rápidas)"
-                className="w-full bg-transparent outline-none py-2 text-[14px] text-slate-800 placeholder:text-slate-400"
+                placeholder={isInternal ? "Digite uma nota interna..." : "Digite uma mensagem... (Use / para respostas rápidas)"}
+                className={cn(
+                  "w-full bg-transparent outline-none py-2 text-[14px]",
+                  isInternal ? "text-amber-900 placeholder:text-amber-700/50" : "text-slate-800 placeholder:text-slate-400"
+                )}
               />
             </div>
             

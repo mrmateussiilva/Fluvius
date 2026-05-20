@@ -153,6 +153,8 @@ export interface Message {
   mime_type?: string | null;
   external_message_id: string | null;
   status: string;
+  is_internal?: boolean;
+  author_agent_id?: string | null;
   created_at: string;
   quoted_message_id?: string | null;
   quoted_content?: string | null;
@@ -292,6 +294,20 @@ export const sendMessage = async (conversationId: string, content: string, quote
   });
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, 'Failed to send message'));
+  }
+  return response.json();
+};
+
+export const sendInternalNote = async (conversationId: string, content: string): Promise<Message> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/conversations/${conversationId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ content, is_internal: true }),
+  });
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Failed to send internal note'));
   }
   return response.json();
 };

@@ -5,7 +5,7 @@ import { ConversationList } from '../components/ConversationList';
 import { MessagePanel } from '../components/MessagePanel';
 import { TransferModal } from '../components/TransferModal';
 import {
-  fetchConversations, fetchMessages, sendMessage, sendMediaMessage,
+  fetchConversations, fetchMessages, sendMessage, sendMediaMessage, sendInternalNote,
   assignConversation, resolveConversation, pendingConversation, markAsRead
 } from '../api/client';
 import type { Conversation, Message } from '../api/client';
@@ -42,6 +42,7 @@ export const InboxPage: React.FC = () => {
   const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState(false);
   // Copilot alerts state
   const [copilotAlerts, setCopilotAlerts] = useState<CopilotAlert[]>([]);
+  const [typingState, setTypingState] = useState<Record<string, boolean>>({});
 
   const { currentAgent } = useAgent();
   const { token } = useAuth();
@@ -220,6 +221,25 @@ export const InboxPage: React.FC = () => {
           return [...filtered, { ...event.data, timestamp: Date.now() }];
         });
         break;
+
+      case 'TYPING_STATUS':
+        setTypingState(prev => ({
+          ...prev,
+          [event.data.conversation_id]: event.data.is_typing
+        }));
+        
+        // Auto-clear typing status after 5 seconds
+        if (event.data.is_typing) {
+           setTimeout(() => {
+              setTypingState(current => {
+                 if (current[event.data.conversation_id]) {
+                    return { ...current, [event.data.conversation_id]: false };
+                 }
+                 return current;
+              });
+           }, 5000);
+        }
+        break;
     }
   }, [selectedConversationId, loadConversations, loadMessages]);
 
@@ -231,6 +251,17 @@ export const InboxPage: React.FC = () => {
     if (!selectedConversationId) return;
     try {
       await sendMessage(selectedConversationId, content, replyingTo?.id);
+      setReplyingTo(null);
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  };
+
+  const handleSendInternalNote = async (content: string) => {
+    if (!selectedConversationId) return;
+    try {
+      await sendInternalNote(selectedConversationId, content);
       setReplyingTo(null);
     } catch (err) {
       console.error(err);
@@ -368,6 +399,7 @@ export const InboxPage: React.FC = () => {
         <MessagePanel
           messages={messages}
           onSendMessage={handleSendMessage}
+          onSendInternalNote={handleSendInternalNote}
           onSendMedia={handleSendMedia}
           conversation={selectedConversation}
           onAssign={() => handleAssign(selectedConversation.id)}
@@ -380,6 +412,7 @@ export const InboxPage: React.FC = () => {
           onLoadMore={handleLoadMoreMessages}
           hasMore={hasMoreMessages}
           isLoadingMore={isLoadingMore}
+          isTyping={typingState[selectedConversation.id] || false}
         />
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center bg-fluvius-surface border-l border-fluvius-border">
