@@ -49,3 +49,31 @@ def client(db_session):
         yield test_client
     fluvius_app.dependency_overrides.clear()
 
+
+@pytest.fixture(scope="function")
+def workspace_seed(client, db_session):
+    register_payload = {
+        "company_name": "Test Company",
+        "agent_name": "Test Admin",
+        "email": "admin@test.com",
+        "password": "securepassword123"
+    }
+    response = client.post("/api/auth/register", json=register_payload)
+    token = response.json()["access_token"]
+    
+    headers = {"Authorization": f"Bearer {token}"}
+    me_response = client.get("/api/auth/me", headers=headers)
+    me_data = me_response.json()
+    
+    return {
+        "token": token,
+        "headers": headers,
+        "workspace_id": me_data["workspace_id"],
+        "agent_id": me_data["id"]
+    }
+
+
+@pytest.fixture(scope="function")
+def auth_headers(workspace_seed):
+    return workspace_seed["headers"]
+
