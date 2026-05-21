@@ -28,6 +28,7 @@ interface CopilotPanelProps {
   onSelectConversation: (id: string) => void;
   onDismissAlert: (conversationId: string) => void;
   onClearAll: () => void;
+  variant?: 'default' | 'compact';
 }
 
 const urgencyConfig = {
@@ -190,6 +191,7 @@ export const CopilotPanel: React.FC<CopilotPanelProps> = ({
   onSelectConversation,
   onDismissAlert,
   onClearAll,
+  variant = 'default',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -205,9 +207,31 @@ export const CopilotPanel: React.FC<CopilotPanelProps> = ({
     return b.timestamp - a.timestamp;
   });
 
-  return (
-    <>
-      {/* Floating trigger button */}
+  const renderButton = () => {
+    if (variant === 'compact') {
+      return (
+        <button
+          onClick={() => setIsOpen(o => !o)}
+          className={`relative p-1.5 rounded transition-all flex items-center justify-center group
+            ${totalAlerts > 0
+              ? 'text-[#6366f1] bg-[#6366f1]/10 border border-[#6366f1]/20 hover:bg-[#6366f1]/20'
+              : 'text-slate-400 hover:text-[#6366f1] hover:bg-slate-50'
+            }`}
+          title="Copiloto de IA"
+        >
+          <Bot size={15} className={totalAlerts > 0 ? 'animate-pulse' : ''} />
+          {totalAlerts > 0 && (
+            <span className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${criticalCount > 0 ? 'bg-rose-500 animate-ping' : 'bg-amber-500'}`} />
+          )}
+          {/* Tooltip para a sidebar */}
+          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+            Copiloto ({totalAlerts} alerta{totalAlerts !== 1 ? 's' : ''})
+          </div>
+        </button>
+      );
+    }
+
+    return (
       <button
         onClick={() => setIsOpen(o => !o)}
         className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all border
@@ -228,6 +252,12 @@ export const CopilotPanel: React.FC<CopilotPanelProps> = ({
           </span>
         )}
       </button>
+    );
+  };
+
+  return (
+    <>
+      {renderButton()}
 
       {/* Drawer */}
       <AnimatePresence>

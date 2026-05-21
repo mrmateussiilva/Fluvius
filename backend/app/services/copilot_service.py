@@ -127,6 +127,8 @@ class CopilotService:
             urgency = CopilotService._calc_urgency(sentiment, intent, minutes_waiting, trigger)
 
             # --- 6. Emitir COPILOT_ALERT via WebSocket ---
+            # O alerta aparece apenas no painel flutuante do agente (CopilotPanel).
+            # Nenhuma nota interna é criada automaticamente — o agente decide se age.
             alert_payload = {
                 "type": "COPILOT_ALERT",
                 "workspace_id": conversation.workspace_id,
@@ -144,20 +146,8 @@ class CopilotService:
             }
             await socket_manager.broadcast(alert_payload)
             logger.info(
-                f"[Copilot] Alerta emitido para conversa {conversation_id} "
+                f"[Copilot] Alerta WS emitido para conversa {conversation_id} "
                 f"(sentiment={sentiment}, intent={intent}, urgency={urgency})"
-            )
-
-            # --- 7. Salvar nota interna com a análise ---
-            await CopilotService._save_internal_note(
-                db=db,
-                conversation=conversation,
-                sentiment=sentiment,
-                intent=intent,
-                urgency=urgency,
-                trigger=trigger,
-                minutes_waiting=minutes_waiting,
-                suggestion=suggestion,
             )
 
         except Exception as e:

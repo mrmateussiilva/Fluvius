@@ -88,42 +88,40 @@ const AppContent = () => {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={token ? <Navigate to="/" replace /> : <LoginPage />} />
-        <Route path="/signup" element={token ? <Navigate to="/" replace /> : <SignupPage />} />
-        
-        <Route path="/" element={
-          <ProtectedRoute>
-            <OnboardingRedirect>
-              <AgentProvider>
+      <AgentProvider>
+        <Routes>
+          <Route path="/login" element={token ? <Navigate to="/" replace /> : <LoginPage />} />
+          <Route path="/signup" element={token ? <Navigate to="/" replace /> : <SignupPage />} />
+          
+          <Route path="/" element={
+            <ProtectedRoute>
+              <OnboardingRedirect>
                 <InboxPage />
-              </AgentProvider>
-            </OnboardingRedirect>
-          </ProtectedRoute>
-        } />
+              </OnboardingRedirect>
+            </ProtectedRoute>
+          } />
 
-        <Route path="/onboarding" element={
-          <ProtectedRoute>
-            <OnboardingPage />
-          </ProtectedRoute>
-        } />
+          <Route path="/onboarding" element={
+            <ProtectedRoute>
+              <OnboardingPage />
+            </ProtectedRoute>
+          } />
 
-        <Route path="/settings" element={
-          <ProtectedRoute>
-            <SettingsPage />
-          </ProtectedRoute>
-        } />
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          } />
 
-        <Route path="/admin" element={
-          <ProtectedRoute>
-            <AgentProvider>
+          <Route path="/admin" element={
+            <ProtectedRoute>
               <AdminRoute>
                 <AdminPage />
               </AdminRoute>
-            </AgentProvider>
-          </ProtectedRoute>
-        } />
-      </Routes>
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </AgentProvider>
     </BrowserRouter>
   );
 };

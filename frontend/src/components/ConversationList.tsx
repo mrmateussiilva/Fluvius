@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { NewChatModal } from './NewChatModal';
 import { MessageSquarePlus } from 'lucide-react';
 import { APP_VERSION } from '../version';
+import { CopilotPanel, type CopilotAlert } from './CopilotPanel';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -38,10 +39,15 @@ interface ConversationListProps {
   onTabChange: (tab: TabFilter) => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  copilotAlerts: CopilotAlert[];
+  onSelectCopilotConversation: (id: string) => void;
+  onDismissCopilotAlert: (conversationId: string) => void;
+  onClearAllCopilotAlerts: () => void;
 }
 
 export const ConversationList: React.FC<ConversationListProps> = ({
-  conversations, selectedId, onSelect, activeTab, onTabChange, isCollapsed = false, onToggleCollapse
+  conversations, selectedId, onSelect, activeTab, onTabChange, isCollapsed = false, onToggleCollapse,
+  copilotAlerts, onSelectCopilotConversation, onDismissCopilotAlert, onClearAllCopilotAlerts
 }) => {
   const location = useLocation();
   const { currentAgent } = useAgent();
@@ -203,6 +209,14 @@ export const ConversationList: React.FC<ConversationListProps> = ({
             </div>
             
             <div className="flex flex-col items-center gap-1.5 shrink-0">
+              <CopilotPanel
+                alerts={copilotAlerts}
+                onSelectConversation={onSelectCopilotConversation}
+                onDismissAlert={onDismissCopilotAlert}
+                onClearAll={onClearAllCopilotAlerts}
+                variant="compact"
+              />
+              
               <Link to="/settings" className="p-1.5 text-slate-400 hover:text-slate-600 rounded transition-colors group relative">
                 <SettingsIcon size={16} />
                 <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
@@ -409,6 +423,13 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                  </div>
               </div>
               <div className="flex items-center gap-0.5">
+                 <CopilotPanel
+                   alerts={copilotAlerts}
+                   onSelectConversation={onSelectCopilotConversation}
+                   onDismissAlert={onDismissCopilotAlert}
+                   onClearAll={onClearAllCopilotAlerts}
+                   variant="compact"
+                 />
                  <Link to="/settings" className="p-1.5 text-slate-400 hover:text-slate-600 rounded transition-colors">
                     <SettingsIcon size={14} />
                  </Link>

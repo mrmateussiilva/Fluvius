@@ -14,7 +14,38 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { API_BASE_URL } from '../api/client';
 
-const UPLOADS_BASE_URL = API_BASE_URL.replace('/api', '');
+// Normaliza a base URL para servir arquivos de upload sem double-slash
+const _rawBase = API_BASE_URL.replace('/api', '');
+const UPLOADS_BASE_URL = _rawBase.endsWith('/') ? _rawBase.slice(0, -1) : _rawBase;
+
+/** Constrói URL absoluta para mídia hospedada no backend */
+function buildMediaUrl(mediaUrl: string | null | undefined): string {
+  if (!mediaUrl) return '';
+  if (mediaUrl.startsWith('http://') || mediaUrl.startsWith('https://')) return mediaUrl;
+  const path = mediaUrl.startsWith('/') ? mediaUrl : `/${mediaUrl}`;
+  return `${UPLOADS_BASE_URL}${path}`;
+}
+
+/** Formata a data para o separador de grupo — estilo WhatsApp */
+function formatDateLabel(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const sameYear = date.getFullYear() === now.getFullYear();
+  const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  if (dayKey(date) === dayKey(now)) return 'Hoje';
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (dayKey(date) === dayKey(yesterday)) return 'Ontem';
+  return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', ...(sameYear ? {} : { year: 'numeric' }) });
+}
+
+/** Verifica se duas datas ISO são do mesmo dia */
+function isSameDay(a: string, b: string): boolean {
+  const da = new Date(a), db = new Date(b);
+  return da.getFullYear() === db.getFullYear() &&
+    da.getMonth() === db.getMonth() &&
+    da.getDate() === db.getDate();
+}
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -82,12 +113,20 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
     <div className="min-w-[260px] py-2 flex items-center gap-3">
       <audio
         ref={audioRef}
-        src={src}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={() => setIsPlaying(false)}
+        onError={() => { setIsPlaying(false); }}
         className="hidden"
-      />
+        preload="metadata"
+      >
+        {/* Múltiplos formatos para compatibilidade com WhatsApp (ogg/opus) e outros */}
+        <source src={src} type="audio/ogg; codecs=opus" />
+        <source src={src} type="audio/ogg" />
+        <source src={src} type="audio/mpeg" />
+        <source src={src} type="audio/mp4" />
+        <source src={src} />
+      </audio>
       <button 
         onClick={togglePlay}
         className="w-10 h-10 bg-fluvius-blue-main text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors shadow-sm shrink-0"
@@ -183,6 +222,11 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
   const [isUpdatingTags, setIsUpdatingTags] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Scroll management refs
+  const isLoadingMoreRef = useRef(false);
+  const prevScrollHeightRef = useRef(0);
+  const isFirstLoadRef = useRef(true);
+  const lastConversationIdRef = useRef<string | null>(null);
 
   // AI Details Sidebar states
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -260,18 +304,56 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
   const contactPhone = conversation.contact?.phone || '';
   const contactTags = conversation.contact?.tags || [];
 
-  // Scroll to bottom only if we are at the bottom or it's a new message
+  // ── Scroll inteligente ──────────────────────────────────────────────────────
+  // 1. Ao trocar de conversa: sempre vai para o fundo
+  // 2. Ao receber nova mensagem: só vai para o fundo se o usuário estiver perto
+  // 3. Ao carregar mensagens antigas (loadMore): preserva posição de scroll
   useEffect(() => {
-    if (!isLoadingMore) {
-       endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = containerRef.current;
+    if (!container) return;
+
+    const conversationChanged = lastConversationIdRef.current !== conversation.id;
+    if (conversationChanged) {
+      lastConversationIdRef.current = conversation.id;
+      isFirstLoadRef.current = true;
     }
-  }, [messages, isLoadingMore]);
+
+    // Se estamos carregando mensagens antigas, restaurar posição relativa
+    if (isLoadingMoreRef.current) {
+      const newScrollHeight = container.scrollHeight;
+      const diff = newScrollHeight - prevScrollHeightRef.current;
+      container.scrollTop = diff;
+      isLoadingMoreRef.current = false;
+      return;
+    }
+
+    // Primeira carga da conversa ou troca de conversa: ir para baixo
+    if (isFirstLoadRef.current) {
+      endRef.current?.scrollIntoView({ behavior: 'instant' });
+      isFirstLoadRef.current = false;
+      return;
+    }
+
+    // Nova mensagem: só auto-scroll se o usuário estiver perto do fundo (< 150px)
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (distanceFromBottom < 150) {
+      endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, conversation.id]);
+
+  // Rastreia quando loadMore é chamado para capturar scrollHeight antes do update
+  useEffect(() => {
+    if (isLoadingMore) {
+      isLoadingMoreRef.current = true;
+      prevScrollHeightRef.current = containerRef.current?.scrollHeight || 0;
+    }
+  }, [isLoadingMore]);
 
   const handleScroll = () => {
-    if (containerRef.current) {
-      if (containerRef.current.scrollTop === 0 && hasMore && !isLoadingMore && onLoadMore) {
-        onLoadMore();
-      }
+    const container = containerRef.current;
+    if (!container) return;
+    if (container.scrollTop === 0 && hasMore && !isLoadingMore && onLoadMore) {
+      onLoadMore();
     }
   };
 
@@ -504,42 +586,50 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Header - Minimalist & Functional */}
-        <div className="h-14 flex items-center justify-between px-6 bg-white border-b border-slate-200/80 z-20 shrink-0">
+        {/* Header — estilo WhatsApp Web */}
+        <div className="h-[60px] flex items-center justify-between px-4 bg-[#f0f2f5] border-b border-[#e9edef] z-20 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 shrink-0 border border-slate-200/60 shadow-sm overflow-hidden">
-              {conversation.contact?.avatar_url ? (
-                <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover" />
-              ) : (
-                <User size={20} className="opacity-45" />
-              )}
-            </div>
-            
-            <div className="min-w-0">
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="relative shrink-0 group"
+            >
+              <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-400 overflow-hidden border-2 border-transparent group-hover:border-[#00a884]/30 transition-all">
+                {conversation.contact?.avatar_url ? (
+                  <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover" />
+                ) : (
+                  <User size={20} className="opacity-50" />
+                )}
+              </div>
+            </button>
+
+            <div className="min-w-0 cursor-pointer" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
               <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-slate-800 text-[14px] leading-tight">{contactName}</h2>
+                <h2 className="font-semibold text-[#111b21] text-[15px] leading-tight tracking-tight">{contactName}</h2>
                 {conversation.assignee && (
-                  <span className="text-[10px] font-semibold text-blue-600 px-1.5 py-0.5 bg-blue-50/80 border border-blue-100/30 rounded uppercase tracking-wider">
-                     {conversation.assignee.name}
+                  <span className="text-[10px] font-semibold text-[#00a884] px-1.5 py-0.5 bg-[#00a884]/10 rounded uppercase tracking-wider">
+                    {conversation.assignee.name}
                   </span>
                 )}
               </div>
+              {contactPhone && contactPhone !== contactName && (
+                <p className="text-[12px] text-[#667781] leading-none mt-0.5">{contactPhone}</p>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {renderActionBar()}
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className={cn(
-                "flex items-center justify-center p-2 rounded-md transition-all border shrink-0",
-                isSidebarOpen 
-                  ? "bg-amber-50 border-amber-200 text-amber-600 shadow-sm shadow-amber-50/50" 
-                  : "bg-white border-slate-200 text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                "flex items-center justify-center w-9 h-9 rounded-full transition-all",
+                isSidebarOpen
+                  ? "bg-[#00a884]/10 text-[#00a884]"
+                  : "text-[#54656f] hover:bg-[#e9edef]"
               )}
-              title="Detalhes & IA Resumo"
+              title="Detalhes &amp; IA Resumo"
             >
-              <Sparkles size={15} />
+              <Sparkles size={18} />
             </button>
           </div>
         </div>
@@ -576,20 +666,28 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                 const isOutbound = msg.direction === 'outbound';
                 const timeString = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const isSameSenderAsPrev = index > 0 && messages[index-1].direction === msg.direction;
-
+                const prevMsg = index > 0 ? messages[index - 1] : null;
+                const showDateSep = !prevMsg || !isSameDay(prevMsg.created_at, msg.created_at);
                 const isMedia = msg.message_type === 'image' || msg.message_type === 'video';
 
                 const renderMessageContent = () => {
-                  const mediaUrl = msg.media_url?.startsWith('/') ? `${UPLOADS_BASE_URL}${msg.media_url}` : msg.media_url;
+                  const mediaUrl = buildMediaUrl(msg.media_url);
+                  const isDocImage = msg.message_type === 'document' && msg.mime_type?.startsWith('image/');
+                  const fileName = msg.media_url
+                    ? decodeURIComponent(msg.media_url.split('/').pop() || 'arquivo')
+                    : 'arquivo';
+                  const fileExt = msg.mime_type?.split('/')[1]?.toUpperCase() || fileName.split('.').pop()?.toUpperCase() || 'DOC';
+
                   switch (msg.message_type) {
                     case 'audio':
-                      return <AudioPlayer src={mediaUrl || ''} />;
+                      return <AudioPlayer src={mediaUrl} />;
                     case 'video':
                       return (
                         <div className="flex flex-col">
                           <div className="bg-black overflow-hidden rounded-sm">
                             <video controls controlsList="nodownload" disablePictureInPicture={false} className="w-full max-w-[440px] block max-h-[500px]">
-                              <source src={mediaUrl || ''} type={msg.mime_type || 'video/mp4'} />
+                              <source src={mediaUrl} type={msg.mime_type || 'video/mp4'} />
+                              <source src={mediaUrl} type="video/mp4" />
                             </video>
                           </div>
                           {msg.content && (
@@ -604,13 +702,17 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                         <div className="flex flex-col">
                           <div className="overflow-hidden rounded-sm relative group/image">
                             <img
-                              src={mediaUrl || ''}
+                              src={mediaUrl}
                               alt="Media"
                               className="w-full max-w-[440px] h-auto max-h-[500px] object-cover cursor-pointer hover:opacity-95 transition-opacity block"
-                              onClick={() => setLightboxImage(mediaUrl || '')}
+                              onClick={() => setLightboxImage(mediaUrl)}
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                e.currentTarget.parentElement?.classList.add('hidden');
+                              }}
                             />
                             <button
-                              onClick={(e) => { e.stopPropagation(); setLightboxImage(mediaUrl || ''); }}
+                              onClick={(e) => { e.stopPropagation(); setLightboxImage(mediaUrl); }}
                               className="absolute top-2 right-2 bg-black/50 text-white p-1.5 rounded-full opacity-0 group-hover/image:opacity-100 transition-opacity backdrop-blur-sm hover:bg-black/70 shadow-sm"
                             >
                               <Maximize2 size={16} />
@@ -624,26 +726,46 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                         </div>
                       );
                     case 'document':
-                      return (
-                        <div className="flex flex-col gap-2 p-1 m-1">
-                          <div className="bg-slate-100 rounded-md border border-slate-200 flex items-center justify-center p-6 mb-1">
-                             <FileText size={40} className="text-slate-400 opacity-50" />
-                          </div>
-                          <div className="flex items-center justify-between gap-3 px-2">
-                            <div className="min-w-0">
-                              <p className="text-[12px] font-bold text-slate-700 truncate max-w-[180px]">Documento</p>
-                              <p className="text-[9px] text-slate-400 font-medium truncate uppercase">{msg.mime_type?.split('/')[1]?.toUpperCase() || 'PDF'}</p>
+                      // Se o documento for uma imagem (ex: jpeg enviado como documento), mostrar preview
+                      if (isDocImage) {
+                        return (
+                          <div className="flex flex-col">
+                            <div className="overflow-hidden rounded-sm relative group/image">
+                              <img
+                                src={mediaUrl}
+                                alt={fileName}
+                                className="w-full max-w-[440px] h-auto max-h-[500px] object-cover cursor-pointer hover:opacity-95 transition-opacity block"
+                                onClick={() => setLightboxImage(mediaUrl)}
+                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                              />
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setLightboxImage(mediaUrl); }}
+                                className="absolute top-2 right-2 bg-black/50 text-white p-1.5 rounded-full opacity-0 group-hover/image:opacity-100 transition-opacity backdrop-blur-sm hover:bg-black/70 shadow-sm"
+                              >
+                                <Maximize2 size={16} />
+                              </button>
                             </div>
-                            <a
-                              href={mediaUrl || ''}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-2 bg-white border border-slate-200 text-slate-500 rounded-full hover:text-fluvius-blue-main hover:bg-fluvius-blue-main/5 transition-colors shrink-0 shadow-sm"
-                              title="Baixar ou Visualizar"
-                            >
-                              <Download size={14} />
-                            </a>
                           </div>
+                        );
+                      }
+                      return (
+                        <div className="flex items-center gap-3 p-3 m-1 bg-black/5 rounded-lg min-w-[220px]">
+                          <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-sm">
+                            <FileText size={20} className="text-fluvius-blue-main" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[12px] font-bold text-slate-700 truncate max-w-[160px]" title={fileName}>{fileName}</p>
+                            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mt-0.5">{fileExt}</p>
+                          </div>
+                          <a
+                            href={mediaUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-2 bg-white border border-slate-200 text-slate-500 rounded-full hover:text-fluvius-blue-main hover:bg-fluvius-blue-main/5 transition-colors shrink-0 shadow-sm"
+                            title="Baixar ou Visualizar"
+                          >
+                            <Download size={14} />
+                          </a>
                         </div>
                       );
                     default:
@@ -658,14 +780,22 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                 };
 
                 return (
-                  <div
-                    key={msg.id}
-                    className={cn(
-                      "flex flex-col max-w-[78%] md:max-w-[70%]",
-                      isOutbound ? "self-end items-end" : "self-start items-start",
-                      isSameSenderAsPrev ? "mt-0.5" : "mt-3"
+                  <React.Fragment key={msg.id}>
+                    {/* Separador de data — estilo WhatsApp */}
+                    {showDateSep && (
+                      <div className="flex items-center justify-center my-2 self-center w-full">
+                        <span className="date-separator-badge">
+                          {formatDateLabel(msg.created_at)}
+                        </span>
+                      </div>
                     )}
-                  >
+                    <div
+                      className={cn(
+                        "flex flex-col max-w-[78%] md:max-w-[70%]",
+                        isOutbound ? "self-end items-end" : "self-start items-start",
+                        isSameSenderAsPrev ? "mt-0.5" : "mt-2"
+                      )}
+                    >
                     <div className={cn(
                       "relative transition-all shadow-[0_1px_0.5px_rgba(0,0,0,0.13)] group/bubble",
                       isMedia ? "p-1 rounded-lg" : "p-0 rounded-lg",
@@ -710,7 +840,8 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                         {isOutbound && renderStatusIcon(msg.status)}
                       </div>
                     </div>
-                  </div>
+                    </div>
+                  </React.Fragment>
                 );
               })
             )}

@@ -10,7 +10,7 @@ import {
 } from '../api/client';
 import type { Conversation, Message } from '../api/client';
 import type { Contact } from '../api/client';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Lock } from 'lucide-react';
 import { useAgent } from '../context/AgentContext';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket, type WSEvent } from '../hooks/useWebSocket';
@@ -371,20 +371,6 @@ export const InboxPage: React.FC = () => {
         </div>
       )}
 
-      {/* CopilotPanel — botão flutuante no canto superior direito */}
-      <div className="absolute top-3 right-4 z-30">
-        <CopilotPanel
-          alerts={copilotAlerts}
-          onSelectConversation={(id) => {
-            handleSelectConversation(id);
-          }}
-          onDismissAlert={(conversationId) => {
-            setCopilotAlerts(prev => prev.filter(a => a.conversation_id !== conversationId));
-          }}
-          onClearAll={() => setCopilotAlerts([])}
-        />
-      </div>
-
       <div className="flex flex-1 overflow-hidden">
         <ConversationList
           conversations={conversations}
@@ -394,6 +380,12 @@ export const InboxPage: React.FC = () => {
           onTabChange={setActiveTab}
           isCollapsed={isLeftSidebarCollapsed}
           onToggleCollapse={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
+          copilotAlerts={copilotAlerts}
+          onSelectCopilotConversation={handleSelectConversation}
+          onDismissCopilotAlert={(conversationId) => {
+            setCopilotAlerts(prev => prev.filter(a => a.conversation_id !== conversationId));
+          }}
+          onClearAllCopilotAlerts={() => setCopilotAlerts([])}
         />
       {selectedConversation ? (
         <MessagePanel
@@ -415,14 +407,42 @@ export const InboxPage: React.FC = () => {
           isTyping={typingState[selectedConversation.id] || false}
         />
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center bg-fluvius-surface border-l border-fluvius-border">
-          <div className="bg-white p-6 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-6">
-            <MessageSquare size={48} className="text-fluvius-blue-main" />
+        <div className="flex-1 flex flex-col items-center justify-center bg-whatsapp-doodle border-l border-slate-200/60 relative overflow-hidden">
+          {/* Conteúdo central */}
+          <div className="flex flex-col items-center text-center px-8 max-w-sm">
+            {/* Ícone animado estilo WA Web */}
+            <div className="relative mb-8">
+              <div className="w-44 h-44 rounded-full bg-white/60 backdrop-blur-sm flex items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.08)] border border-white/80">
+                <div className="w-24 h-24 rounded-full bg-[#00a884]/10 flex items-center justify-center">
+                  <MessageSquare size={48} strokeWidth={1.2} className="text-[#00a884]" />
+                </div>
+              </div>
+              {/* Dot pulsante */}
+              <div className="absolute bottom-3 right-3 w-4 h-4 bg-[#00a884] rounded-full border-4 border-white shadow-sm animate-pulse" />
+            </div>
+
+            <h2 className="text-[26px] font-light text-[#41525d] mb-3 tracking-tight leading-tight">
+              Fluvius Business
+            </h2>
+            <p className="text-[13.5px] text-[#667781] leading-relaxed">
+              Selecione uma conversa na lista ao lado para começar a atender.
+            </p>
+
+            {/* Dica de atalho */}
+            <div className="mt-8 flex items-center gap-2 px-4 py-2.5 bg-white/60 rounded-xl border border-white/80 shadow-sm backdrop-blur-sm">
+              <span className="text-[11px] font-semibold text-[#54656f] uppercase tracking-wider">Dica</span>
+              <span className="w-px h-3 bg-slate-300" />
+              <span className="text-[12px] text-[#667781]">
+                Digite <kbd className="px-1.5 py-0.5 bg-[#efeae2] rounded text-[11px] font-mono font-bold text-[#41525d]">{"/atalho"}</kbd> para respostas rápidas
+              </span>
+            </div>
           </div>
-          <h2 className="text-2xl font-semibold text-fluvius-text-main mb-2">Fluvius Inbox</h2>
-          <p className="text-fluvius-text-sec max-w-md text-center">
-            Selecione uma conversa para começar a atender.
-          </p>
+
+          {/* Rodapé estilo WA */}
+          <div className="absolute bottom-6 flex items-center gap-1.5 text-[12px] text-[#8696a0]">
+            <Lock size={12} className="opacity-60" />
+            Suas mensagens pessoais são seguras com este sistema
+          </div>
         </div>
       )}
       </div>
