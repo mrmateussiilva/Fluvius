@@ -43,11 +43,12 @@ interface ConversationListProps {
   onSelectCopilotConversation: (id: string) => void;
   onDismissCopilotAlert: (conversationId: string) => void;
   onClearAllCopilotAlerts: () => void;
+  isLoading?: boolean;
 }
 
 export const ConversationList: React.FC<ConversationListProps> = ({
   conversations, selectedId, onSelect, activeTab, onTabChange, isCollapsed = false, onToggleCollapse,
-  copilotAlerts, onSelectCopilotConversation, onDismissCopilotAlert, onClearAllCopilotAlerts
+  copilotAlerts, onSelectCopilotConversation, onDismissCopilotAlert, onClearAllCopilotAlerts, isLoading = false
 }) => {
   const location = useLocation();
   const { currentAgent } = useAgent();
@@ -319,6 +320,12 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
           {/* Conversation List - High Density */}
           <div className="flex-1 overflow-y-auto fluvius-scroll pb-4">
+            {isLoading ? (
+              <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-400">
+                <div className="w-5 h-5 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+                <p className="text-[11px] font-medium uppercase tracking-widest">Carregando...</p>
+              </div>
+            ) : (
             <AnimatePresence mode="popLayout">
               {filteredConversations.length === 0 ? (
                 <div className="py-12 text-center text-slate-400">
@@ -407,6 +414,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 })
               )}
             </AnimatePresence>
+            )}
           </div>
 
 

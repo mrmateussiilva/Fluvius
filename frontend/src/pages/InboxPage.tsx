@@ -44,6 +44,7 @@ export const InboxPage: React.FC = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [activeTab, setActiveTab] = useState<TabFilter>('pending');
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string>('connecting');
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
@@ -75,6 +76,7 @@ export const InboxPage: React.FC = () => {
   }, []);
 
   const loadConversations = useCallback(async () => {
+    setIsLoadingConversations(true);
     try {
       const statusMap: Record<TabFilter, string | undefined> = {
         all: undefined,
@@ -96,6 +98,8 @@ export const InboxPage: React.FC = () => {
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsLoadingConversations(false);
     }
   }, [activeTab, currentAgent]);
 
@@ -511,6 +515,7 @@ export const InboxPage: React.FC = () => {
             setCopilotAlerts(prev => prev.filter(a => a.conversation_id !== conversationId));
           }}
           onClearAllCopilotAlerts={() => setCopilotAlerts([])}
+          isLoading={isLoadingConversations}
         />
       {selectedConversation ? (
         <MessagePanel
