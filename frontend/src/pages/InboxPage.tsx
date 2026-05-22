@@ -27,6 +27,14 @@ function mergeConversations(conversations: Conversation[]): Conversation[] {
   return Array.from(map.values());
 }
 
+function sortConversations(conversations: Conversation[]): Conversation[] {
+  return [...conversations].sort((a, b) => {
+    const timeA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+    const timeB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+    return timeB - timeA;
+  });
+}
+
 export const InboxPage: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -79,7 +87,7 @@ export const InboxPage: React.FC = () => {
       const filtered = activeTab === 'mine' && currentAgent
         ? data.filter(c => c.assignee_id === currentAgent.id)
         : data;
-      setConversations(mergeConversations(filtered));
+      setConversations(sortConversations(mergeConversations(filtered)));
       if (selectedConversationIdRef.current) {
         const selected = data.find(c => c.id === selectedConversationIdRef.current);
         if (selected) {
@@ -124,7 +132,11 @@ export const InboxPage: React.FC = () => {
 
   // Initial loads
   useEffect(() => { loadConversations(); }, [loadConversations]);
-  useEffect(() => { loadMessages(); }, [loadMessages]);
+  useEffect(() => {
+    if (selectedConversationId) {
+      loadMessages();
+    }
+  }, [selectedConversationId, loadMessages]);
 
   // WebSocket Event Handler
   const handleWSEvent = useCallback(async (event: WSEvent) => {
@@ -185,17 +197,81 @@ export const InboxPage: React.FC = () => {
             markAsRead(newMsg.conversation_id).catch(console.error);
           }
         }
-        // Always refresh the conversation list to update previews and unread counts
-        await loadConversations();
+
+        // Update local conversations state optimistically and sort
+        setConversations(prev => {
+          const conversationExists = prev.some(c => c.id === newMsg.conversation_id);
+          if (!conversationExists) {
+            // Se a conversa não existe localmente (por exemplo, nova conversa), faz um fetch
+            loadConversations();
+            return prev;
+          }
+          const updated = prev.map(c => {
+            if (c.id === newMsg.conversation_id) {
+              const isCurrentlySelected = selectedConversationIdRef.current === newMsg.conversation_id;
+              const incrementUnread = newMsg.direction === 'inbound' && !isCurrentlySelected;
+              return {
+                ...c,
+                last_message_at: newMsg.created_at,
+                unread_count: incrementUnread ? c.unread_count + 1 : c.unread_count
+              };
+            }
+            return c;
+          });
+          return sortConversations(updated);
+        });
         break;
 
       case 'NEW_CONVERSATION':
-        await loadConversations();
+        // Adiciona a conversa nova no state e reordena
+        setConversations(prev => {
+          if (prev.some(c => c.id === event.data.id)) return prev;
+          
+          const conv = event.data as Conversation;
+          const statusMap: Record<TabFilter, string | undefined> = {
+            all: undefined,
+            pending: 'pending',
+            mine: 'open',
+            resolved: 'resolved',
+          };
+          const activeStatus = statusMap[activeTab];
+          if (activeStatus && conv.status !== activeStatus) return prev;
+          if (activeTab === 'mine' && currentAgent && conv.assignee_id !== currentAgent.id) return prev;
+
+          return sortConversations([conv, ...prev]);
+        });
         break;
 
       case 'CONVERSATION_UPDATED':
         // Someone assigned, resolved or re-queued a conversation
-        await loadConversations();
+        setConversations(prev => {
+          const statusMap: Record<TabFilter, string | undefined> = {
+            all: undefined,
+            pending: 'pending',
+            mine: 'open',
+            resolved: 'resolved',
+          };
+          const activeStatus = statusMap[activeTab];
+          
+          const updated = prev.map(c => {
+            if (c.id === event.data.id) {
+              return { ...c, ...event.data };
+            }
+            return c;
+          });
+
+          // Filtra conversas que mudaram para status que não pertence à aba atual
+          const filtered = updated.filter(c => {
+            if (c.id === event.data.id) {
+              if (activeStatus && c.status !== activeStatus) return false;
+              if (activeTab === 'mine' && currentAgent && c.assignee_id !== currentAgent.id) return false;
+            }
+            return true;
+          });
+
+          return sortConversations(filtered);
+        });
+
         // If the updated conversation is the one we have open, we might need to refresh it
         if (event.data.id === selectedConversationId) {
           setSelectedConversation(prev => prev ? { ...prev, ...event.data } : prev);
@@ -241,7 +317,7 @@ export const InboxPage: React.FC = () => {
         }
         break;
     }
-  }, [selectedConversationId, loadConversations, loadMessages]);
+  }, [selectedConversationId, activeTab, currentAgent, loadConversations, loadMessages]);
 
   // Connect WebSocket — captura o estado de reconexão
   const wsStatus = useWebSocket(token, handleWSEvent);
@@ -283,8 +359,27 @@ export const InboxPage: React.FC = () => {
   const handleAssign = async (conversationId: string) => {
     if (!currentAgent) return;
     try {
-      await assignConversation(conversationId, currentAgent.id);
-      await loadConversations();
+      const updated = await assignConversation(conversationId, currentAgent.id);
+      setConversations(prev => {
+        const list = prev.map(c => c.id === conversationId ? { ...c, ...updated } : c);
+        const statusMap: Record<TabFilter, string | undefined> = {
+          all: undefined,
+          pending: 'pending',
+          mine: 'open',
+          resolved: 'resolved',
+        };
+        const activeStatus = statusMap[activeTab];
+        return sortConversations(list.filter(c => {
+          if (c.id === conversationId) {
+            if (activeStatus && c.status !== activeStatus) return false;
+            if (activeTab === 'mine' && c.assignee_id !== currentAgent.id) return false;
+          }
+          return true;
+        }));
+      });
+      if (selectedConversationId === conversationId) {
+        setSelectedConversation(prev => prev ? { ...prev, ...updated } : prev);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -292,9 +387,24 @@ export const InboxPage: React.FC = () => {
 
   const handleResolve = async (conversationId: string) => {
     try {
-      await resolveConversation(conversationId);
+      const updated = await resolveConversation(conversationId);
       handleSelectConversation(null);
-      await loadConversations();
+      setConversations(prev => {
+        const list = prev.map(c => c.id === conversationId ? { ...c, ...updated } : c);
+        const statusMap: Record<TabFilter, string | undefined> = {
+          all: undefined,
+          pending: 'pending',
+          mine: 'open',
+          resolved: 'resolved',
+        };
+        const activeStatus = statusMap[activeTab];
+        return sortConversations(list.filter(c => {
+          if (c.id === conversationId) {
+            if (activeStatus && c.status !== activeStatus) return false;
+          }
+          return true;
+        }));
+      });
     } catch (err) {
       console.error(err);
     }
@@ -302,8 +412,23 @@ export const InboxPage: React.FC = () => {
 
   const handlePending = async (conversationId: string) => {
     try {
-      await pendingConversation(conversationId);
-      await loadConversations();
+      const updated = await pendingConversation(conversationId);
+      setConversations(prev => {
+        const list = prev.map(c => c.id === conversationId ? { ...c, ...updated } : c);
+        const statusMap: Record<TabFilter, string | undefined> = {
+          all: undefined,
+          pending: 'pending',
+          mine: 'open',
+          resolved: 'resolved',
+        };
+        const activeStatus = statusMap[activeTab];
+        return sortConversations(list.filter(c => {
+          if (c.id === conversationId) {
+            if (activeStatus && c.status !== activeStatus) return false;
+          }
+          return true;
+        }));
+      });
     } catch (err) {
       console.error(err);
     }
@@ -451,10 +576,26 @@ export const InboxPage: React.FC = () => {
         <TransferModal 
           conversationId={selectedConversationId}
           onClose={() => setIsTransferModalOpen(false)}
-          onTransferred={() => {
+          onTransferred={(updated) => {
             setIsTransferModalOpen(false);
             setSelectedConversationId(null);
-            loadConversations();
+            setConversations(prev => {
+              const list = prev.map(c => c.id === selectedConversationId ? { ...c, ...updated } : c);
+              const statusMap: Record<TabFilter, string | undefined> = {
+                all: undefined,
+                pending: 'pending',
+                mine: 'open',
+                resolved: 'resolved',
+              };
+              const activeStatus = statusMap[activeTab];
+              return sortConversations(list.filter(c => {
+                if (c.id === selectedConversationId) {
+                  if (activeStatus && c.status !== activeStatus) return false;
+                  if (activeTab === 'mine' && currentAgent && c.assignee_id !== currentAgent.id) return false;
+                }
+                return true;
+              }));
+            });
           }}
         />
       )}

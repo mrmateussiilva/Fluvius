@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 interface TransferModalProps {
   conversationId: string;
   onClose: () => void;
-  onTransferred: () => void;
+  onTransferred: (updated: Conversation) => void;
 }
 
 export const TransferModal: React.FC<TransferModalProps> = ({ conversationId, onClose, onTransferred }) => {
@@ -37,12 +37,15 @@ export const TransferModal: React.FC<TransferModalProps> = ({ conversationId, on
   const handleTransfer = async () => {
     try {
       setTransferring(true);
+      let updated: Conversation | null = null;
       if (activeTab === 'queue' && selectedQueueId) {
-        await transferConversation(conversationId, { queue_id: selectedQueueId });
+        updated = await transferConversation(conversationId, { queue_id: selectedQueueId });
       } else if (activeTab === 'agent' && selectedAgentId) {
-        await transferConversation(conversationId, { agent_id: selectedAgentId });
+        updated = await transferConversation(conversationId, { agent_id: selectedAgentId });
       }
-      onTransferred();
+      if (updated) {
+        onTransferred(updated);
+      }
     } catch (err) {
       console.error(err);
       toast.error('Erro ao transferir conversa');

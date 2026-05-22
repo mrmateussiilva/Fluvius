@@ -55,6 +55,33 @@ def attach_contact_and_assignee(db: Session, conversation: Conversation, assigne
     return True
 
 
+def build_conversation_ws_payload(db: Session, conversation: Conversation) -> dict:
+    contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
+    assignee = db.query(Agent).filter(Agent.id == conversation.assignee_id).first() if conversation.assignee_id else None
+    
+    return {
+        "id": conversation.id,
+        "status": conversation.status,
+        "assignee_id": conversation.assignee_id,
+        "queue_id": conversation.queue_id,
+        "unread_count": conversation.unread_count,
+        "last_message_at": (conversation.last_message_at.isoformat() + "Z" if conversation.last_message_at and conversation.last_message_at.tzinfo is None else (conversation.last_message_at.isoformat() if conversation.last_message_at else None)),
+        "assigned_at": (conversation.assigned_at.isoformat() + "Z" if conversation.assigned_at and conversation.assigned_at.tzinfo is None else (conversation.assigned_at.isoformat() if conversation.assigned_at else None)),
+        "resolved_at": (conversation.resolved_at.isoformat() + "Z" if conversation.resolved_at and conversation.resolved_at.tzinfo is None else (conversation.resolved_at.isoformat() if conversation.resolved_at else None)),
+        "contact": {
+            "id": contact.id,
+            "name": contact.name,
+            "phone": contact.phone,
+            "avatar_url": contact.avatar_url
+        } if contact else None,
+        "assignee": {
+            "id": assignee.id,
+            "name": assignee.name,
+            "email": assignee.email
+        } if assignee else None,
+    }
+
+
 @router.get("", response_model=List[ConversationResponse])
 def get_conversations(
     status: Optional[str] = None, 
@@ -192,17 +219,7 @@ async def assign_conversation(
     await ConversationVisibilityService.broadcast_to_allowed_agents(db, conversation, {
         "type": "CONVERSATION_UPDATED",
         "workspace_id": current_agent.workspace_id,
-        "data": {
-            "id": conversation.id,
-            "status": conversation.status,
-            "last_message_at": (conversation.last_message_at.isoformat() + "Z" if conversation.last_message_at.tzinfo is None else conversation.last_message_at.isoformat()) if conversation.last_message_at else None,
-            "assignee_id": conversation.assignee_id,
-            "assignee": {
-                "id": agent.id,
-                "name": agent.name,
-                "email": agent.email
-            }
-        }
+        "data": build_conversation_ws_payload(db, conversation)
     })
 
     conversation.contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
@@ -245,12 +262,7 @@ async def transfer_conversation(
     await ConversationVisibilityService.broadcast_to_allowed_agents(db, conversation, {
         "type": "CONVERSATION_UPDATED",
         "workspace_id": current_agent.workspace_id,
-        "data": {
-            "id": conversation.id,
-            "status": conversation.status,
-            "queue_id": conversation.queue_id,
-            "assignee_id": conversation.assignee_id
-        }
+        "data": build_conversation_ws_payload(db, conversation)
     })
 
     return conversation
@@ -280,12 +292,7 @@ async def resolve_conversation(
     await ConversationVisibilityService.broadcast_to_allowed_agents(db, conversation, {
         "type": "CONVERSATION_UPDATED",
         "workspace_id": current_agent.workspace_id,
-        "data": {
-            "id": conversation.id,
-            "status": conversation.status,
-            "last_message_at": (conversation.last_message_at.isoformat() + "Z" if conversation.last_message_at.tzinfo is None else conversation.last_message_at.isoformat()) if conversation.last_message_at else None,
-            "assignee_id": conversation.assignee_id
-        }
+        "data": build_conversation_ws_payload(db, conversation)
     })
 
     conversation.contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
@@ -422,10 +429,7 @@ async def mark_as_read(
     await ConversationVisibilityService.broadcast_to_allowed_agents(db, conversation, {
         "type": "CONVERSATION_UPDATED",
         "workspace_id": current_agent.workspace_id,
-        "data": {
-            "id": conversation.id,
-            "unread_count": 0
-        }
+        "data": build_conversation_ws_payload(db, conversation)
     })
 
     conversation.contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
@@ -459,12 +463,7 @@ async def pending_conversation(
     await ConversationVisibilityService.broadcast_to_allowed_agents(db, conversation, {
         "type": "CONVERSATION_UPDATED",
         "workspace_id": current_agent.workspace_id,
-        "data": {
-            "id": conversation.id,
-            "status": conversation.status,
-            "last_message_at": (conversation.last_message_at.isoformat() + "Z" if conversation.last_message_at.tzinfo is None else conversation.last_message_at.isoformat()) if conversation.last_message_at else None,
-            "assignee_id": None
-        }
+        "data": build_conversation_ws_payload(db, conversation)
     })
 
     conversation.contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
