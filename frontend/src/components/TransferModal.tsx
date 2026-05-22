@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { type Queue, type Agent, getQueues, fetchAgents, transferConversation } from '../api/client';
+import { type Queue, type Agent, type Conversation, getQueues, fetchAgents, transferConversation } from '../api/client';
 import { X, Users, Layers, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
