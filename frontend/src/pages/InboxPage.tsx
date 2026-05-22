@@ -214,9 +214,28 @@ export const InboxPage: React.FC = () => {
             if (c.id === newMsg.conversation_id) {
               const isCurrentlySelected = selectedConversationIdRef.current === newMsg.conversation_id;
               const incrementUnread = newMsg.direction === 'inbound' && !isCurrentlySelected;
+              
+              let preview = '';
+              if (newMsg.is_internal) {
+                preview = `📝 Nota: ${newMsg.content || ''}`;
+              } else if (newMsg.message_type === 'text') {
+                preview = newMsg.content || '';
+              } else if (newMsg.message_type === 'image') {
+                preview = `📷 Foto${newMsg.content ? ': ' + newMsg.content : ''}`;
+              } else if (newMsg.message_type === 'video') {
+                preview = `🎥 Vídeo${newMsg.content ? ': ' + newMsg.content : ''}`;
+              } else if (newMsg.message_type === 'audio') {
+                preview = '🎤 Áudio';
+              } else if (newMsg.message_type === 'document') {
+                preview = `📄 Documento${newMsg.content ? ': ' + newMsg.content : ''}`;
+              } else {
+                preview = newMsg.content || '';
+              }
+
               return {
                 ...c,
                 last_message_at: newMsg.created_at,
+                last_message_preview: preview,
                 unread_count: incrementUnread ? c.unread_count + 1 : c.unread_count
               };
             }
@@ -516,6 +535,7 @@ export const InboxPage: React.FC = () => {
           }}
           onClearAllCopilotAlerts={() => setCopilotAlerts([])}
           isLoading={isLoadingConversations}
+          typingState={typingState}
         />
       {selectedConversation ? (
         <MessagePanel

@@ -31,6 +31,57 @@ const TABS: { key: TabFilter; label: string; icon: React.ReactNode }[] = [
   { key: 'resolved', label: 'Resolvidas', icon: <CheckCircle size={14} /> },
 ];
 
+const ConversationSkeleton: React.FC = () => (
+  <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-50/50 mb-0.5 animate-pulse">
+    <div className="w-11 h-11 rounded-full bg-slate-100 border border-slate-200/40 shrink-0" />
+    <div className="flex-1 min-w-0">
+      <div className="flex justify-between items-center mb-1.5">
+        <div className="h-3.5 bg-slate-100 rounded w-1/3" />
+        <div className="h-2.5 bg-slate-100 rounded w-1/8" />
+      </div>
+      <div className="h-3 bg-slate-50 rounded w-2/3" />
+    </div>
+  </div>
+);
+
+function formatSmartTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  try {
+    const date = new Date(dateStr);
+    const now = new Date();
+    
+    const isToday = date.getDate() === now.getDate() &&
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear();
+      
+    if (isToday) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday = date.getDate() === yesterday.getDate() &&
+      date.getMonth() === yesterday.getMonth() &&
+      date.getFullYear() === yesterday.getFullYear();
+      
+    if (isYesterday) {
+      return 'Ontem';
+    }
+    
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 7) {
+      const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+      return days[date.getDay()];
+    }
+    
+    return date.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+  } catch (e) {
+    return '';
+  }
+}
+
 interface ConversationListProps {
   conversations: Conversation[];
   selectedId: string | null;
@@ -44,11 +95,13 @@ interface ConversationListProps {
   onDismissCopilotAlert: (conversationId: string) => void;
   onClearAllCopilotAlerts: () => void;
   isLoading?: boolean;
+  typingState?: Record<string, boolean>;
 }
 
 export const ConversationList: React.FC<ConversationListProps> = ({
   conversations, selectedId, onSelect, activeTab, onTabChange, isCollapsed = false, onToggleCollapse,
-  copilotAlerts, onSelectCopilotConversation, onDismissCopilotAlert, onClearAllCopilotAlerts, isLoading = false
+  copilotAlerts, onSelectCopilotConversation, onDismissCopilotAlert, onClearAllCopilotAlerts, isLoading = false,
+  typingState = {}
 }) => {
   const location = useLocation();
   const { currentAgent } = useAgent();
@@ -321,9 +374,15 @@ export const ConversationList: React.FC<ConversationListProps> = ({
           {/* Conversation List - High Density */}
           <div className="flex-1 overflow-y-auto fluvius-scroll pb-4">
             {isLoading ? (
-              <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-400">
-                <div className="w-5 h-5 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
-                <p className="text-[11px] font-medium uppercase tracking-widest">Carregando...</p>
+              <div className="flex flex-col">
+                <ConversationSkeleton />
+                <ConversationSkeleton />
+                <ConversationSkeleton />
+                <ConversationSkeleton />
+                <ConversationSkeleton />
+                <ConversationSkeleton />
+                <ConversationSkeleton />
+                <ConversationSkeleton />
               </div>
             ) : (
             <AnimatePresence mode="popLayout">
@@ -335,13 +394,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 filteredConversations.map((conv) => {
                   const isSelected = selectedId === conv.id;
                   const contactName = conv.contact?.name || conv.contact?.phone || 'Desconhecido';
-                  
-                  let timeStr = '';
-                  if (conv.last_message_at) {
-                    try {
-                      timeStr = formatDistanceToNow(new Date(conv.last_message_at), { addSuffix: false, locale: ptBR });
-                    } catch (e) { timeStr = ''; }
-                  }
+                  const isTyping = typingState[conv.id];
+                  const timeStr = formatSmartTime(conv.last_message_at);
 
                   const statusColor: Record<string, string> = {
                     pending: 'bg-amber-500',
@@ -394,16 +448,29 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                         </div>
                         
                         <div className="flex justify-between items-center">
-                          <div className="text-[11px] text-slate-500 truncate flex items-center gap-1.5">
-                            {conv.assignee ? (
-                              <span className="text-[11px] font-medium text-slate-400 truncate">Atribuído a {conv.assignee.name}</span>
+                          <div className="text-[12px] text-slate-500 truncate flex-1 mr-2">
+                            {isTyping ? (
+                              <span className="text-emerald-600 font-semibold animate-pulse flex items-center gap-1">
+                                <span className="inline-block w-1.5 h-1.5 bg-emerald-600 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                <span className="inline-block w-1.5 h-1.5 bg-emerald-600 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                <span className="inline-block w-1.5 h-1.5 bg-emerald-600 rounded-full animate-bounce" />
+                                digitando...
+                              </span>
                             ) : (
-                              <span className="text-slate-400 text-[11px] font-medium italic">Sem atendente</span>
+                              <span className="text-slate-500 text-[12.5px] leading-tight block truncate">
+                                {conv.last_message_preview || (
+                                  conv.assignee ? (
+                                    <span className="text-[11px] font-medium text-slate-400">Atribuído a {conv.assignee.name}</span>
+                                  ) : (
+                                    <span className="text-slate-400 text-[11px] font-medium italic">Sem atendente</span>
+                                  )
+                                )}
+                              </span>
                             )}
                           </div>
                           
                           {conv.unread_count > 0 && (
-                            <span className="bg-emerald-500 text-white text-[10px] font-bold h-5 min-w-[20px] px-1.5 rounded-full flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                            <span className="bg-emerald-500 text-white text-[10px] font-bold h-5 min-w-[20px] px-1.5 rounded-full flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.05)] shrink-0">
                               {conv.unread_count}
                             </span>
                           )}

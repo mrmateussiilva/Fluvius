@@ -17,6 +17,7 @@ from app.models.workspace import utcnow
 from app.models.contact import Contact
 from app.core.socket_manager import socket_manager
 from app.services.visibility_service import ConversationVisibilityService
+from app.utils.media import get_message_preview
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +165,7 @@ async def create_message(
     
     message = MessageService.create_message(db, message_data)
     conversation.last_message_at = utcnow()
+    conversation.last_message_preview = get_message_preview(message.message_type, message.content, message.is_internal)
     db.commit()
     db.refresh(message)
     
@@ -320,6 +322,7 @@ async def create_media_message(
     
     message = MessageService.create_message(db, message_data)
     conversation.last_message_at = utcnow()
+    conversation.last_message_preview = get_message_preview(message.message_type, message.content)
     db.commit()
     db.refresh(message)
     

@@ -65,6 +65,7 @@ def build_conversation_ws_payload(db: Session, conversation: Conversation) -> di
         "assignee_id": conversation.assignee_id,
         "queue_id": conversation.queue_id,
         "unread_count": conversation.unread_count,
+        "last_message_preview": conversation.last_message_preview,
         "last_message_at": (conversation.last_message_at.isoformat() + "Z" if conversation.last_message_at and conversation.last_message_at.tzinfo is None else (conversation.last_message_at.isoformat() if conversation.last_message_at else None)),
         "assigned_at": (conversation.assigned_at.isoformat() + "Z" if conversation.assigned_at and conversation.assigned_at.tzinfo is None else (conversation.assigned_at.isoformat() if conversation.assigned_at else None)),
         "resolved_at": (conversation.resolved_at.isoformat() + "Z" if conversation.resolved_at and conversation.resolved_at.tzinfo is None else (conversation.resolved_at.isoformat() if conversation.resolved_at else None)),

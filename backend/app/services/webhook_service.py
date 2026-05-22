@@ -10,6 +10,7 @@ from app.services.evolution_service import EvolutionService
 from app.services.sync_service import SyncService
 from app.services.visibility_service import ConversationVisibilityService
 from app.services.copilot_service import CopilotService
+from app.utils.media import get_message_preview
 import logging
 import asyncio
 
@@ -423,6 +424,7 @@ class WebhookService:
         # Update conversation
         from app.models.workspace import utcnow
         conversation.last_message_at = utcnow()
+        conversation.last_message_preview = get_message_preview(msg.message_type, msg.content)
 
         # If inbound and resolved, re-open
         if direction == "inbound":

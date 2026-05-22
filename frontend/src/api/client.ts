@@ -133,6 +133,7 @@ export interface Conversation {
   status: string;
   unread_count: number;
   last_message_at: string | null;
+  last_message_preview?: string | null;
   assigned_at: string | null;
   resolved_at: string | null;
   created_at: string;

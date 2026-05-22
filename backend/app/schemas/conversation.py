@@ -27,6 +27,7 @@ class ConversationResponse(ConversationBase):
     queue_id: Optional[str] = None
     unread_count: int = 0
     last_message_at: Optional[datetime]
+    last_message_preview: Optional[str] = None
     assigned_at: Optional[datetime] = None
     resolved_at: Optional[datetime] = None
     created_at: datetime

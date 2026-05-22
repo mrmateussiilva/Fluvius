@@ -17,6 +17,7 @@ class Conversation(Base):
     status = Column(String, nullable=False, default="bot")  # bot, pending, open, resolved
     unread_count = Column(Integer, default=0, nullable=False)
     last_message_at = Column(DateTime(timezone=True), nullable=True)
+    last_message_preview = Column(String, nullable=True)
     assigned_at = Column(DateTime(timezone=True), nullable=True)
     resolved_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)

@@ -49,3 +49,21 @@ async def download_media(url: str, api_key: str, mime_type: str) -> str:
     except Exception as e:
         logger.error(f"Failed to download media from {url}: {e}")
         return url # Fallback to original URL if download fails
+
+
+def get_message_preview(message_type: str, content: str | None, is_internal: bool = False) -> str:
+    if is_internal:
+        return f"📝 Nota: {content or ''}"
+    
+    if message_type == "text":
+        return content or ""
+    elif message_type == "image":
+        return f"📷 Foto{': ' + content if content else ''}"
+    elif message_type == "video":
+        return f"🎥 Vídeo{': ' + content if content else ''}"
+    elif message_type == "audio":
+        return "🎤 Áudio"
+    elif message_type == "document":
+        return f"📄 Documento{': ' + content if content else ''}"
+    return content or ""
+
