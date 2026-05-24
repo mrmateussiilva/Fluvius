@@ -11,7 +11,7 @@ interface ConversationState {
   lastFetchedAt: Record<string, number>; // key: status filter (e.g., 'pending', 'all', etc.), value: timestamp
 
   // Actions
-  setConversations: (conversations: Conversation[]) => void;
+  setConversations: (conversations: Conversation[] | ((prev: Conversation[]) => Conversation[])) => void;
   loadConversations: (statusFilter: string | undefined, activeTab: string, force?: boolean) => Promise<void>;
   loadMessages: (conversationId: string, force?: boolean) => Promise<void>;
   loadMoreMessages: (conversationId: string) => Promise<void>;
@@ -51,7 +51,12 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
   lastFetchedAt: {},
 
   setConversations: (conversations) => {
-    set({ conversations: sortConversations(conversations) });
+    set((state) => {
+      const nextConversations = typeof conversations === 'function'
+        ? conversations(state.conversations)
+        : conversations;
+      return { conversations: sortConversations(nextConversations) };
+    });
   },
 
   loadConversations: async (statusFilter, activeTab, force = false) => {

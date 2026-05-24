@@ -4,6 +4,7 @@ import mimetypes
 import os
 import httpx
 import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -71,8 +72,15 @@ def get_message_preview(message_type: str, content: str | None, is_internal: boo
 def get_serialized_avatar_url(avatar_url: str | None, contact_id: str) -> str | None:
     if not avatar_url:
         return None
+    if avatar_url.startswith("/api/media/avatar/"):
+        if Path(f"uploads/avatars/{contact_id}.jpg").exists():
+            return avatar_url
+        return None
     if avatar_url.startswith("http"):
-        return f"/api/media/avatar/{contact_id}"
+        # Only expose the local avatar endpoint when the file is already cached.
+        # Otherwise large conversation lists trigger hundreds of slow 404 image
+        # requests while the browser tries to load avatars that do not exist yet.
+        if Path(f"uploads/avatars/{contact_id}.jpg").exists():
+            return f"/api/media/avatar/{contact_id}"
+        return None
     return avatar_url
-
-

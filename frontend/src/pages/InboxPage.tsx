@@ -45,6 +45,7 @@ function sortConversations(conversations: Conversation[]): Conversation[] {
 export const InboxPage: React.FC = () => {
   const conversations = useConversationStore(state => state.conversations);
   const isLoadingConversations = useConversationStore(state => state.isLoadingConversations);
+  const setConversations = useConversationStore(state => state.setConversations);
   const storeLoadConversations = useConversationStore(state => state.loadConversations);
   const storeLoadMessages = useConversationStore(state => state.loadMessages);
   const storeLoadMoreMessages = useConversationStore(state => state.loadMoreMessages);

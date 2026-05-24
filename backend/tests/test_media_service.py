@@ -95,19 +95,14 @@ def test_get_contact_avatar_redirect(client, db_session):
     db_session.add(contact)
     db_session.commit()
 
-    # Mocka o método de download para evitar rede
-    with patch("app.api.routes.media.MediaDownloadService.download_contact_avatar", new_callable=AsyncMock) as mock_download:
-        response = client.get("/api/media/avatar/contact-avatar-redirect-test", follow_redirects=False)
-        
-        # Deve retornar status code de redirecionamento (307)
-        assert response.status_code == 307
-        assert response.headers["location"] == "http://whatsapp-cdn.net/profile.jpg"
-        
-        # Deve disparar a tarefa de download em background
-        mock_download.assert_called_once()
+    response = client.get("/api/media/avatar/contact-avatar-redirect-test", follow_redirects=False)
+
+    # Deve retornar status code de redirecionamento (307)
+    assert response.status_code == 307
+    assert response.headers["location"] == "http://whatsapp-cdn.net/profile.jpg"
 
 
-def test_get_contact_avatar_not_found_triggers_bg_task(client, db_session):
+def test_get_contact_avatar_not_found_is_fast_and_cacheable(client, db_session):
     from app.models.contact import Contact
     from app.models.conversation import Conversation
     from app.models.inbox import Inbox
@@ -157,10 +152,10 @@ def test_get_contact_avatar_not_found_triggers_bg_task(client, db_session):
 
     with patch("app.api.routes.media.fetch_and_download_avatar_task", new_callable=AsyncMock) as mock_fetch_task:
         response = client.get("/api/media/avatar/contact-avatar-bg-test")
-        
-        # Como o arquivo físico não existe e não há avatar_url externo, deve retornar 404
+
+        # Como o arquivo físico não existe e não há avatar_url externo, retorna 404 cacheável
+        # sem acionar download em background a partir de request de imagem do browser.
         assert response.status_code == 404
-        assert response.json()["detail"] == "Avatar carregando em segundo plano"
-        
-        # Deve ter agendado a busca/download em background
-        mock_fetch_task.assert_called_once()
+        assert response.json()["detail"] == "Avatar não disponível"
+        assert "max-age" in response.headers["cache-control"]
+        mock_fetch_task.assert_not_called()

@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, field_serializer
 from app.schemas.agent import AgentRead
+from app.utils.media import get_serialized_avatar_url
 
 
 class ContactResponse(BaseModel):
@@ -15,11 +16,7 @@ class ContactResponse(BaseModel):
 
     @field_serializer("avatar_url")
     def serialize_avatar(self, avatar_url: Optional[str], _info):
-        if not avatar_url:
-            return None
-        if avatar_url.startswith("http"):
-            return f"/api/media/avatar/{self.id}"
-        return avatar_url
+        return get_serialized_avatar_url(avatar_url, self.id)
 
 
 class ConversationBase(BaseModel):
