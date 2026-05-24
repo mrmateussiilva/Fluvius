@@ -1,10 +1,16 @@
 import os
+import base64
 import pytest
 from pathlib import Path
 from unittest.mock import patch, AsyncMock
 
 from app.models.media import Media
 from app.models.message import Message
+from app.models.workspace import Workspace
+from app.models.contact import Contact
+from app.models.conversation import Conversation
+from app.models.inbox import Inbox
+from app.models.connection import Connection
 from app.services.media_service import MediaDownloadService
 
 
@@ -81,12 +87,96 @@ async def test_get_media_file_autocure(client, db_session):
     assert media.downloaded is False
 
 
+@pytest.mark.asyncio
+async def test_download_message_media_uses_evolution_message_envelope(db_session, tmp_path):
+    workspace = Workspace(id="ws-media", name="Workspace", slug="ws-media")
+    contact = Contact(id="contact-media", workspace_id=workspace.id, phone="5511999999999")
+    inbox = Inbox(id="inbox-media", workspace_id=workspace.id, name="Inbox", channel_type="whatsapp")
+    connection = Connection(
+        id="conn-media",
+        workspace_id=workspace.id,
+        inbox_id=inbox.id,
+        name="Evolution",
+        provider="evolution_api",
+        instance_name="inst",
+        base_url="http://evolution.local",
+        api_key="secret",
+        status="online",
+    )
+    conversation = Conversation(
+        id="conv-media",
+        workspace_id=workspace.id,
+        inbox_id=inbox.id,
+        contact_id=contact.id,
+    )
+    message = Message(
+        id="msg-media",
+        workspace_id=workspace.id,
+        conversation_id=conversation.id,
+        contact_id=contact.id,
+        direction="inbound",
+        message_type="image",
+        content="Imagem",
+        media_url="/api/media/media-download",
+        mime_type="image/jpeg",
+        raw_payload={
+            "data": {
+                "key": {
+                    "id": "EVOLUTION_MSG_ID",
+                    "remoteJid": "5511999999999@s.whatsapp.net",
+                    "fromMe": False,
+                },
+                "message": {
+                    "imageMessage": {
+                        "mimetype": "image/jpeg",
+                        "url": "https://mmg.whatsapp.net/media.enc",
+                    }
+                },
+            }
+        },
+    )
+    media = Media(
+        id="media-download",
+        message_id=message.id,
+        media_type="image",
+        mime_type="image/jpeg",
+        downloaded=False,
+        failed=False,
+    )
+
+    db_session.add_all([workspace, contact, inbox, connection, conversation, message, media])
+    db_session.commit()
+
+    encoded = base64.b64encode(b"image data").decode()
+    with patch("app.services.media_service.UPLOADS_DIR", tmp_path), patch(
+        "app.services.media_service.EvolutionService.get_base64_from_media_message",
+        new_callable=AsyncMock,
+        return_value=encoded,
+    ) as mock_get_base64:
+        await MediaDownloadService.download_message_media(db_session, message.id)
+
+    mock_get_base64.assert_awaited_once()
+    _, kwargs = mock_get_base64.call_args
+    assert kwargs["message"]["key"]["id"] == "EVOLUTION_MSG_ID"
+    assert "imageMessage" in kwargs["message"]["message"]
+    assert kwargs["convert_to_mp4"] is False
+
+    db_session.refresh(media)
+    db_session.refresh(message)
+    assert media.downloaded is True
+    assert media.failed is False
+    assert media.file_path
+    assert (tmp_path / "images" / Path(media.file_path).name).exists()
+    assert message.media_url == "/api/media/media-download"
+
+
 def test_get_contact_avatar_proxy(client, db_session):
     from app.models.contact import Contact
+    contact_id = "contact-avatar-proxy-test"
     
     # Cria um contato com avatar_url externo
     contact = Contact(
-        id="contact-avatar-redirect-test",
+        id=contact_id,
         workspace_id="ws-123",
         name="Test Contact Avatar",
         phone="5511999999999",
@@ -101,7 +191,7 @@ def test_get_contact_avatar_proxy(client, db_session):
     mock_response.content = b"avatar image"
 
     with patch("httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_response) as mock_get:
-        response = client.get("/api/media/avatar/contact-avatar-redirect-test", follow_redirects=False)
+        response = client.get(f"/api/media/avatar/{contact_id}", follow_redirects=False)
 
     assert response.status_code == 200
     assert response.headers["content-type"] == "image/jpeg"

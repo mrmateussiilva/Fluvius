@@ -269,6 +269,7 @@ class EvolutionService:
         api_key: str,
         instance_name: str,
         message: dict,
+        convert_to_mp4: bool = False,
     ) -> str | None:
         """Solicita à Evolution API que descriptografe e retorne base64 de uma mídia."""
         url = f"{base_url.rstrip('/')}/chat/getBase64FromMediaMessage/{instance_name}"
@@ -276,12 +277,17 @@ class EvolutionService:
 
         try:
             response = await _request(
-                "post", url, headers=headers, json={"message": message}
+                "post",
+                url,
+                headers=headers,
+                json={"message": message, "convertToMp4": convert_to_mp4},
             )
             response.raise_for_status()
             data = response.json()
             if isinstance(data, dict) and "base64" in data:
                 return data["base64"]
+            if isinstance(data, dict) and isinstance(data.get("data"), dict) and "base64" in data["data"]:
+                return data["data"]["base64"]
             return None
         except Exception as e:
             logger.error(f"Failed to fetch base64 media from Evolution API: {e}")

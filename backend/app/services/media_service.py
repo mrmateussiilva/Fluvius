@@ -3,6 +3,8 @@ import uuid
 import logging
 import mimetypes
 import asyncio
+import base64
+import binascii
 import httpx
 from pathlib import Path
 from sqlalchemy.orm import Session
@@ -21,6 +23,52 @@ logger = logging.getLogger(__name__)
 
 # Diretório base montado no docker/local
 UPLOADS_DIR = Path("uploads")
+
+
+def _payload_data(raw_payload: dict) -> dict:
+    data = raw_payload.get("data")
+    return data if isinstance(data, dict) else raw_payload
+
+
+def _payload_message(raw_payload: dict) -> dict:
+    data = _payload_data(raw_payload)
+    message = data.get("message") or raw_payload.get("message") or {}
+    return message if isinstance(message, dict) else {}
+
+
+def _extract_media_source_url(raw_payload: dict) -> str | None:
+    data = _payload_data(raw_payload)
+    for source in (data, raw_payload):
+        url = source.get("mediaUrl") or source.get("url")
+        if url:
+            return url
+
+    message = _payload_message(raw_payload)
+    for key in ("imageMessage", "audioMessage", "videoMessage", "documentMessage"):
+        media_message = message.get(key)
+        if isinstance(media_message, dict) and media_message.get("url"):
+            return media_message["url"]
+    return None
+
+
+def _build_evolution_media_message(raw_payload: dict) -> dict | None:
+    data = _payload_data(raw_payload)
+    key = data.get("key") or raw_payload.get("key")
+    message = _payload_message(raw_payload)
+
+    if not isinstance(key, dict):
+        return None
+
+    evolution_message = {"key": key}
+    if message:
+        evolution_message["message"] = message
+    return evolution_message
+
+
+def _decode_base64_media(base64_data: str) -> bytes:
+    if "," in base64_data and base64_data.strip().startswith("data:"):
+        base64_data = base64_data.split(",", 1)[1]
+    return base64.b64decode(base64_data, validate=True)
 
 
 class MediaDownloadService:
@@ -80,13 +128,10 @@ class MediaDownloadService:
                 return
 
             raw_payload = message.raw_payload or {}
-            wa_message = (
-                raw_payload.get("data", {}).get("message")
-                or raw_payload.get("message")
-            )
+            evolution_message = _build_evolution_media_message(raw_payload)
 
             # Detectar a URL original (se houver) salva no payload ou informada
-            source_url = raw_payload.get("data", {}).get("mediaUrl") or raw_payload.get("mediaUrl")
+            source_url = _extract_media_source_url(raw_payload)
             
             # Tipo e extensão do arquivo
             mime_type = message.mime_type or media.mime_type or "application/octet-stream"
@@ -111,21 +156,27 @@ class MediaDownloadService:
             success = False
             async with MediaDownloadService._download_semaphore:
                 try:
-                    # Caso 1: Mídia descriptografada via Evolution API (para .enc do WhatsApp)
-                    if wa_message and (source_url and ".enc" in source_url or "keys" in str(wa_message).lower()):
+                    # Caso 1: Mídia descriptografada via Evolution API.
+                    # A Evolution espera o envelope da mensagem com key.id, não só imageMessage/audioMessage.
+                    if evolution_message:
                         logger.info(f"[MediaDownloadService] Solicitando descriptografia via Evolution para mensagem {message_id}")
                         base64_data = await EvolutionService.get_base64_from_media_message(
                             base_url=connection.base_url,
                             api_key=connection.api_key,
                             instance_name=connection.instance_name,
-                            message={"message": wa_message},
+                            message=evolution_message,
+                            convert_to_mp4=media.media_type == "video",
                         )
                         if base64_data:
-                            import base64
-                            with open(absolute_path, "wb") as f:
-                                f.write(base64.b64decode(base64_data))
-                            success = True
-                            logger.info(f"[MediaDownloadService] Mídia descriptografada salva em {relative_path}")
+                            try:
+                                content = _decode_base64_media(base64_data)
+                            except (binascii.Error, ValueError) as exc:
+                                logger.error(f"[MediaDownloadService] Base64 inválido para mídia {media.id}: {exc}")
+                            else:
+                                with open(absolute_path, "wb") as f:
+                                    f.write(content)
+                                success = True
+                                logger.info(f"[MediaDownloadService] Mídia descriptografada salva em {relative_path}")
 
                     # Caso 2: URL direta de download da Evolution API (localhost / docker)
                     if not success and source_url and ("localhost" in source_url or "host.docker.internal" in source_url or "/message/download" in source_url):
