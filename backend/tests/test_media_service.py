@@ -1,5 +1,6 @@
 import os
 import base64
+import uuid
 import pytest
 from pathlib import Path
 from unittest.mock import patch, AsyncMock
@@ -172,7 +173,7 @@ async def test_download_message_media_uses_evolution_message_envelope(db_session
 
 def test_get_contact_avatar_proxy(client, db_session):
     from app.models.contact import Contact
-    contact_id = "contact-avatar-proxy-test"
+    contact_id = f"contact-avatar-proxy-{uuid.uuid4()}"
     
     # Cria um contato com avatar_url externo
     contact = Contact(

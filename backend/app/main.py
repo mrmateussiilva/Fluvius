@@ -1,7 +1,6 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Depends
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy.orm import Session
 from contextlib import asynccontextmanager
 from jose import jwt
 import asyncio
@@ -10,7 +9,7 @@ import logging
 
 from app.core.config import settings
 from app.core.socket_manager import socket_manager
-from app.core.database import get_db
+from app.core.database import SessionLocal
 from app.core.auth import SECRET_KEY, ALGORITHM
 from app.models.agent import Agent
 
@@ -102,7 +101,6 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 async def websocket_endpoint(
     websocket: WebSocket, 
     token: str | None = Query(default=None),
-    db: Session = Depends(get_db)
 ):
     agent_id = None
     workspace_id = None
@@ -130,14 +128,15 @@ async def websocket_endpoint(
             await websocket.close(code=1008)
             return
             
-        agent = db.query(Agent).filter(Agent.id == agent_id).first()
-        if not agent:
-            logger.warning("WS: token rejected because agent %s was not found", agent_id)
-            await websocket.accept()
-            await websocket.close(code=1008)
-            return
+        with SessionLocal() as db:
+            agent = db.query(Agent).filter(Agent.id == agent_id).first()
+            if not agent:
+                logger.warning("WS: token rejected because agent %s was not found", agent_id)
+                await websocket.accept()
+                await websocket.close(code=1008)
+                return
 
-        workspace_id = agent.workspace_id
+            workspace_id = agent.workspace_id
         logger.info("WS: accepted agent %s from workspace %s", agent_id, workspace_id)
         await socket_manager.connect(websocket, workspace_id, agent_id)
         
