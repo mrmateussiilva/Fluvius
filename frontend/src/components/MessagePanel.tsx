@@ -745,8 +745,15 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                   const fileExt = msg.mime_type?.split('/')[1]?.toUpperCase() || fileName.split('.').pop()?.toUpperCase() || 'DOC';
 
                   switch (msg.message_type) {
-                    case 'audio':
-                      return <AudioPlayer src={mediaUrl} />;
+                    case 'audio': {
+                      // For audio, always use backend proxy to decrypt .enc files from WhatsApp
+                      // If media_url is already a local file, use it directly
+                      const isLocalMedia = msg.media_url && !msg.media_url.startsWith('http');
+                      const audioSrc = isLocalMedia
+                        ? mediaUrl
+                        : `${API_BASE_URL}/media/proxy?message_id=${msg.id}`;
+                      return <AudioPlayer src={audioSrc} />;
+                    }
                     case 'video':
                       return (
                         <div className="flex flex-col">

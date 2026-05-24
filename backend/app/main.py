@@ -27,6 +27,7 @@ from app.api.routes import (
     queues_router,
     quick_replies_router,
     copilot_router,
+    media_router,
 )
 
 logger = logging.getLogger(__name__)
@@ -89,6 +90,7 @@ app.include_router(dashboard_router)
 app.include_router(queues_router)
 app.include_router(quick_replies_router)
 app.include_router(copilot_router)
+app.include_router(media_router)
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 
 # Create uploads dir if it doesn't exist
