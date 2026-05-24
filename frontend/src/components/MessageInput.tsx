@@ -323,26 +323,28 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendIntern
         />
       )}
 
-      {/* Attachment Menu - Functional List */}
+      {/* Attachment Menu - Premium Card */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
             ref={menuRef}
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 5 }}
-            className="absolute bottom-full left-2 mb-2 z-40 bg-white rounded-md shadow-lg border border-slate-200 p-1 min-w-[140px]"
+            initial={{ opacity: 0, scale: 0.95, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="absolute bottom-full left-3 mb-3 z-40 bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.1)] border border-slate-200/80 p-2 min-w-[180px] backdrop-blur-sm"
           >
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2 pt-1 pb-2">Enviar como</p>
             {attachmentOptions.map((opt) => (
               <button
                 key={opt.id}
                 onClick={() => handleFileSelect(opt.accept)}
-                className="flex items-center gap-2.5 w-full hover:bg-slate-50 px-3 py-2 rounded transition-colors text-left"
+                className="flex items-center gap-3 w-full hover:bg-slate-50 px-2 py-2.5 rounded-xl transition-colors text-left group"
               >
-                <div className={cn(opt.color, opt.bg, "p-1.5 rounded")}>
+                <div className={cn(opt.color, opt.bg, "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform")}>
                   {opt.icon}
                 </div>
-                <span className="text-[12px] font-bold text-slate-700">{opt.label}</span>
+                <span className="text-[13px] font-semibold text-slate-700">{opt.label}</span>
               </button>
             ))}
           </motion.div>
@@ -464,27 +466,36 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendIntern
 
       {/* Main Input Area */}
       <div className={cn(
-        "flex items-center gap-2 p-2.5 transition-colors border-t border-slate-200/50 z-20 shrink-0",
-        isRecording ? "bg-rose-50/50" : "bg-[#f0f2f5]"
+        "flex items-end gap-2 px-3 py-3 transition-all border-t z-20 shrink-0",
+        "shadow-[0_-1px_0_rgba(0,0,0,0.04),0_-4px_16px_rgba(0,0,0,0.02)]",
+        isRecording ? "bg-rose-50/60 border-rose-100" : "bg-white border-slate-100"
       )}>
         {!isRecording ? (
           <>
-            <div className="flex items-center gap-0.5">
-              <button type="button" className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-200/40 rounded-full transition-all duration-200">
-                <Smile size={20} />
+            {/* Botões de Ação Esquerdos */}
+            <div className="flex items-center gap-0.5 pb-1 shrink-0">
+              <button
+                type="button"
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-150"
+                title="Emoji"
+              >
+                <Smile size={19} />
               </button>
-              
+
               <button
                 type="button"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className={cn(
-                  "p-2 rounded-full transition-all duration-200",
-                  isMenuOpen ? "bg-slate-200/80 text-slate-800" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/40"
+                  "p-2 rounded-xl transition-all duration-150",
+                  isMenuOpen
+                    ? "bg-fluvius-blue-50 text-fluvius-blue-main shadow-inner"
+                    : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
                 )}
+                title="Anexar arquivo"
               >
-                <Paperclip size={20} />
+                <Paperclip size={19} />
               </button>
-              
+
               <input
                 type="file"
                 ref={fileInputRef}
@@ -497,31 +508,43 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendIntern
                 type="button"
                 onClick={handleSuggestReply}
                 disabled={isGeneratingSuggestion || !conversationId}
-                className="p-2 text-amber-500 hover:bg-amber-100/40 rounded-full transition-all duration-200 disabled:opacity-40"
+                className={cn(
+                  "p-2 rounded-xl transition-all duration-150 disabled:opacity-30",
+                  isGeneratingSuggestion
+                    ? "text-amber-500 bg-amber-50"
+                    : "text-slate-400 hover:text-amber-500 hover:bg-amber-50"
+                )}
                 title="Sugestão com IA"
               >
                 {isGeneratingSuggestion ? (
-                  <Loader2 size={20} className="animate-spin" />
+                  <Loader2 size={19} className="animate-spin" />
                 ) : (
-                  <Sparkles size={20} />
+                  <Sparkles size={19} />
                 )}
               </button>
+
               <button
                 type="button"
                 onClick={() => setIsInternal(!isInternal)}
                 className={cn(
-                  "p-2 rounded-full transition-all duration-200",
-                  isInternal ? "bg-amber-100 text-amber-600" : "text-slate-500 hover:text-amber-500 hover:bg-amber-50"
+                  "p-2 rounded-xl transition-all duration-150",
+                  isInternal
+                    ? "bg-amber-100 text-amber-600 shadow-inner"
+                    : "text-slate-400 hover:text-amber-500 hover:bg-amber-50"
                 )}
-                title="Nota Interna (Oculta para o cliente)"
+                title="Nota Interna"
               >
-                <Lock size={20} />
+                <Lock size={19} />
               </button>
             </div>
-            
+
+            {/* Campo de Texto */}
             <div className={cn(
-              "flex-1 flex items-center rounded-full px-5 py-0.5 border shadow-sm focus-within:shadow-[0_1px_3px_rgba(0,0,0,0.03)] transition-all duration-200",
-              isInternal ? "bg-amber-50 border-amber-300 focus-within:border-amber-400" : "bg-white border-slate-200/60 focus-within:border-slate-300"
+              "flex-1 flex items-end rounded-2xl border transition-all duration-200 min-h-[44px]",
+              "focus-within:shadow-[0_0_0_3px_rgba(59,130,246,0.12)]",
+              isInternal
+                ? "bg-amber-50 border-amber-300/80 focus-within:border-amber-400"
+                : "bg-slate-50 border-slate-200 hover:border-slate-300 focus-within:border-fluvius-blue-300 focus-within:bg-white"
             )}>
               <input
                 ref={inputRef}
@@ -530,48 +553,45 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, onSendIntern
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
-                placeholder={isInternal ? "Digite uma nota interna..." : "Digite uma mensagem... (Use / para respostas rápidas)"}
+                placeholder={isInternal ? "🔒 Nota interna (só a equipe vê)..." : "Mensagem..."}
                 className={cn(
-                  "w-full bg-transparent outline-none py-2 text-[14px]",
-                  isInternal ? "text-amber-900 placeholder:text-amber-700/50" : "text-slate-800 placeholder:text-slate-400"
+                  "w-full bg-transparent outline-none px-4 py-[11px] text-[14px] leading-5 resize-none",
+                  isInternal
+                    ? "text-amber-900 placeholder:text-amber-600/50 font-medium"
+                    : "text-slate-800 placeholder:text-slate-400"
                 )}
               />
             </div>
-            
-            <div className="flex items-center gap-1 shrink-0">
+
+            {/* Botão Enviar / Mic */}
+            <div className="pb-1 shrink-0">
               {text.trim() ? (
-                <button
+                <motion.button
                   type="button"
                   onClick={handleSend}
-                  className="w-10 h-10 rounded-full bg-[#00a884] text-white flex items-center justify-center shadow-[0_2px_4px_rgba(0,168,132,0.2)] hover:bg-[#008f72] transition-all hover:scale-105 active:scale-95 shrink-0"
-                  title="Enviar mensagem"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="w-10 h-10 rounded-full bg-gradient-to-br from-fluvius-blue-main to-fluvius-blue-deep text-white flex items-center justify-center shadow-[0_4px_12px_rgba(59,130,246,0.35)] hover:shadow-[0_6px_20px_rgba(59,130,246,0.45)] hover:scale-105 active:scale-95 transition-all shrink-0"
+                  title="Enviar mensagem (Enter)"
                 >
                   <Send size={15} className="ml-0.5" />
-                </button>
+                </motion.button>
               ) : (
                 <>
-                  <button 
-                    type="button" 
-                    onClick={() => fileInputRef.current?.click()} 
-                    className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-200/40 rounded-full transition-all duration-200"
-                    title="Enviar anexo"
-                  >
-                    <ImageIcon size={20} />
-                  </button>
-                  <button 
-                    type="button" 
-                    onMouseDown={startRecording} 
-                    onMouseUp={stopRecording} 
-                    onMouseLeave={stopRecording} 
+                  <button
+                    type="button"
+                    onMouseDown={startRecording}
+                    onMouseUp={stopRecording}
+                    onMouseLeave={stopRecording}
                     className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0 shadow-sm border",
-                      isRecording 
-                        ? "bg-rose-500 text-white animate-pulse border-rose-500" 
-                        : "bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-700 border-slate-200"
+                      "w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0 border",
+                      isRecording
+                        ? "bg-rose-500 text-white animate-pulse border-rose-500 shadow-[0_4px_12px_rgba(239,68,68,0.35)]"
+                        : "bg-white hover:bg-slate-50 text-slate-400 hover:text-fluvius-blue-main border-slate-200 hover:border-blue-200 shadow-sm hover:shadow"
                     )}
                     title="Segurar para gravar áudio"
                   >
-                    <Mic size={18} />
+                    <Mic size={17} />
                   </button>
                 </>
               )}

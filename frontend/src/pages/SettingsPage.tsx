@@ -260,7 +260,7 @@ export const SettingsPage: React.FC = () => {
         <div className="grid grid-cols-12 gap-6">
           
           {/* Settings Navigation */}
-          <div className="col-span-3 space-y-1">
+          <div className="col-span-3 space-y-1 bg-white p-2 rounded-xl border border-slate-200/60 shadow-sm h-fit">
             {[
               { id: 'general', label: 'Geral', icon: Settings },
               { id: 'queues', label: 'Setores', icon: Layers },
@@ -270,13 +270,16 @@ export const SettingsPage: React.FC = () => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2 rounded font-bold text-[12px] transition-colors",
+                  "relative w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-bold text-[12px] transition-all overflow-hidden group",
                   activeTab === tab.id 
-                    ? "bg-white text-blue-600 border border-slate-200 shadow-sm" 
-                    : "text-slate-500 hover:bg-slate-200/50 hover:text-slate-700"
+                    ? "bg-fluvius-blue-50/50 text-fluvius-blue-deep" 
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
                 )}
               >
-                <tab.icon size={16} className={activeTab === tab.id ? "text-blue-500" : "opacity-50"} />
+                {activeTab === tab.id && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-fluvius-gradient" />
+                )}
+                <tab.icon size={16} className={cn("transition-colors", activeTab === tab.id ? "text-fluvius-blue-main" : "text-slate-400 group-hover:text-slate-600")} />
                 {tab.label}
               </button>
             ))}
@@ -286,22 +289,22 @@ export const SettingsPage: React.FC = () => {
             {activeTab === 'general' && (
               <>
                 {/* Profile Card */}
-                <section className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-                  <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
-                    <h2 className="font-bold text-slate-500 text-[10px] uppercase tracking-wider flex items-center gap-2">
-                      <User size={14} />
-                      Perfil
+                <section className="bg-white rounded-xl border border-slate-200/60 overflow-hidden shadow-sm">
+                  <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-fluvius-blue-50/30 to-transparent">
+                    <h2 className="font-bold text-fluvius-blue-deep text-[11px] uppercase tracking-wider flex items-center gap-2">
+                      <User size={16} className="text-fluvius-blue-main" />
+                      Perfil do Usuário
                     </h2>
                   </div>
                   <div className="p-6">
                     <div className="flex items-center gap-6">
-                      <div className="w-16 h-16 rounded bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-sm">
+                      <div className="w-20 h-20 rounded-full bg-fluvius-gradient flex items-center justify-center text-white font-bold text-3xl shadow-md ring-4 ring-white">
                         {user?.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <h3 className="text-lg font-bold text-slate-900 tracking-tight">{user?.name}</h3>
-                        <p className="text-slate-400 text-sm font-medium">{user?.email}</p>
-                        <div className="inline-flex items-center gap-1.5 mt-2 px-2 py-0.5 bg-blue-50 text-blue-600 rounded font-bold text-[9px] uppercase tracking-wider border border-blue-100">
+                        <h3 className="text-xl font-bold text-slate-900 tracking-tight mb-1">{user?.name}</h3>
+                        <p className="text-slate-500 text-sm font-medium mb-3">{user?.email}</p>
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-fluvius-blue-50 text-fluvius-blue-deep rounded-full font-bold text-[10px] uppercase tracking-wider border border-fluvius-blue-100 shadow-sm">
                           {user?.role === 'admin' ? 'Administrador' : 'Atendente'}
                         </div>
                       </div>
@@ -310,22 +313,22 @@ export const SettingsPage: React.FC = () => {
                 </section>
 
                 {/* Connections Card */}
-                <section className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-                  <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                    <h2 className="font-bold text-slate-500 text-[10px] uppercase tracking-wider flex items-center gap-2">
-                      <Wifi size={14} />
-                      Conexões
+                <section className="bg-white rounded-xl border border-slate-200/60 overflow-hidden shadow-sm">
+                  <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-emerald-50/30 to-transparent flex justify-between items-center">
+                    <h2 className="font-bold text-emerald-700 text-[11px] uppercase tracking-wider flex items-center gap-2">
+                      <Wifi size={16} className="text-emerald-500" />
+                      Conexões de WhatsApp
                     </h2>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setShowCreateConn(!showCreateConn)}
-                        className="flex items-center gap-1.5 text-[10px] bg-blue-600 text-white px-3 py-1.5 rounded font-bold uppercase tracking-wider hover:bg-blue-700 transition-colors"
+                        className="flex items-center gap-1.5 text-[11px] bg-fluvius-blue-main text-white px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-fluvius-blue-deep transition-all hover:shadow-md active:scale-95"
                       >
-                        <Plus size={14} />
-                        Nova
+                        <Plus size={16} />
+                        Nova Conexão
                       </button>
-                      <button onClick={loadConnections} className="p-1.5 rounded hover:bg-slate-200 text-slate-400 transition-colors">
-                        <RefreshCw size={14} />
+                      <button onClick={loadConnections} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                        <RefreshCw size={16} />
                       </button>
                     </div>
                   </div>
@@ -384,21 +387,22 @@ export const SettingsPage: React.FC = () => {
                         <div key={conn.id} className="p-5 flex items-center justify-between hover:bg-slate-50 transition-colors group">
                           <div className="flex items-center gap-4">
                             <div className={cn(
-                              "w-10 h-10 rounded flex items-center justify-center border transition-all",
-                              (conn.status === 'open' || conn.status === 'connected') ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-200 text-slate-300'
+                              "w-12 h-12 rounded-xl flex items-center justify-center border shadow-sm transition-all",
+                              (conn.status === 'open' || conn.status === 'connected') ? 'bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200 text-emerald-600' : 'bg-slate-50 border-slate-200 text-slate-400'
                             )}>
-                              {(conn.status === 'open' || conn.status === 'connected') ? <Wifi size={20} /> : <WifiOff size={20} />}
+                              {(conn.status === 'open' || conn.status === 'connected') ? <Wifi size={24} className="drop-shadow-sm" /> : <WifiOff size={24} />}
                             </div>
                             <div>
-                              <h3 className="font-bold text-slate-800 text-[13px]">{conn.name}</h3>
-                              <div className="flex items-center gap-3 mt-0.5">
+                              <h3 className="font-bold text-slate-900 text-[14px]">{conn.name}</h3>
+                              <div className="flex items-center gap-3 mt-1">
                                 <span className={cn(
-                                  "text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider",
-                                  (conn.status === 'open' || conn.status === 'connected') ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                                  "text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1",
+                                  (conn.status === 'open' || conn.status === 'connected') ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm' : 'bg-slate-50 text-slate-500 border-slate-200'
                                 )}>
+                                  {(conn.status === 'open' || conn.status === 'connected') && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
                                   {(conn.status === 'open' || conn.status === 'connected') ? 'Conectado' : 'Offline'}
                                 </span>
-                                <span className="text-[9px] text-slate-400 font-medium truncate max-w-[150px]">Inst: {conn.instance_name}</span>
+                                <span className="text-[10px] text-slate-500 font-medium truncate max-w-[150px] bg-slate-100 px-2 py-0.5 rounded-md">Inst: {conn.instance_name}</span>
                               </div>
                             </div>
                           </div>
@@ -459,7 +463,7 @@ export const SettingsPage: React.FC = () => {
 
       {/* Connection QR Modal */}
       {selectedConnection && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-6">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-6">
           <motion.div 
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -511,7 +515,7 @@ export const SettingsPage: React.FC = () => {
 
       {/* Edit Connection Modal */}
       {editingConn && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-6">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-6">
           <motion.div 
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}

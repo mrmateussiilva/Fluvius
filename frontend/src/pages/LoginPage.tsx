@@ -39,10 +39,10 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-fluvius-bg flex items-center justify-center p-4 relative overflow-hidden font-sans">
-      {/* Background Orbs - Softer for Light Mode */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-fluvius-blue-main/5 blur-[120px] rounded-full" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-fluvius-green-water/5 blur-[120px] rounded-full" />
+    <div className="min-h-screen bg-slate-900 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden font-sans">
+      {/* Background Orbs - Premium Dark Glow */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-fluvius-blue-main/20 blur-[120px] rounded-full animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-fluvius-green-water/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '2s' }} />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -50,11 +50,11 @@ export const LoginPage: React.FC = () => {
         className="w-full max-w-md relative z-10"
       >
         <div className="text-center mb-8 flex flex-col items-center">
-          <img src="/logo.png" alt="Fluvius Logo" className="h-24 mb-4 object-contain" />
-          <p className="text-fluvius-text-sec mt-2">Painel de Atendimento Multi-Agente</p>
+          <img src="/logo.png" alt="Fluvius Logo" className="h-24 mb-4 object-contain brightness-0 invert" />
+          <p className="text-blue-200 mt-2 font-medium tracking-wide">Painel de Atendimento Multi-Agente</p>
         </div>
 
-        <div className="bg-white border border-fluvius-border p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <div className="bg-white/95 backdrop-blur-xl border border-white/20 p-8 rounded-[24px] shadow-2xl">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-fluvius-text-sec mb-1.5 ml-1">E-mail corporativo</label>

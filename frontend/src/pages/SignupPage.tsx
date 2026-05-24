@@ -43,10 +43,10 @@ export const SignupPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-fluvius-bg relative overflow-x-hidden overflow-y-auto font-sans pt-12 pb-12 sm:pt-20 px-4 sm:px-8">
+    <div className="min-h-screen bg-slate-900 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 relative overflow-x-hidden overflow-y-auto font-sans pt-12 pb-12 sm:pt-20 px-4 sm:px-8">
       {/* Background Orbs */}
-      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-fluvius-blue-main/5 blur-[120px] rounded-full pointer-events-none" />
-      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-fluvius-green-water/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-fluvius-blue-main/20 blur-[120px] rounded-full pointer-events-none animate-pulse" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-fluvius-green-water/10 blur-[120px] rounded-full pointer-events-none animate-pulse" style={{ animationDelay: '2s' }} />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -54,12 +54,12 @@ export const SignupPage: React.FC = () => {
         className="w-full max-w-md mx-auto relative z-10"
       >
         <div className="text-center mb-8 flex flex-col items-center">
-          <img src="/logo.png" alt="Fluvius Logo" className="h-20 mb-4 object-contain drop-shadow-sm" />
-          <h1 className="text-3xl font-bold text-fluvius-text-main tracking-tight">Criar Conta</h1>
-          <p className="text-fluvius-text-sec mt-2">Comece a usar o Fluvius hoje mesmo</p>
+          <img src="/logo.png" alt="Fluvius Logo" className="h-20 mb-4 object-contain drop-shadow-sm brightness-0 invert" />
+          <h1 className="text-3xl font-bold text-white tracking-tight">Criar Conta</h1>
+          <p className="text-blue-200 mt-2 font-medium">Comece a usar o Fluvius hoje mesmo</p>
         </div>
 
-        <div className="bg-white border border-fluvius-border p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <div className="bg-white/95 backdrop-blur-xl border border-white/20 p-8 rounded-[24px] shadow-2xl">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-fluvius-text-sec mb-1.5 ml-1">Nome da Empresa</label>

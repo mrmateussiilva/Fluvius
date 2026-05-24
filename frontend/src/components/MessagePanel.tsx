@@ -419,11 +419,11 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
 
   const renderStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending': return <Clock size={10} className="text-slate-400" />;
-      case 'sent': return <Check size={10} className="text-slate-400" />;
-      case 'delivered': return <CheckCheck size={10} className="text-slate-400" />;
-      case 'read': return <CheckCheck size={10} className="text-[#53bdeb]" />;
-      case 'failed': return <AlertCircle size={10} className="text-rose-500" />;
+      case 'pending': return <Clock size={10} className="opacity-70" />;
+      case 'sent': return <Check size={10} className="opacity-70" />;
+      case 'delivered': return <CheckCheck size={10} className="opacity-70" />;
+      case 'read': return <CheckCheck size={10} className="text-fluvius-green-water drop-shadow-sm" />;
+      case 'failed': return <AlertCircle size={10} className="text-rose-300" />;
       default: return null;
     }
   };
@@ -531,7 +531,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
     <div className="flex-1 flex overflow-hidden bg-slate-50 relative">
       {/* Main Chat Area */}
       <div 
-        className="flex-1 flex flex-col min-w-0 relative bg-whatsapp-doodle overflow-hidden"
+        className="flex-1 flex flex-col min-w-0 relative bg-chat-pattern overflow-hidden"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -586,14 +586,14 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Header — estilo WhatsApp Web */}
-        <div className="h-[60px] flex items-center justify-between px-4 bg-[#f0f2f5] border-b border-[#e9edef] z-20 shrink-0">
-          <div className="flex items-center gap-3">
+        {/* Header — estilo Premium SaaS */}
+        <div className="h-[64px] flex items-center justify-between px-5 bg-white/80 backdrop-blur-md border-b border-slate-200/60 z-20 shrink-0 shadow-sm">
+          <div className="flex items-center gap-3.5">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="relative shrink-0 group"
             >
-              <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-400 overflow-hidden border-2 border-transparent group-hover:border-[#00a884]/30 transition-all">
+              <div className="w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 overflow-hidden ring-2 ring-transparent group-hover:ring-fluvius-blue-main/30 shadow-sm transition-all">
                 {conversation.contact?.avatar_url ? (
                   <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover" />
                 ) : (
@@ -603,10 +603,10 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
             </button>
 
             <div className="min-w-0 cursor-pointer" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-              <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-[#111b21] text-[15px] leading-tight tracking-tight">{contactName}</h2>
+              <div className="flex items-center gap-2.5">
+                <h2 className="font-bold text-slate-900 text-[15px] leading-tight tracking-tight">{contactName}</h2>
                 {conversation.assignee && (
-                  <span className="text-[10px] font-semibold text-[#00a884] px-1.5 py-0.5 bg-[#00a884]/10 rounded uppercase tracking-wider">
+                  <span className="text-[9px] font-bold text-fluvius-blue-deep px-1.5 py-0.5 bg-fluvius-blue-50 border border-fluvius-blue-100 rounded uppercase tracking-wider shadow-sm">
                     {conversation.assignee.name}
                   </span>
                 )}
@@ -624,8 +624,8 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
               className={cn(
                 "flex items-center justify-center w-9 h-9 rounded-full transition-all",
                 isSidebarOpen
-                  ? "bg-[#00a884]/10 text-[#00a884]"
-                  : "text-[#54656f] hover:bg-[#e9edef]"
+                  ? "bg-fluvius-blue-50 text-fluvius-blue-main shadow-inner"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
               )}
               title="Detalhes &amp; IA Resumo"
             >
@@ -657,9 +657,14 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
           )}
           <AnimatePresence mode="popLayout">
             {messages.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40">
-                <MessageSquare size={32} className="mb-4" />
-                <p className="text-[11px] font-bold uppercase tracking-widest">Start a conversation</p>
+              <div className="flex-1 flex flex-col items-center justify-center text-center mt-12 mb-auto opacity-70">
+                <div className="w-20 h-20 bg-fluvius-blue-50 text-fluvius-blue-main rounded-full flex items-center justify-center shadow-sm mb-5 border border-fluvius-blue-100/50">
+                  <MessageSquare size={36} className="opacity-90" />
+                </div>
+                <h3 className="text-[18px] font-bold text-slate-700 tracking-tight mb-2">Nenhuma mensagem ainda</h3>
+                <p className="text-[13px] text-slate-500 font-medium max-w-[260px] leading-relaxed">
+                  Este é o início do histórico com o cliente. Mande um olá para começar o atendimento.
+                </p>
               </div>
             ) : (
               messages.map((msg, index) => {
@@ -770,8 +775,11 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                       );
                     default:
                       return (
-                        <div className="px-4 py-2.5">
-                          <p className="text-[13px] leading-relaxed whitespace-pre-wrap font-medium tracking-tight">
+                        <div className={cn("px-4 pt-3 pb-1.5", isOutbound ? "tracking-[-0.1px]" : "")}>
+                          <p className={cn(
+                            "text-[13.5px] leading-[1.55] whitespace-pre-wrap break-words font-sans",
+                            isOutbound ? "font-normal text-white" : "font-[450] text-slate-800"
+                          )}>
                             {msg.content}
                           </p>
                         </div>
@@ -780,78 +788,102 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                 };
 
                 return (
-                  <React.Fragment key={msg.id}>
+                  <motion.div
+                    layout="position"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    key={msg.id}
+                    className="w-full flex flex-col"
+                  >
                     {/* Separador de data — estilo WhatsApp */}
                     {showDateSep && (
-                      <div className="flex items-center justify-center my-2 self-center w-full">
-                        <span className="date-separator-badge">
+                      <div className="flex items-center justify-center my-4 self-center w-full relative">
+                        <div className="absolute inset-x-12 top-1/2 -translate-y-1/2 h-[1px] bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
+                        <span className="date-separator-badge relative z-10 px-4 py-1">
                           {formatDateLabel(msg.created_at)}
                         </span>
                       </div>
                     )}
                     <div
                       className={cn(
-                        "flex flex-col max-w-[78%] md:max-w-[70%]",
+                        "flex flex-col max-w-[80%] md:max-w-[72%]",
                         isOutbound ? "self-end items-end" : "self-start items-start",
-                        isSameSenderAsPrev ? "mt-0.5" : "mt-2"
+                        isSameSenderAsPrev ? "mt-[2px]" : "mt-3"
                       )}
                     >
                     <div className={cn(
-                      "relative transition-all shadow-[0_1px_0.5px_rgba(0,0,0,0.13)] group/bubble",
-                      isMedia ? "p-1 rounded-lg" : "p-0 rounded-lg",
-                      msg.is_internal ? "bg-amber-50 border border-amber-400 text-amber-900" : (isOutbound ? "bubble-out" : "bubble-in"),
-                      !isSameSenderAsPrev ? (isOutbound ? "bubble-out-tail" : "bubble-in-tail") : (isOutbound ? "rounded-tr-lg" : "rounded-tl-lg")
+                      "relative transition-all group/bubble overflow-hidden",
+                      isMedia ? "p-0.5" : "p-0",
+                      msg.is_internal
+                        ? "bg-amber-50 border border-amber-200/80 text-amber-900 shadow-[0_2px_8px_rgba(245,158,11,0.08)]"
+                        : (isOutbound ? "bubble-out" : "bubble-in"),
+                      !isSameSenderAsPrev
+                        ? (isOutbound ? "rounded-[18px] rounded-br-[4px] bubble-out-tail" : "rounded-[18px] rounded-bl-[4px] bubble-in-tail")
+                        : "rounded-[18px]"
                     )}>
                       {msg.is_internal && (
-                        <div className="flex items-center gap-1 text-amber-600 bg-amber-100/50 px-2 py-1 rounded-t-lg text-[10px] font-bold uppercase tracking-wider border-b border-amber-200/50">
-                          <Lock size={10} />
-                          Nota Interna
+                        <div className="flex items-center gap-1.5 text-amber-600 bg-amber-100/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider border-b border-amber-200/60">
+                          <Lock size={9} />
+                          Nota Interna — visível apenas para a equipe
                         </div>
                       )}
-                      {/* Botão Responder (visível no hover) */}
+
+                      {/* Ação de Responder — aparece no hover ao lado da bolha */}
                       <div className={cn(
-                        "absolute top-1 z-10 opacity-0 group-hover/bubble:opacity-100 transition-opacity",
-                        isOutbound ? "-left-10" : "-right-10"
+                        "absolute top-1/2 -translate-y-1/2 z-10 opacity-0 group-hover/bubble:opacity-100 transition-all duration-150 scale-90 group-hover/bubble:scale-100",
+                        isOutbound ? "-left-11" : "-right-11"
                       )}>
                         <button
                           onClick={() => onSetReplyingTo?.(msg)}
-                          className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-full text-slate-500 shadow-sm hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                          className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200/80 rounded-full text-slate-400 shadow-md hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50/80 transition-all duration-150"
                           title="Responder"
                         >
-                          <Reply size={14} />
+                          <Reply size={13} />
                         </button>
                       </div>
 
                       {msg.quoted_content && (
                         <div className={cn(
-                          "rounded p-2 m-2 border-l-2 text-[11px] italic opacity-80",
-                          isOutbound ? "bg-black/5 border-slate-400/30 text-slate-700" : "bg-slate-50 border-slate-300 text-slate-600"
+                          "mx-3 mt-3 mb-1 rounded-lg px-3 py-2 border-l-[3px] text-[11.5px]",
+                          isOutbound
+                            ? "bg-white/10 border-white/40 text-white/75 italic"
+                            : "bg-slate-50 border-fluvius-blue-main/30 text-slate-500 italic"
                         )}>
-                          "{msg.quoted_content}"
+                          {msg.quoted_content}
                         </div>
                       )}
+
                       {renderMessageContent()}
+
+                      {/* Timestamp + Status integrado na base da bolha */}
                       <div className={cn(
-                        "flex items-center gap-1.5 px-3 pb-1.5 justify-end",
-                        isMedia && !msg.content ? "absolute bottom-2 right-2 bg-black/30 backdrop-blur-sm px-1.5 py-0.5 rounded text-white" : "",
-                        !isMedia || msg.content ? "text-[#667781]" : "text-white"
+                        "flex items-center gap-1.5 px-3 pb-2 justify-end",
+                        isMedia && !msg.content
+                          ? "absolute bottom-2 right-2 bg-black/40 backdrop-blur-md px-2 py-1 rounded-full"
+                          : "",
+                        !isMedia || msg.content
+                          ? (isOutbound ? "text-white/55" : "text-slate-400/80")
+                          : "text-white"
                       )}>
-                        <span className="text-[9px] font-medium tabular-nums">{timeString}</span>
-                        {isOutbound && renderStatusIcon(msg.status)}
+                        <span className="text-[10px] font-medium tabular-nums">{timeString}</span>
+                        {isOutbound && <span className="ml-0.5">{renderStatusIcon(msg.status)}</span>}
                       </div>
                     </div>
                     </div>
-                  </React.Fragment>
+                  </motion.div>
                 );
               })
             )}
           </AnimatePresence>
           {isTyping && (
-             <div className="self-start mt-2 ml-2 flex items-center gap-1.5 px-3 py-2 bg-slate-100 rounded-xl rounded-tl-sm text-slate-500 shadow-sm w-fit group">
-               <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-               <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-               <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
-               <span className="text-[10px] font-medium ml-1">Digitando...</span>
+             <div className="self-start mt-2 ml-2 flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl rounded-bl-sm text-slate-500 shadow-sm w-fit group">
+               <div className="flex gap-1.5 items-center">
+                 <span className="w-1.5 h-1.5 bg-fluvius-blue-main/60 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                 <span className="w-1.5 h-1.5 bg-fluvius-blue-main/60 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                 <span className="w-1.5 h-1.5 bg-fluvius-blue-main/60 rounded-full animate-bounce"></span>
+               </div>
+               <span className="text-[11px] font-semibold text-slate-400 ml-1.5 animate-pulse">Digitando...</span>
              </div>
           )}
           <div ref={endRef} />
@@ -873,83 +905,118 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
       {/* Right Sidebar: Contact Info, AI Summary & Tags */}
       <div 
         className={cn(
-          "bg-[#faf9f6]/95 border-l border-slate-200/50 flex flex-col shrink-0 transition-all duration-300 relative h-full overflow-hidden z-20",
-          isSidebarOpen ? "w-[300px]" : "w-[64px]"
+          "bg-white border-l border-slate-200/80 flex flex-col shrink-0 transition-all duration-300 relative h-full overflow-hidden z-20 shadow-[-4px_0_15px_rgba(0,0,0,0.02)]",
+          isSidebarOpen ? "w-[320px]" : "w-[64px]"
         )}
       >
         {isSidebarOpen ? (
           <div className="flex flex-col h-full overflow-y-auto w-full fluvius-scroll">
-            {/* Header */}
-            <div className="h-14 border-b border-slate-200/40 flex items-center justify-between px-4 shrink-0">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                <User size={13} className="text-slate-400" /> Informações
+            {/* Header da Sidebar */}
+            <div className="h-14 border-b border-slate-100 flex items-center justify-between px-5 shrink-0 bg-white">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <User size={12} className="text-fluvius-blue-main" /> Perfil do Contato
               </span>
               <button
                 onClick={() => setIsSidebarOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-md transition-all duration-200 hover:bg-slate-200/30"
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg transition-all duration-150 hover:bg-slate-100"
+                title="Fechar painel"
               >
-                <ChevronRight size={18} />
+                <ChevronRight size={16} />
               </button>
             </div>
 
-            {/* Contact Details Card */}
-            <div className="p-4 border-b border-slate-100/60 flex flex-col items-center text-center">
-              <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200/70 shadow-sm mb-3 relative overflow-hidden bg-white">
-                {conversation.contact?.avatar_url ? (
-                  <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover" />
-                ) : (
-                  <User size={36} className="opacity-30" />
-                )}
+            {/* Contact Details Card — Hero Section */}
+            <div className="relative flex flex-col items-center text-center border-b border-slate-100 overflow-hidden">
+              {/* Background decorativo */}
+              <div className="absolute inset-0 bg-gradient-to-br from-fluvius-blue-50 via-slate-50 to-white pointer-events-none"></div>
+              <div className="absolute inset-0 bg-chat-pattern opacity-20 mix-blend-multiply pointer-events-none"></div>
+
+              {/* Avatar com anel de status */}
+              <div className="relative mt-7 mb-4 z-10">
+                <div className={cn(
+                  "w-20 h-20 rounded-full flex items-center justify-center text-slate-400 overflow-hidden ring-4 shadow-lg",
+                  conversation.status === 'open' ? 'ring-emerald-400/40' :
+                  conversation.status === 'pending' ? 'ring-amber-400/40' :
+                  conversation.status === 'bot' ? 'ring-fluvius-blue-200' :
+                  'ring-slate-200/60',
+                  "bg-white"
+                )}>
+                  {conversation.contact?.avatar_url ? (
+                    <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-fluvius-blue-100 to-fluvius-blue-200 flex items-center justify-center">
+                      <span className="text-[28px] font-bold text-fluvius-blue-deep">
+                        {contactName.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {/* Bolinha de status */}
+                {(() => {
+                  const dotColor = conversation.status === 'open' ? 'bg-emerald-500' :
+                    conversation.status === 'pending' ? 'bg-amber-400' :
+                    conversation.status === 'bot' ? 'bg-fluvius-blue-main' : 'bg-slate-300';
+                  return (
+                    <span className={cn(
+                      "absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full border-2 border-white shadow-sm",
+                      dotColor
+                    )} />
+                  );
+                })()}
               </div>
-              <h3 className="font-semibold text-slate-855 text-[15px] leading-snug tracking-tight mb-0.5">{contactName}</h3>
-              <p className="text-[11px] font-mono text-slate-400/90">{contactPhone}</p>
-              
-              {/* Dynamic Status Subtitle */}
+
+              <h3 className="font-bold text-slate-900 text-[15px] leading-tight tracking-tight mb-0.5 z-10 px-4">{contactName}</h3>
+              <p className="text-[12px] font-mono text-slate-400 mb-1 z-10">{contactPhone}</p>
+
+              {/* Status pill */}
               {(() => {
-                const statusInfo: Record<string, { label: string; dot: string; text: string }> = {
-                  pending: { label: 'Pendente', dot: 'bg-amber-500', text: 'text-amber-600/90' },
-                  open: { label: 'Em atendimento', dot: 'bg-emerald-500', text: 'text-emerald-600/90' },
-                  bot: { label: 'Com Robô', dot: 'bg-blue-500', text: 'text-blue-600/90' },
-                  resolved: { label: 'Resolvido', dot: 'bg-slate-300', text: 'text-slate-400' },
+                const statusInfo: Record<string, { label: string; bg: string; text: string; border: string }> = {
+                  pending:  { label: 'Aguardando', bg: 'bg-amber-50',   text: 'text-amber-700',  border: 'border-amber-200' },
+                  open:     { label: 'Em atendimento', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+                  bot:      { label: 'Com Bot', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+                  resolved: { label: 'Resolvido', bg: 'bg-slate-50', text: 'text-slate-500', border: 'border-slate-200' },
                 };
-                const currentStatus = statusInfo[conversation.status] || { label: 'Desconhecido', dot: 'bg-slate-300', text: 'text-slate-400' };
+                const s = statusInfo[conversation.status] || statusInfo.resolved;
                 return (
-                  <div className="flex items-center gap-1.5 mt-2 bg-white/50 border border-slate-200/30 rounded-full px-2.5 py-0.5 shadow-sm">
-                    <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", currentStatus.dot)} />
-                    <span className={cn("text-[9px] font-bold uppercase tracking-wider", currentStatus.text)}>
-                      {currentStatus.label}
-                    </span>
+                  <div className={cn("flex items-center gap-1.5 mb-6 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider z-10", s.bg, s.text, s.border)}>
+                    {s.label}
                   </div>
                 );
               })()}
             </div>
 
             {/* AI Sentiment Analysis Section */}
-            <div className="p-3.5 border-b border-slate-100/60 flex flex-col">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold text-slate-400/90 tracking-widest uppercase flex items-center gap-1.5">
-                  <Sparkles size={11} className="text-blue-500" /> Humor do Cliente
+            <div className="px-4 py-4 border-b border-slate-100">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-bold text-slate-600 tracking-wide flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-md bg-blue-50 flex items-center justify-center">
+                    <Sparkles size={11} className="text-fluvius-blue-main" />
+                  </span>
+                  Humor do Cliente
                 </span>
                 <button
                   onClick={handleAnalyzeSentiment}
                   disabled={isLoadingSentiment}
-                  className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors disabled:opacity-50 hover:bg-slate-200/30"
-                  title="Analisar novamente"
+                  className="p-1.5 text-slate-400 hover:text-fluvius-blue-main rounded-lg transition-all disabled:opacity-40 hover:bg-blue-50"
+                  title="Reanalisar"
                 >
                   <RefreshCw size={11} className={cn(isLoadingSentiment && "animate-spin")} />
                 </button>
               </div>
 
               {isLoadingSentiment && (
-                <div className="bg-white/40 border border-slate-100/60 rounded-xl p-2.5 flex items-center gap-2.5 animate-pulse">
-                  <Loader2 size={13} className="text-slate-400 animate-spin shrink-0" />
-                  <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 flex items-center gap-3 animate-pulse">
+                  <Loader2 size={14} className="text-slate-300 animate-spin shrink-0" />
+                  <div className="flex flex-col gap-1.5 flex-1">
+                    <div className="h-2.5 bg-slate-200 rounded-full w-2/3"></div>
+                    <div className="h-2 bg-slate-100 rounded-full w-1/2"></div>
+                  </div>
                 </div>
               )}
 
               {!isLoadingSentiment && sentimentError && (
-                <div className="bg-rose-50/50 border border-rose-100/30 text-rose-600 rounded-xl p-2.5 text-[11px] font-medium flex items-center gap-2">
-                  <AlertCircle size={13} className="shrink-0" />
+                <div className="bg-rose-50 border border-rose-100 text-rose-600 rounded-xl p-3 text-[11px] font-medium flex items-center gap-2">
+                  <AlertCircle size={14} className="shrink-0" />
                   <span>{sentimentError}</span>
                 </div>
               )}
@@ -957,38 +1024,31 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
               {!isLoadingSentiment && !sentiment && !sentimentError && (
                 <button
                   onClick={handleAnalyzeSentiment}
-                  className="w-full py-1.5 bg-white/60 hover:bg-white border border-slate-200/50 rounded-xl text-[11px] font-semibold text-slate-600 transition-all duration-200 flex items-center justify-center gap-1.5 shadow-sm"
+                  className="w-full py-2.5 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl text-[11.5px] font-semibold text-slate-600 hover:text-fluvius-blue-main transition-all duration-200 flex items-center justify-center gap-2 shadow-sm"
                 >
-                  <Smile size={13} className="text-slate-400" /> Analisar Sentimento
+                  <Smile size={14} className="text-slate-400" /> Analisar agora
                 </button>
               )}
 
-              {!isLoadingSentiment && sentiment && (
-                <div className={cn(
-                  "border rounded-xl p-2.5 flex items-center gap-2.5 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.01)]",
-                  sentiment === 'POSITIVE' && "bg-emerald-500/5 border-emerald-500/10 text-emerald-800",
-                  sentiment === 'NEUTRAL' && "bg-slate-500/5 border-slate-500/10 text-slate-750",
-                  sentiment === 'NEGATIVE' && "bg-rose-500/5 border-rose-500/10 text-rose-800",
-                  sentiment === 'URGENT' && "bg-amber-500/5 border-amber-500/10 text-amber-800"
-                )}>
-                  <span className="text-[16px] shrink-0 leading-none">
-                    {sentiment === 'POSITIVE' && '😊'}
-                    {sentiment === 'NEUTRAL' && '😐'}
-                    {sentiment === 'NEGATIVE' && '😢'}
-                    {sentiment === 'URGENT' && '🚨'}
-                  </span>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[11.5px] font-semibold tracking-tight text-slate-800 leading-tight">
-                      {sentiment === 'POSITIVE' && 'Cliente Satisfeito'}
-                      {sentiment === 'NEUTRAL' && 'Cliente Neutro'}
-                      {sentiment === 'NEGATIVE' && 'Cliente Frustrado'}
-                      {sentiment === 'URGENT' && 'Humor Urgente'}
+              {!isLoadingSentiment && sentiment && (() => {
+                const sentimentMap: Record<string, { emoji: string; label: string; sub: string; bg: string; border: string; text: string; accent: string }> = {
+                  POSITIVE: { emoji: '😊', label: 'Satisfeito',  sub: 'Cliente feliz e engajado',  bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-900', accent: 'bg-emerald-500' },
+                  NEUTRAL:  { emoji: '😐', label: 'Neutro',      sub: 'Tom objetivo e tranquilo',  bg: 'bg-slate-50',   border: 'border-slate-200',   text: 'text-slate-700',  accent: 'bg-slate-400' },
+                  NEGATIVE: { emoji: '😞', label: 'Insatisfeito', sub: 'Cliente precisa de atenção', bg: 'bg-rose-50',    border: 'border-rose-200',   text: 'text-rose-900',   accent: 'bg-rose-500' },
+                  URGENT:   { emoji: '🚨', label: 'Urgente',     sub: 'Requer ação imediata',      bg: 'bg-amber-50',   border: 'border-amber-200',  text: 'text-amber-900',  accent: 'bg-amber-500' },
+                };
+                const s = sentimentMap[sentiment] || sentimentMap.NEUTRAL;
+                return (
+                  <div className={cn("rounded-xl border p-3 flex items-center gap-3", s.bg, s.border, s.text)}>
+                    <span className="text-[22px] leading-none shrink-0">{s.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-bold leading-tight">{s.label}</p>
+                      <p className="text-[10.5px] opacity-70 mt-0.5 font-medium">{s.sub}</p>
                     </div>
-                    <span className="text-[9px] text-slate-400/90 block leading-none mt-0.5 font-medium">Análise de Humor via IA</span>
+                    <span className={cn("w-1.5 h-8 rounded-full shrink-0 opacity-40", s.accent)} />
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
 
             {/* AI Summary Section */}
@@ -1064,21 +1124,25 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                 {contactTags.length === 0 ? (
                   <span className="text-[11.5px] text-slate-400 italic font-medium">Nenhum marcador.</span>
                 ) : (
-                  contactTags.map((tag) => (
+                  contactTags.map((tag) => {
+                    const tagHash = Array.from(tag).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                    const hue = tagHash % 360;
+                    return (
                     <span
                       key={tag}
-                      className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-slate-600 bg-slate-200/50 hover:bg-slate-200/80 px-2.5 py-0.5 rounded-full transition-colors duration-150"
+                      style={{ backgroundColor: `hsla(${hue}, 80%, 90%, 0.8)`, color: `hsla(${hue}, 85%, 25%, 1)`, border: `1px solid hsla(${hue}, 80%, 80%, 0.5)` }}
+                      className="inline-flex items-center gap-1 text-[10.5px] font-bold px-2.5 py-0.5 rounded-md transition-all duration-150 shadow-sm hover:shadow"
                     >
                       {tag}
                       <button
                         onClick={() => handleRemoveTag(tag)}
                         disabled={isUpdatingTags}
-                        className="text-slate-400 hover:text-rose-500 transition-colors shrink-0 disabled:opacity-50 ml-0.5"
+                        className="hover:text-rose-500 transition-colors shrink-0 disabled:opacity-50 ml-0.5 opacity-60 hover:opacity-100"
                       >
                         <X size={10} />
                       </button>
                     </span>
-                  ))
+                  )})
                 )}
               </div>
 
