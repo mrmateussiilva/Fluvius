@@ -50,23 +50,37 @@ async def get_contact_avatar(
         if inbox:
             connection = db.query(Connection).filter(Connection.inbox_id == inbox.id).first()
             if connection:
-                # Tenta buscar a URL externa atual na Evolution API
+                # Extraímos as variáveis antes de fechar a sessão para evitar lazy loading errors
+                base_url = connection.base_url
+                api_key = connection.api_key
+                instance_name = connection.instance_name
+                phone = contact.phone
+
+                # LIBERA A CONEXÃO COM O BANCO DE DADOS AGORA (antes da chamada de rede lenta)
+                db.close()
+
+                # Tenta buscar a URL externa atual na Evolution API (pode demorar ou dar timeout)
                 avatar_url = await EvolutionService.fetch_profile_picture_url(
-                    base_url=connection.base_url,
-                    api_key=connection.api_key,
-                    instance_name=connection.instance_name,
-                    number=contact.phone
+                    base_url=base_url,
+                    api_key=api_key,
+                    instance_name=instance_name,
+                    number=phone
                 )
                 if avatar_url:
-                    contact.avatar_url = avatar_url
-                    db.commit()
+                    # Usamos uma sessão curta local apenas para gravar a nova url
+                    from app.core.database import SessionLocal
+                    with SessionLocal() as temp_db:
+                        temp_contact = temp_db.query(Contact).filter(Contact.id == contact_id).first()
+                        if temp_contact:
+                            temp_contact.avatar_url = avatar_url
+                            temp_db.commit()
                     
-                    # Baixa síncrono on-demand
-                    await MediaDownloadService.download_contact_avatar(db, contact_id)
+                    # Baixa síncrono on-demand (passando None para que use uma SessionLocal isolada internamente)
+                    await MediaDownloadService.download_contact_avatar(None, contact_id)
                     if local_path.exists():
                         return FileResponse(str(local_path), media_type="image/jpeg")
 
-    # Fallback se não encontrar avatar: retorna 404 ou uma imagem default/placeholder
+    # Fallback se não encontrar avatar: retorna 404
     raise HTTPException(status_code=404, detail="Avatar não disponível")
 
 
@@ -113,16 +127,24 @@ async def get_media_file(
 
     # Se o download ainda não foi feito ou falhou, tenta baixar de forma síncrona on-demand
     if media.message_id:
-        logger.info(f"[MediaRouter] Baixando mídia {media.id} on-demand para mensagem {media.message_id}")
-        await MediaDownloadService.download_message_media(db, media.message_id)
+        message_id = media.message_id
+        media_uuid = media.id
         
-        # Recarrega a mídia
-        db.refresh(media)
-        if media.downloaded and media.file_path:
-            local_path = Path(media.file_path.lstrip("/"))
-            if local_path.exists():
-                mime = media.mime_type or "application/octet-stream"
-                return FileResponse(str(local_path), media_type=mime)
+        # LIBERA A CONEXÃO COM O BANCO DE DADOS AGORA (antes do download lento via rede)
+        db.close()
+
+        logger.info(f"[MediaRouter] Baixando mídia {media_uuid} on-demand para mensagem {message_id}")
+        await MediaDownloadService.download_message_media(None, message_id)
+        
+        # Abre uma sessão curta apenas para ler o novo file_path e servir o arquivo
+        from app.core.database import SessionLocal
+        with SessionLocal() as temp_db:
+            temp_media = temp_db.query(Media).filter(Media.id == media_uuid).first()
+            if temp_media and temp_media.downloaded and temp_media.file_path:
+                local_path = Path(temp_media.file_path.lstrip("/"))
+                if local_path.exists():
+                    mime = temp_media.mime_type or "application/octet-stream"
+                    return FileResponse(str(local_path), media_type=mime)
 
     raise HTTPException(
         status_code=502,
