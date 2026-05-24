@@ -47,4 +47,4 @@ async def test_evolution_send_media_message(mock_post):
     mock_post.assert_called_once()
     args, kwargs = mock_post.call_args
     assert kwargs["json"]["number"] == "5511999999999"
-    assert kwargs["json"]["mediaMessage"]["mediatype"] == "image"
+    assert kwargs["json"]["mediatype"] == "image"

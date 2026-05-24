@@ -78,6 +78,15 @@ async def sync_chat_record(db: Session, connection: Connection, chat: dict) -> t
             contact.avatar_url = profile_avatar_url
             db.commit()
 
+    # Agenda o download local do avatar se for URL externa do WhatsApp
+    if contact.avatar_url and not contact.avatar_url.startswith("/api/media/"):
+        try:
+            import asyncio
+            from app.services.media_service import MediaDownloadService
+            asyncio.create_task(MediaDownloadService.download_contact_avatar(None, contact.id))
+        except Exception as e:
+            logger.error(f"Erro ao agendar download de avatar na sync do contato {contact.id}: {e}")
+
     # Find or Create Conversation
     conversation = db.query(Conversation).filter(
         Conversation.workspace_id == connection.workspace_id,
@@ -117,6 +126,8 @@ async def sync_chat_record(db: Session, connection: Connection, chat: dict) -> t
     )
 
     synced_messages = 0
+    media_messages_to_download = []
+    
     for msg_data in messages:
         key = msg_data.get("key", {})
         msg_id = key.get("id")
@@ -175,6 +186,13 @@ async def sync_chat_record(db: Session, connection: Connection, chat: dict) -> t
         else:
             message_type = "unknown"
 
+        # If it's a media message, generate a local proxy media_id
+        media_id = None
+        if message_type in ["image", "audio", "video", "document"]:
+            from app.models.workspace import generate_uuid
+            media_id = generate_uuid()
+            media_url = f"/api/media/{media_id}"
+
         # Save new message
         new_msg = Message(
             workspace_id=connection.workspace_id,
@@ -191,8 +209,40 @@ async def sync_chat_record(db: Session, connection: Connection, chat: dict) -> t
         )
         db.add(new_msg)
         synced_messages += 1
+        
+        if media_id:
+            media_messages_to_download.append((new_msg, media_id, message_type, mime_type))
 
     db.commit()
+
+    # Create associated Media records and queue background download jobs
+    if media_messages_to_download:
+        from app.models.media import Media
+        from app.services.media_service import MediaDownloadService
+        import asyncio
+        
+        for msg, m_id, m_type, m_mime in media_messages_to_download:
+            try:
+                existing = db.query(Media).filter(Media.id == m_id).first()
+                if not existing:
+                    media_rec = Media(
+                        id=m_id,
+                        message_id=msg.id,
+                        media_type=m_type,
+                        mime_type=m_mime,
+                        downloaded=False,
+                        failed=False
+                    )
+                    db.add(media_rec)
+            except Exception as e:
+                logger.error(f"Failed to create media record during sync: {e}")
+        
+        db.commit()
+        
+        # Trigger actual async background downloads
+        for msg, _, _, _ in media_messages_to_download:
+            asyncio.create_task(MediaDownloadService.download_message_media(None, msg.id))
+
     return True, synced_messages
 
 

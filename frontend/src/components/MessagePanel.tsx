@@ -60,8 +60,9 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
   const [hasError, setHasError] = useState(false);
   const [resolvedSrc, setResolvedSrc] = useState(src);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const retryCount = useRef(0);
 
-  // Reset when src changes
+  // Reset when src changes and clean up active network requests
   React.useEffect(() => {
     setResolvedSrc(src);
     setHasError(false);
@@ -69,6 +70,19 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
+    retryCount.current = 0;
+
+    return () => {
+      if (audioRef.current) {
+        try {
+          audioRef.current.pause();
+          audioRef.current.src = "";
+          audioRef.current.load(); // Forces browser to abort any active downloads
+        } catch (e) {
+          // Ignore
+        }
+      }
+    };
   }, [src]);
 
   // Generate deterministic waveform bars from src string
@@ -135,12 +149,19 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
   };
 
   const handleError = () => {
-    // If the direct URL failed and it is an external URL, try the backend proxy
-    if (resolvedSrc === src && (src.startsWith('http://') || src.startsWith('https://'))) {
-      const proxyUrl = `${API_BASE_URL}/media/proxy?url=${encodeURIComponent(src)}`;
-      console.warn('[AudioPlayer] Direct URL failed, trying backend proxy:', proxyUrl);
-      setResolvedSrc(proxyUrl);
-      // Don't show spinner on fallback — button stays clickable
+    // If the media fails to load (e.g. backend is downloading it in background),
+    // we retry loading a couple of times before giving up.
+    if (retryCount.current < 3) {
+      retryCount.current += 1;
+      console.warn(`[AudioPlayer] Playback error, retrying (${retryCount.current}/3) in 2 seconds...`);
+      setTimeout(() => {
+        if (audioRef.current) {
+          audioRef.current.load();
+          if (isPlaying) {
+            audioRef.current.play().catch(() => {});
+          }
+        }
+      }, 2000);
     } else {
       setHasError(true);
       setIsLoading(false);
@@ -746,13 +767,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
 
                   switch (msg.message_type) {
                     case 'audio': {
-                      // For audio, always use backend proxy to decrypt .enc files from WhatsApp
-                      // If media_url is already a local file, use it directly
-                      const isLocalMedia = msg.media_url && !msg.media_url.startsWith('http');
-                      const audioSrc = isLocalMedia
-                        ? mediaUrl
-                        : `${API_BASE_URL}/media/proxy?message_id=${msg.id}`;
-                      return <AudioPlayer src={audioSrc} />;
+                      return <AudioPlayer src={mediaUrl} />;
                     }
                     case 'video':
                       return (

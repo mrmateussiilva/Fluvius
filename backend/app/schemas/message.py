@@ -41,3 +41,11 @@ class MessageResponse(BaseModel):
         if dt.tzinfo is None:
             return dt.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
         return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    @field_serializer("media_url")
+    def serialize_media_url(self, media_url: Optional[str], _info):
+        if not media_url:
+            return None
+        if media_url.startswith("http"):
+            return f"/api/media/{self.id}"
+        return media_url

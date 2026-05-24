@@ -225,41 +225,14 @@ class WebhookService:
             mime_type = doc.get("mimetype", "application/pdf")
             media_url = data.get("mediaUrl") or doc.get("url")
             
-        # Handle Base64 media directly from Evolution API
-        base64_data = message_info.get("base64") or data.get("base64")
-        from app.utils.media import save_base64_to_disk, download_media
-        from app.services.evolution_service import EvolutionService
-        
-        # If no base64 in webhook but it is a media message, request decryption
-        if not base64_data and message_type in ["image", "audio", "video", "document"] and "message" in data:
-            try:
-                base64_data = await EvolutionService.get_base64_from_media_message(
-                    base_url=connection.base_url,
-                    api_key=connection.api_key,
-                    instance_name=connection.instance_name,
-                    message=data["message"]
-                )
-            except Exception as e:
-                # 400 = mídia expirada ou formato não suportado pela instância — não é erro crítico
-                if "400" in str(e):
-                    logger.warning(f"[Media] Mídia não disponível (400) na instância {connection.instance_name} — continuando sem mídia")
-                else:
-                    logger.error(f"Failed to decrypt inbound media: {e}")
+        # Generate local media_id if it's a media message
+        if message_type in ["image", "audio", "video", "document"]:
+            from app.models.workspace import generate_uuid
+            media_id = generate_uuid()
+            media_url = f"/api/media/{media_id}"
 
-        if base64_data and mime_type:
-            try:
-                media_url = save_base64_to_disk(base64_data, mime_type)
-            except Exception as e:
-                logger.error(f"Failed to save incoming base64 media: {e}")
-        elif media_url and mime_type and ("localhost" in media_url or "host.docker.internal" in media_url or "/message/download" in media_url):
-            # If it's an Evolution API download URL, download it locally
-            try:
-                media_url = await download_media(media_url, connection.api_key, mime_type)
-            except Exception as e:
-                logger.error(f"Failed to download inbound media: {e}")
-
-        # Garantir que mensagens de mídia sem URL ainda aparecem na conversa
-        if message_type in ["image", "audio", "video", "document"] and not media_url and not content:
+        # Garantir que mensagens de mídia sem conteúdo textual tenham preview amigável
+        if message_type in ["image", "audio", "video", "document"] and not content:
             type_labels = {"image": "🖼️ Imagem", "audio": "🎵 Áudio", "video": "🎬 Vídeo", "document": "📄 Documento"}
             content = type_labels.get(message_type, "📎 Mídia")
             
@@ -329,7 +302,7 @@ class WebhookService:
             contact.name = push_name
             db.commit()
 
-        if not contact.avatar_url:
+        if not contact.avatar_url or not contact.avatar_url.startswith("/api/media/"):
             avatar_url = await EvolutionService.fetch_profile_picture_url(
                 base_url=connection.base_url,
                 api_key=connection.api_key,
@@ -339,6 +312,13 @@ class WebhookService:
             if avatar_url:
                 contact.avatar_url = avatar_url
                 db.commit()
+                # Agenda o download do avatar em background
+                try:
+                    import asyncio
+                    from app.services.media_service import MediaDownloadService
+                    asyncio.create_task(MediaDownloadService.download_contact_avatar(None, contact.id))
+                except Exception as e:
+                    logger.error(f"Erro ao agendar download de avatar do contato {contact.id}: {e}")
             
         # Get or create conversation
         conversation = db.query(Conversation).filter(
@@ -436,6 +416,37 @@ class WebhookService:
         db.commit()
         db.refresh(msg)
         db.refresh(conversation)
+
+        # Handle Background Media Downloading
+        if message_type in ["image", "audio", "video", "document"]:
+            media_id = None
+            if media_url and "/api/media/" in media_url:
+                media_id = media_url.split("/")[-1]
+            
+            if media_id:
+                try:
+                    import asyncio
+                    from app.models.media import Media
+                    from app.services.media_service import MediaDownloadService
+
+                    # Check if already exists just in case
+                    existing_media = db.query(Media).filter(Media.id == media_id).first()
+                    if not existing_media:
+                        media_rec = Media(
+                            id=media_id,
+                            message_id=msg.id,
+                            media_type=message_type,
+                            mime_type=mime_type,
+                            downloaded=False,
+                            failed=False
+                        )
+                        db.add(media_rec)
+                        db.commit()
+                        
+                        # Dispara a tarefa assíncrona sem bloquear
+                        asyncio.create_task(MediaDownloadService.download_message_media(None, msg.id))
+                except Exception as e:
+                    logger.error(f"Erro ao registrar mídia para download em background: {e}")
 
         # Process Bot Logic if applicable
         if direction == "inbound" and conversation.status == "bot":

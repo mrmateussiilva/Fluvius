@@ -13,6 +13,14 @@ class ContactResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
+    @field_serializer("avatar_url")
+    def serialize_avatar(self, avatar_url: Optional[str], _info):
+        if not avatar_url:
+            return None
+        if avatar_url.startswith("http"):
+            return f"/api/media/avatar/{self.id}"
+        return avatar_url
+
 
 class ConversationBase(BaseModel):
     status: str
