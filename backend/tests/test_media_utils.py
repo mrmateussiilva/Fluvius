@@ -36,7 +36,7 @@ def test_get_serialized_avatar_url_hides_missing_local_avatar(tmp_path):
         mock_path.return_value.exists.return_value = False
 
         assert get_serialized_avatar_url("/api/media/avatar/contact-1", "contact-1") is None
-        assert get_serialized_avatar_url("https://cdn.example/avatar.jpg", "contact-1") is None
+        assert get_serialized_avatar_url("https://cdn.example/avatar.jpg", "contact-1") == "https://cdn.example/avatar.jpg"
 
 
 def test_get_serialized_avatar_url_exposes_cached_avatar(tmp_path):

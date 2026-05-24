@@ -122,7 +122,12 @@ const DraggableCard: React.FC<{ conversation: Conversation; isOverlay?: boolean 
             onClick={() => !isOverlay && navigate(`/?c=${conversation.id}`)}
           >
             {conversation.contact?.avatar_url ? (
-              <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover rounded-full" />
+              <img
+                src={conversation.contact.avatar_url}
+                alt={contactName}
+                className="w-full h-full object-cover rounded-full"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
             ) : (
               <span className="text-[12px] font-extrabold uppercase text-slate-500">
                 {contactName.substring(0, 2)}

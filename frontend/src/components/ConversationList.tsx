@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { Conversation } from '../api/client';
 import { 
@@ -24,6 +24,10 @@ function cn(...inputs: ClassValue[]) {
 
 const SafeAvatar = ({ src, alt, size = 16 }: { src?: string | null; alt: string; size?: number }) => {
   const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [src]);
   
   if (!src || hasError) {
     return <User size={size} className="opacity-40" />;

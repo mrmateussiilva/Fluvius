@@ -68,7 +68,12 @@ export const GlobalConversations: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-fluvius-bg flex items-center justify-center text-slate-400 overflow-hidden">
                         {conv.contact?.avatar_url ? (
-                          <img src={conv.contact.avatar_url} alt="" className="w-full h-full object-cover"/>
+                          <img
+                            src={conv.contact.avatar_url}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
                         ) : (
                           <User size={16} />
                         )}

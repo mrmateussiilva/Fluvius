@@ -41,6 +41,10 @@ function formatDateLabel(dateStr: string): string {
 
 const SafeAvatar = ({ src, alt, size = 20, fallback }: { src?: string | null; alt: string; size?: number; fallback?: React.ReactNode }) => {
   const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [src]);
   
   if (!src || hasError) {
     return fallback !== undefined ? <>{fallback}</> : <User size={size} className="opacity-50" />;
