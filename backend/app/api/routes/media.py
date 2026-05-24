@@ -6,8 +6,9 @@ Suporta downloads on-demand resilientes e Range Requests nativos para players de
 """
 import logging
 from pathlib import Path
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Response
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -33,6 +34,7 @@ MISSING_AVATAR_HEADERS = {
 MISSING_MEDIA_HEADERS = {
     "Cache-Control": "public, max-age=21600",
 }
+AVATAR_PROXY_TIMEOUT = 4.0
 
 
 async def fetch_and_download_avatar_task(
@@ -86,9 +88,9 @@ async def get_contact_avatar(
 ):
     """
     Retorna o avatar local do contato. Se já estiver baixado, serve diretamente.
-    Se o contato tem um avatar_url externo (HTTP) no banco, inicia o download em background
-    e redireciona temporariamente para a URL externa para exibição imediata.
-    Caso contrário, agenda a busca na Evolution API e download em background.
+    Se o contato tem um avatar_url externo (HTTP) no banco, o backend faz proxy
+    e salva uma cópia local. Isso evita que o browser bata direto no domínio do
+    WhatsApp, que costuma gerar ORB/NS_BINDING_ABORTED no console.
     """
     local_path = Path(f"uploads/avatars/{contact_id}.jpg")
     
@@ -107,13 +109,56 @@ async def get_contact_avatar(
             headers=MISSING_AVATAR_HEADERS,
         )
 
-    # Redireciona para o avatar externo se disponível. O download local deve ser
-    # feito pelo sync/webhook, não por uma enxurrada de requests de imagem do browser.
+    no_avatar_path = Path(f"uploads/avatars/{contact_id}.no_avatar")
+
     if contact.avatar_url and contact.avatar_url.startswith("http"):
-        return RedirectResponse(contact.avatar_url, headers=AVATAR_CACHE_HEADERS)
+        try:
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(
+                    connect=2.0,
+                    read=AVATAR_PROXY_TIMEOUT,
+                    write=2.0,
+                    pool=2.0,
+                ),
+                follow_redirects=True,
+            ) as client:
+                upstream = await client.get(contact.avatar_url)
+
+            content_type = upstream.headers.get("content-type", "image/jpeg").split(";")[0]
+            if upstream.status_code == 200 and content_type.startswith("image/"):
+                try:
+                    local_path.parent.mkdir(parents=True, exist_ok=True)
+                    local_path.write_bytes(upstream.content)
+                except Exception as exc:
+                    logger.warning("Avatar proxy served but local save failed for %s: %s", contact_id, exc)
+
+                return Response(
+                    content=upstream.content,
+                    media_type=content_type,
+                    headers=AVATAR_CACHE_HEADERS,
+                )
+
+            logger.info(
+                "Avatar upstream unavailable for %s: status=%s content_type=%s",
+                contact_id,
+                upstream.status_code,
+                content_type,
+            )
+        except Exception as exc:
+            logger.info("Avatar proxy failed for %s: %s", contact_id, exc)
+
+        try:
+            no_avatar_path.parent.mkdir(parents=True, exist_ok=True)
+            no_avatar_path.touch()
+        except Exception:
+            pass
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Avatar não disponível"},
+            headers=MISSING_AVATAR_HEADERS,
+        )
 
     # Cache negativo: evita bater na API caso já tenhamos tentado recentemente e falhado
-    no_avatar_path = Path(f"uploads/avatars/{contact_id}.no_avatar")
     if no_avatar_path.exists():
         mtime = no_avatar_path.stat().st_mtime
         import time

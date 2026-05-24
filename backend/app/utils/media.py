@@ -4,7 +4,6 @@ import mimetypes
 import os
 import httpx
 import logging
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -73,14 +72,10 @@ def get_serialized_avatar_url(avatar_url: str | None, contact_id: str) -> str | 
     if not avatar_url:
         return None
     if avatar_url.startswith("/api/media/avatar/"):
-        if Path(f"uploads/avatars/{contact_id}.jpg").exists():
-            return avatar_url
-        return None
-    if avatar_url.startswith("http"):
-        # Prefer the cached local avatar when available. Until then, let the
-        # browser use the provider URL directly instead of hitting a known-missing
-        # local endpoint for every contact in the list.
-        if Path(f"uploads/avatars/{contact_id}.jpg").exists():
-            return f"/api/media/avatar/{contact_id}"
         return avatar_url
+    if avatar_url.startswith("http"):
+        # Keep the browser on our origin. The route serves the cached file or
+        # proxies the provider URL, avoiding ORB/NS_BINDING_ABORTED noise from
+        # direct WhatsApp CDN requests.
+        return f"/api/media/avatar/{contact_id}"
     return avatar_url

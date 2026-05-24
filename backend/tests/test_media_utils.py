@@ -31,17 +31,10 @@ async def test_download_media_failure(mock_get):
     assert result == "http://test/fail.mp3"
 
 
-def test_get_serialized_avatar_url_hides_missing_local_avatar(tmp_path):
-    with patch("app.utils.media.Path") as mock_path:
-        mock_path.return_value.exists.return_value = False
-
-        assert get_serialized_avatar_url("/api/media/avatar/contact-1", "contact-1") is None
-        assert get_serialized_avatar_url("https://cdn.example/avatar.jpg", "contact-1") == "https://cdn.example/avatar.jpg"
+def test_get_serialized_avatar_url_proxies_remote_avatar():
+    assert get_serialized_avatar_url("/api/media/avatar/contact-1", "contact-1") == "/api/media/avatar/contact-1"
+    assert get_serialized_avatar_url("https://cdn.example/avatar.jpg", "contact-1") == "/api/media/avatar/contact-1"
 
 
-def test_get_serialized_avatar_url_exposes_cached_avatar(tmp_path):
-    with patch("app.utils.media.Path") as mock_path:
-        mock_path.return_value.exists.return_value = True
-
-        assert get_serialized_avatar_url("https://cdn.example/avatar.jpg", "contact-1") == "/api/media/avatar/contact-1"
-        assert get_serialized_avatar_url("/api/media/avatar/contact-1", "contact-1") == "/api/media/avatar/contact-1"
+def test_get_serialized_avatar_url_empty():
+    assert get_serialized_avatar_url(None, "contact-1") is None

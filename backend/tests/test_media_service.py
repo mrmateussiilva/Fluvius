@@ -81,7 +81,7 @@ async def test_get_media_file_autocure(client, db_session):
     assert media.downloaded is False
 
 
-def test_get_contact_avatar_redirect(client, db_session):
+def test_get_contact_avatar_proxy(client, db_session):
     from app.models.contact import Contact
     
     # Cria um contato com avatar_url externo
@@ -95,11 +95,18 @@ def test_get_contact_avatar_redirect(client, db_session):
     db_session.add(contact)
     db_session.commit()
 
-    response = client.get("/api/media/avatar/contact-avatar-redirect-test", follow_redirects=False)
+    mock_response = type("MockResponse", (), {})()
+    mock_response.status_code = 200
+    mock_response.headers = {"content-type": "image/jpeg"}
+    mock_response.content = b"avatar image"
 
-    # Deve retornar status code de redirecionamento (307)
-    assert response.status_code == 307
-    assert response.headers["location"] == "http://whatsapp-cdn.net/profile.jpg"
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_response) as mock_get:
+        response = client.get("/api/media/avatar/contact-avatar-redirect-test", follow_redirects=False)
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/jpeg"
+    assert response.content == b"avatar image"
+    mock_get.assert_called_once_with("http://whatsapp-cdn.net/profile.jpg")
 
 
 def test_get_contact_avatar_not_found_is_fast_and_cacheable(client, db_session):
