@@ -1,0 +1,111 @@
+⚠️ JWT_SECRET_KEY is insecure! Change this key in production environment.
+Traceback (most recent call last):
+  File "/home/mateus/Documents/Projects/fluvius/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/mateus/Documents/Projects/fluvius/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such column: conversations.last_message_preview
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/mateus/Documents/Projects/fluvius/backend/test_dashboard.py", line 9, in <module>
+    res = get_dashboard(db=db, current_agent=agent)
+  File "/home/mateus/Documents/Projects/fluvius/backend/app/api/routes/dashboard.py", line 119, in get_dashboard
+    ).all()
+      ~~~^^
+  File "/home/mateus/Documents/Projects/fluvius/backend/.venv/lib/python3.13/site-packages/sqlalchemy/orm/query.py", line 2711, in all
+    return self._iter().all()  # type: ignore
+           ~~~~~~~~~~^^
+  File "/home/mateus/Documents/Projects/fluvius/backend/.venv/lib/python3.13/site-packages/sqlalchemy/orm/query.py", line 2864, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/mateus/Documents/Projects/fluvius/backend/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/mateus/Documents/Projects/fluvius/backend/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "/home/mateus/Documents/Projects/fluvius/backend/.venv/lib/python3.13/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "/home/mateus/Documents/Projects/fluvius/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/home/mateus/Documents/Projects/fluvius/backend/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/mateus/Documents/Projects/fluvius/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/home/mateus/Documents/Projects/fluvius/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/mateus/Documents/Projects/fluvius/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/mateus/Documents/Projects/fluvius/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/mateus/Documents/Projects/fluvius/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/mateus/Documents/Projects/fluvius/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: conversations.last_message_preview
+[SQL: SELECT conversations.id AS conversations_id, conversations.workspace_id AS conversations_workspace_id, conversations.inbox_id AS conversations_inbox_id, conversations.contact_id AS conversations_contact_id, conversations.assignee_id AS conversations_assignee_id, conversations.queue_id AS conversations_queue_id, conversations.external_id AS conversations_external_id, conversations.status AS conversations_status, conversations.unread_count AS conversations_unread_count, conversations.last_message_at AS conversations_last_message_at, conversations.last_message_preview AS conversations_last_message_preview, conversations.assigned_at AS conversations_assigned_at, conversations.resolved_at AS conversations_resolved_at, conversations.created_at AS conversations_created_at, conversations.updated_at AS conversations_updated_at 
+FROM conversations 
+WHERE conversations.workspace_id = ? AND conversations.contact_id IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('4f6da242-0926-4fa9-ab52-aaa41b8d111c', '6aad6346-a2c7-472c-907c-8ce8bc265343', 'f6b5a0b0-d2f4-4270-8e74-54e9b98f02f6', 'dd25e25b-3e76-4bf9-b369-6db5b2630c7c', 'c7e35471-4a66-4d8c-87da-b7006fa2803f', '99e2ba75-5846-4930-beb2-728ed18bf90b', '170b668c-d124-45bb-a00d-71547ed91ee6', '5a900365-800e-43d9-abc0-826c4db73b04', '270c9751-b12f-4c9a-8134-1c177477fa18', 'c707d28c-e4f6-4579-ac03-6a9feda7ce87', '12cca701-4432-4127-9f02-7d0cdd5ba1ea', '627bf1c1-a240-41b7-bcf1-2814a7f363e8', '218b5f08-fa0d-4d41-912e-a6a92a335ecf', '62d8bdd5-850e-4ed5-94b3-0c5c1a6d71f4', '7d04670b-a9ca-42a0-9fce-b938f0302559', '3bbbbf4e-dbc2-40c8-b218-bafc11658e26', '410f4ae1-3a05-4c7c-923e-05edad09f4a7', '83929917-eda0-4434-b691-45ac5727a513', '18b00e0e-46ac-4504-a150-41672f455e23', '3062bdc8-b357-482b-aacd-c7533a7ae7d7', '277614bc-9a3c-4d97-bb45-ca9fd05b7ef7', '9ff9472d-9835-4cd4-9fb7-4ba50c94f7e6', '2ab10696-1c05-46f8-a2c3-0eef36a36e2f', 'a2a6df22-cf3d-43e4-b86b-6676d5a091a7', '21ec0a45-87f9-4979-ba54-9e486f51e8a9', '6f1d2c2d-10f3-4d1b-80b8-38d0e9fb156b', '53c967ac-d2dd-4c40-ab68-809dc9444db6', '6b0d40ac-e00a-44b0-865c-127d4d3ed628', 'c6f3f39f-7e72-4984-85db-46afaf9ef663', '1fad0ad7-ebf3-4029-af62-ee2f8331acd9', '6cd6c510-4dfd-48a8-b026-c74a9c00bbdb', 'a7d1e397-6acc-4f29-be2e-af412a32c638', '34a656d6-de81-4e97-ba15-7d0592cd72b0', 'd668c821-38e9-4990-a610-f1794d2c69e4', '3d0f1507-f9a9-4d58-88f4-198eb7593573', 'b657826a-4b4c-4e38-8902-d4ecc2110da8', '55801a8d-e00d-40f4-9fdf-2f1d28f2d169', 'c37e45ca-4f32-465c-ae41-0222159c8f2e', 'd7e6453b-b13b-483b-9ca6-12271422e5f3', '477d9525-cc26-44ff-a9a8-6d8d4456da7c', 'ecc62bad-2cd5-4426-98a9-873f2d92d375', '7a7d16c0-1249-44e1-8f2c-ab6ba2b81611', '585d3717-c673-4b22-abe0-11c2c16c983d', '63d900c0-a26f-4770-aaa3-68ec5d097952', 'fbebec7f-93eb-4728-b450-3ceeed23280c', 'f3e9e9a9-148d-458a-b94c-b038cc29359b', '85d02baa-72d9-477d-840d-da356bc67927', '8d1ee706-ea69-410f-9fa0-39f4529ab7c2', '41dabefd-a74e-4014-bd7e-d006c70836a1', 'c69edc7e-27d6-4e37-9a18-b60a24467d41' ... 43 parameters truncated ... '9e5d0f51-df63-4a98-bad9-95d6a74d00de', '1a24a520-fec8-41ff-b62c-b11f37696e66', 'ca4494a1-ac6e-47a3-8a3e-3038ac630474', 'f1fd1550-9a90-4db1-bad0-2c1371bb1b3f', '1673ebfd-1086-4116-9c3f-5a9178cbfb73', '7030be7a-99c1-4674-a6b6-53426035d375', 'b21a12d7-6519-4840-9239-71c81c1ea394', 'd983e73d-452d-4bbb-b8b5-824f944d4cf0', 'af6c3374-74ee-434b-aa61-0f43613bd60f', '06150a3b-036c-4b96-9eb9-e1ef4d34bfe2', '36e36c08-7578-4919-9f44-f88b8bd74121', '7dae9eaf-1e6d-47e5-8a85-080402c77f66', '70d30601-4d83-4884-bb93-ae4729c669bc', '53441677-0732-4f96-9ab1-1c5e874a2531', '61ae6fab-0678-4505-b0b3-100e67fe8d1c', '953a8172-895c-4eae-a734-9403cc1502d3', 'c71ba9f2-3da4-44f6-b49c-bb9ed73235cc', 'dbb30440-184a-4460-b13b-f5eb185b19f5', '2fababf1-b071-49a1-a40d-704689a782c3', 'f6746993-73d9-409b-b0dc-1a79d7082b9e', '65be625f-3bf4-41f0-b65d-93472b178ae9', '0d95657c-5499-4165-99ec-9a7c804a2e7a', 'a8c889c1-e9d4-4570-83b5-9948a5dafea8', 'cc819d4b-00ff-4603-b103-d741bdf812b0', 'd434c5b9-77e1-4dd1-9bf9-5684ffac4800', 'd9f71356-19f5-4c67-a678-c8dc221a9194', '30ff9699-9a51-45ba-ae73-f47bfe8894d5', '210dcc33-41e4-4eb7-a63a-94e3ea381ac2', '17603a1a-f7d2-422b-b384-e1d20aa0df41', '60211a32-c3f6-4a54-b054-78309a4664d5', 'f7a78479-efc0-40c1-a793-b87e0c424994', 'e349633b-e460-4326-8a12-457a8a1a6d18', '0254df7e-2f40-49c7-aa83-72de80364e8b', 'bf73daac-6d8d-49bc-9929-d59bf6f0567f', 'e221a920-8170-4c95-b111-551ee936ff88', 'c1e0cefc-15b7-4bd0-bb41-812cc2ceafb3', '92d314f5-222a-4709-b2af-69bbd2deed8b', 'bde1a267-0e2a-4eff-a1f9-b0094b9d9b26', 'c534bf3b-3aed-4db7-9867-2356dc91f0c5', 'dd78be3f-9ffd-4a3a-96dd-be12d80d1884', 'e09ca7fe-fb9e-40fc-96af-8d86d16112c8', '6e4f89ad-bb05-4385-8c47-799032d83444', '9987530e-a95b-4e57-be46-4918ccd1652c', '828abdf6-5093-422a-b438-e07d86938711', 'f8702315-ca76-44db-aaaf-07edcde40688', '7e5aca36-a1d9-4839-803d-66842e487e9a', '3f09c577-adf2-4f3b-9333-f6227c44afe4', '7d21d96a-71ef-4fb8-aec8-ccbac0be186f', 'c3123e69-ee06-4790-8c33-a8d517951d2b', 'a3f1ca3f-3040-4ef8-9df6-3116b206f0ee')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
