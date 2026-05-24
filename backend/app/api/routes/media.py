@@ -7,7 +7,7 @@ Suporta downloads on-demand resilientes e Range Requests nativos para players de
 import logging
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -111,11 +111,12 @@ from app.models.message import Message
 @router.get("/{media_id}")
 async def get_media_file(
     media_id: str,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
-    Serve a mídia cadastrada. Se o arquivo ainda não foi baixado
-    (ex: download em background falhou ou pego na sync), executa o download on-demand.
+    Serve a mídia cadastrada. Se o arquivo ainda não foi baixado,
+    dispara o download em background e retorna 202 imediatamente.
     """
     # Tenta buscar por ID da mídia ou por ID da mensagem
     media = db.query(Media).filter((Media.id == media_id) | (Media.message_id == media_id)).first()
@@ -172,33 +173,18 @@ async def get_media_file(
             pass
         raise HTTPException(status_code=410, detail="Mídia expirada ou indisponível")
 
-    # Se o download ainda não foi feito, tenta baixar on-demand
+    # Se o download ainda não foi feito, dispara o download em background e retorna 202
     if media.message_id:
         message_id = media.message_id
         media_uuid = media.id
         
-        # LIBERA A CONEXÃO COM O BANCO DE DADOS AGORA (antes do download lento via rede)
-        db.close()
-
-        logger.info(f"[MediaRouter] Baixando mídia {media_uuid} on-demand para mensagem {message_id}")
-        await MediaDownloadService.download_message_media(None, message_id)
+        # Inicia a tarefa em background sem bloquear o pool de conexões HTTP do FastAPI
+        background_tasks.add_task(MediaDownloadService.download_message_media, None, message_id)
         
-        # Abre uma sessão curta apenas para ler o novo file_path e servir o arquivo
-        from app.core.database import SessionLocal
-        with SessionLocal() as temp_db:
-            temp_media = temp_db.query(Media).filter(Media.id == media_uuid).first()
-            if temp_media and temp_media.downloaded and temp_media.file_path:
-                local_path = Path(temp_media.file_path.lstrip("/"))
-                if local_path.exists():
-                    mime = temp_media.mime_type or "application/octet-stream"
-                    return FileResponse(str(local_path), media_type=mime)
-            
-            # Download falhou — grava cache negativo para evitar retry imediato
-            try:
-                Path("uploads").mkdir(parents=True, exist_ok=True)
-                no_media_path.touch()
-            except Exception:
-                pass
+        return JSONResponse(
+            status_code=202,
+            content={"status": "processing", "message": "Mídia está sendo baixada do WhatsApp"}
+        )
 
     raise HTTPException(
         status_code=410,

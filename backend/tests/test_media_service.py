@@ -68,10 +68,10 @@ async def test_get_media_file_autocure(client, db_session):
     with patch("app.api.routes.media.MediaDownloadService.download_message_media", new_callable=AsyncMock) as mock_download:
         response = client.get("/api/media/msg-legacy-456")
         
-        # Como o arquivo físico não existe, a rota vai retornar 502/404 após tentar o download
-        assert response.status_code in [502, 404]
+        # Como o arquivo físico não existe, a rota vai iniciar download em background e retornar 202
+        assert response.status_code == 202
         
-        # O download deve ter sido chamado uma vez
+        # O download deve ter sido escalado em background
         mock_download.assert_called_once()
 
     # Verifica se o registro Media foi inserido no banco de dados com sucesso pelo fluxo de autocura

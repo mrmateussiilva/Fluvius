@@ -82,10 +82,44 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
 
   // Preflight: verifica se a mídia existe antes de passar para o <audio>
   React.useEffect(() => {
+    let timeoutId: any = null;
     // Cancela preflight anterior se src mudou
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+
+    const checkMedia = () => {
+      fetch(src, { method: 'HEAD', signal: controller.signal })
+        .then(res => {
+          if (res.status === 202) {
+            // Ainda baixando no backend. Mostra spinner de carregamento e agenda nova verificação
+            setIsLoading(true);
+            setErrorMsg('Baixando...');
+            timeoutId = setTimeout(checkMedia, 4000);
+          } else if (res.ok) {
+            // Mídia pronta e disponível localmente
+            setResolvedSrc(src);
+            setIsLoading(false);
+            setHasError(false);
+            setErrorMsg('');
+          } else if (res.status === 410 || res.status === 404) {
+            setErrorMsg('Expirado');
+            setHasError(true);
+            setIsLoading(false);
+          } else {
+            // Outro erro de servidor — tenta tocar direto (fallback)
+            setResolvedSrc(src);
+            setIsLoading(false);
+          }
+        })
+        .catch(err => {
+          if (err.name !== 'AbortError') {
+            // Erro de rede — tenta mesmo assim
+            setResolvedSrc(src);
+            setIsLoading(false);
+          }
+        });
+    };
 
     setResolvedSrc(null);
     setHasError(false);
@@ -95,31 +129,11 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
     setCurrentTime(0);
     setDuration(0);
 
-    fetch(src, { method: 'HEAD', signal: controller.signal })
-      .then(res => {
-        if (res.ok) {
-          setResolvedSrc(src);
-          setIsLoading(false);
-        } else if (res.status === 410 || res.status === 404) {
-          setErrorMsg('Expirado');
-          setHasError(true);
-          setIsLoading(false);
-        } else {
-          // 502 ou outro erro de servidor — tenta direto (pode estar sendo processado)
-          setResolvedSrc(src);
-          setIsLoading(false);
-        }
-      })
-      .catch(err => {
-        if (err.name !== 'AbortError') {
-          // Erro de rede — tenta mesmo assim
-          setResolvedSrc(src);
-          setIsLoading(false);
-        }
-      });
+    checkMedia();
 
     return () => {
       controller.abort();
+      if (timeoutId) clearTimeout(timeoutId);
       if (audioRef.current) {
         try {
           audioRef.current.pause();

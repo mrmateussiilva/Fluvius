@@ -2,6 +2,7 @@ import os
 import uuid
 import logging
 import mimetypes
+import asyncio
 import httpx
 from pathlib import Path
 from sqlalchemy.orm import Session
@@ -23,6 +24,8 @@ UPLOADS_DIR = Path("uploads")
 
 
 class MediaDownloadService:
+    # Semáforo para limitar downloads simultâneos de mídias pesadas a 3
+    _download_semaphore = asyncio.Semaphore(3)
 
     @staticmethod
     def ensure_directories():
@@ -106,48 +109,49 @@ class MediaDownloadService:
 
             # 3. Executar download
             success = False
-            try:
-                # Caso 1: Mídia descriptografada via Evolution API (para .enc do WhatsApp)
-                if wa_message and (source_url and ".enc" in source_url or "keys" in str(wa_message).lower()):
-                    logger.info(f"[MediaDownloadService] Solicitando descriptografia via Evolution para mensagem {message_id}")
-                    base64_data = await EvolutionService.get_base64_from_media_message(
-                        base_url=connection.base_url,
-                        api_key=connection.api_key,
-                        instance_name=connection.instance_name,
-                        message={"message": wa_message},
-                    )
-                    if base64_data:
-                        import base64
-                        with open(absolute_path, "wb") as f:
-                            f.write(base64.b64decode(base64_data))
-                        success = True
-                        logger.info(f"[MediaDownloadService] Mídia descriptografada salva em {relative_path}")
-
-                # Caso 2: URL direta de download da Evolution API (localhost / docker)
-                if not success and source_url and ("localhost" in source_url or "host.docker.internal" in source_url or "/message/download" in source_url):
-                    logger.info(f"[MediaDownloadService] Baixando URL interna do Evolution: {source_url}")
-                    headers = {"apikey": connection.api_key}
-                    async with httpx.AsyncClient() as client:
-                        response = await client.get(source_url, headers=headers, timeout=60.0)
-                        if response.status_code == 200:
+            async with MediaDownloadService._download_semaphore:
+                try:
+                    # Caso 1: Mídia descriptografada via Evolution API (para .enc do WhatsApp)
+                    if wa_message and (source_url and ".enc" in source_url or "keys" in str(wa_message).lower()):
+                        logger.info(f"[MediaDownloadService] Solicitando descriptografia via Evolution para mensagem {message_id}")
+                        base64_data = await EvolutionService.get_base64_from_media_message(
+                            base_url=connection.base_url,
+                            api_key=connection.api_key,
+                            instance_name=connection.instance_name,
+                            message={"message": wa_message},
+                        )
+                        if base64_data:
+                            import base64
                             with open(absolute_path, "wb") as f:
-                                f.write(response.content)
+                                f.write(base64.b64decode(base64_data))
                             success = True
-                            logger.info(f"[MediaDownloadService] Mídia de URL interna salva em {relative_path}")
+                            logger.info(f"[MediaDownloadService] Mídia descriptografada salva em {relative_path}")
 
-                # Caso 3: URL normal na internet
-                if not success and source_url and source_url.startswith("http"):
-                    logger.info(f"[MediaDownloadService] Baixando URL direta da internet: {source_url}")
-                    async with httpx.AsyncClient() as client:
-                        response = await client.get(source_url, timeout=60.0)
-                        if response.status_code == 200:
-                            with open(absolute_path, "wb") as f:
-                                f.write(response.content)
-                            success = True
-                            logger.info(f"[MediaDownloadService] Mídia de URL pública salva em {relative_path}")
+                    # Caso 2: URL direta de download da Evolution API (localhost / docker)
+                    if not success and source_url and ("localhost" in source_url or "host.docker.internal" in source_url or "/message/download" in source_url):
+                        logger.info(f"[MediaDownloadService] Baixando URL interna do Evolution: {source_url}")
+                        headers = {"apikey": connection.api_key}
+                        async with httpx.AsyncClient() as client:
+                            response = await client.get(source_url, headers=headers, timeout=15.0)
+                            if response.status_code == 200:
+                                with open(absolute_path, "wb") as f:
+                                    f.write(response.content)
+                                success = True
+                                logger.info(f"[MediaDownloadService] Mídia de URL interna salva em {relative_path}")
 
-            except Exception as e:
-                logger.error(f"[MediaDownloadService] Falha ao baixar mídia {media.id} para mensagem {message_id}: {e}")
+                    # Caso 3: URL normal na internet
+                    if not success and source_url and source_url.startswith("http"):
+                        logger.info(f"[MediaDownloadService] Baixando URL direta da internet: {source_url}")
+                        async with httpx.AsyncClient() as client:
+                            response = await client.get(source_url, timeout=15.0)
+                            if response.status_code == 200:
+                                with open(absolute_path, "wb") as f:
+                                    f.write(response.content)
+                                success = True
+                                logger.info(f"[MediaDownloadService] Mídia de URL pública salva em {relative_path}")
+
+                except Exception as e:
+                    logger.error(f"[MediaDownloadService] Falha ao baixar mídia {media.id} para mensagem {message_id}: {e}")
 
             # 4. Atualizar registro no banco
             if success:
@@ -211,7 +215,7 @@ class MediaDownloadService:
             try:
                 logger.info(f"[MediaDownloadService] Baixando avatar para contato {contact.name or contact.phone}")
                 async with httpx.AsyncClient() as client:
-                    response = await client.get(external_url, timeout=30.0)
+                    response = await client.get(external_url, timeout=10.0)
                     if response.status_code == 200:
                         with open(absolute_path, "wb") as f:
                             f.write(response.content)
