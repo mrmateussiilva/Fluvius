@@ -56,7 +56,7 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // false: preload=none, show play button immediately
   const [hasError, setHasError] = useState(false);
   const [resolvedSrc, setResolvedSrc] = useState(src);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -65,7 +65,7 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
   React.useEffect(() => {
     setResolvedSrc(src);
     setHasError(false);
-    setIsLoading(true);
+    setIsLoading(false);
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
@@ -92,11 +92,17 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
         audioRef.current.pause();
         setIsPlaying(false);
       } else {
+        // Show brief loading spinner while browser buffers
+        if (audioRef.current.readyState < 3) {
+          setIsLoading(true);
+        }
         await audioRef.current.play();
+        setIsLoading(false);
         setIsPlaying(true);
       }
     } catch (err) {
       console.warn('[AudioPlayer] play() failed:', err);
+      setIsLoading(false);
       setIsPlaying(false);
     }
   };
@@ -134,7 +140,7 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
       const proxyUrl = `${API_BASE_URL}/media/proxy?url=${encodeURIComponent(src)}`;
       console.warn('[AudioPlayer] Direct URL failed, trying backend proxy:', proxyUrl);
       setResolvedSrc(proxyUrl);
-      setIsLoading(true);
+      // Don't show spinner on fallback — button stays clickable
     } else {
       setHasError(true);
       setIsLoading(false);
