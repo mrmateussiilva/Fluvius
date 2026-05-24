@@ -39,7 +39,7 @@ function formatDateLabel(dateStr: string): string {
   return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', ...(sameYear ? {} : { year: 'numeric' }) });
 }
 
-const SafeAvatar = ({ src, alt, size = 20, fallback }: { src?: string; alt: string; size?: number; fallback?: React.ReactNode }) => {
+const SafeAvatar = ({ src, alt, size = 20, fallback }: { src?: string | null; alt: string; size?: number; fallback?: React.ReactNode }) => {
   const [hasError, setHasError] = useState(false);
   
   if (!src || hasError) {

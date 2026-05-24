@@ -22,7 +22,7 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const SafeAvatar = ({ src, alt, size = 16 }: { src?: string; alt: string; size?: number }) => {
+const SafeAvatar = ({ src, alt, size = 16 }: { src?: string | null; alt: string; size?: number }) => {
   const [hasError, setHasError] = useState(false);
   
   if (!src || hasError) {
