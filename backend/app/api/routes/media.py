@@ -38,6 +38,14 @@ async def get_contact_avatar(
     if local_path.exists():
         return FileResponse(str(local_path), media_type="image/jpeg")
 
+    # Cache negativo: evita bater na API caso já tenhamos tentado recentemente e falhado
+    no_avatar_path = Path(f"uploads/avatars/{contact_id}.no_avatar")
+    if no_avatar_path.exists():
+        mtime = no_avatar_path.stat().st_mtime
+        import time
+        if time.time() - mtime < 3600:  # Cache negativo de 1 hora
+            raise HTTPException(status_code=404, detail="Avatar não disponível (cached)")
+
     # Se não existe localmente, vamos obter da Evolution API on-demand
     contact = db.query(Contact).filter(Contact.id == contact_id).first()
     if not contact:
@@ -78,7 +86,21 @@ async def get_contact_avatar(
                     # Baixa síncrono on-demand (passando None para que use uma SessionLocal isolada internamente)
                     await MediaDownloadService.download_contact_avatar(None, contact_id)
                     if local_path.exists():
+                        # Limpa qualquer marcador de cache negativo se agora deu certo
+                        try:
+                            if no_avatar_path.exists():
+                                no_avatar_path.unlink()
+                        except Exception:
+                            pass
                         return FileResponse(str(local_path), media_type="image/jpeg")
+
+    # Se falhou e não temos o arquivo local, criamos o marcador de cache negativo
+    if not local_path.exists():
+        try:
+            no_avatar_path.parent.mkdir(parents=True, exist_ok=True)
+            no_avatar_path.touch()
+        except Exception:
+            pass
 
     # Fallback se não encontrar avatar: retorna 404
     raise HTTPException(status_code=404, detail="Avatar não disponível")
