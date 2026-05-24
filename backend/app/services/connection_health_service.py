@@ -14,6 +14,7 @@ Responsabilidades:
 
 import asyncio
 import logging
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,55 @@ logger = logging.getLogger(__name__)
 HEALTH_CHECK_INTERVAL = 60
 
 
+@dataclass(frozen=True)
+class ConnectionSnapshot:
+    id: str
+    workspace_id: str
+    base_url: str
+    api_key: str
+    instance_name: str
+    status: str
+
+
 class ConnectionHealthService:
+
+    @staticmethod
+    def _get_connection_snapshots() -> list[ConnectionSnapshot]:
+        from app.core.database import SessionLocal
+        from app.models.connection import Connection
+
+        with SessionLocal() as db:
+            return [
+                ConnectionSnapshot(
+                    id=conn.id,
+                    workspace_id=conn.workspace_id,
+                    base_url=conn.base_url,
+                    api_key=conn.api_key,
+                    instance_name=conn.instance_name,
+                    status=conn.status,
+                )
+                for conn in db.query(Connection).all()
+            ]
+
+    @staticmethod
+    def _update_connection_status(connection_id: str, status: str):
+        from app.core.database import SessionLocal
+        from app.models.connection import Connection
+
+        with SessionLocal() as db:
+            conn = db.query(Connection).filter(Connection.id == connection_id).first()
+            if not conn:
+                return None
+            conn.status = status
+            db.commit()
+            return ConnectionSnapshot(
+                id=conn.id,
+                workspace_id=conn.workspace_id,
+                base_url=conn.base_url,
+                api_key=conn.api_key,
+                instance_name=conn.instance_name,
+                status=conn.status,
+            )
 
     @staticmethod
     async def check_all_connections() -> None:
@@ -29,16 +78,13 @@ class ConnectionHealthService:
         Verifica o estado real de todas as conexões na Evolution API
         e sincroniza com o banco de dados.
         """
-        from app.core.database import SessionLocal
-        from app.models.connection import Connection
         from app.services.evolution_service import EvolutionService
         from app.core.socket_manager import socket_manager
         from app.core.config import settings
         from app.core.circuit_breaker import CircuitBreakerError
 
-        db = SessionLocal()
         try:
-            connections = db.query(Connection).all()
+            connections = ConnectionHealthService._get_connection_snapshots()
             if not connections:
                 return
 
@@ -77,22 +123,23 @@ class ConnectionHealthService:
                             f"[HealthCheck] {conn.instance_name}: "
                             f"{previous_status} → {new_status}"
                         )
-                        conn.status = new_status
-                        db.commit()
+                        updated_conn = ConnectionHealthService._update_connection_status(conn.id, new_status)
+                        if not updated_conn:
+                            continue
 
                         # Notifica o frontend via WebSocket
                         await socket_manager.broadcast({
                             "type": "CONNECTION_STATUS_UPDATED",
-                            "workspace_id": conn.workspace_id,
+                            "workspace_id": updated_conn.workspace_id,
                             "data": {
-                                "id": conn.id,
-                                "status": conn.status,
+                                "id": updated_conn.id,
+                                "status": updated_conn.status,
                             },
                         })
 
                         # Reconectou → re-registra webhook e dispara sync
                         if new_status == "connected" and previous_status != "connected":
-                            await ConnectionHealthService._on_reconnected(conn, settings)
+                            await ConnectionHealthService._on_reconnected(updated_conn, settings)
 
                 except CircuitBreakerError as e:
                     logger.warning(
@@ -107,18 +154,17 @@ class ConnectionHealthService:
                     )
                     # Marca como disconnected se a API estiver inacessível
                     if conn.status == "connected":
-                        conn.status = "disconnected"
-                        db.commit()
+                        updated_conn = ConnectionHealthService._update_connection_status(conn.id, "disconnected")
+                        if not updated_conn:
+                            continue
                         await socket_manager.broadcast({
                             "type": "CONNECTION_STATUS_UPDATED",
-                            "workspace_id": conn.workspace_id,
-                            "data": {"id": conn.id, "status": "disconnected"},
+                            "workspace_id": updated_conn.workspace_id,
+                            "data": {"id": updated_conn.id, "status": "disconnected"},
                         })
 
         except Exception as e:
             logger.error(f"[HealthCheck] Erro geral durante verificação: {e}")
-        finally:
-            db.close()
 
 
     @staticmethod
