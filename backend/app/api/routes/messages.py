@@ -35,7 +35,7 @@ def is_valid_whatsapp_destination(destination: str | None) -> bool:
 
 
 @router.get("", response_model=List[MessageResponse])
-def get_messages(
+async def get_messages(
     conversation_id: str, 
     before_date: Optional[str] = None,
     limit: int = 50,
@@ -53,6 +53,35 @@ def get_messages(
         limit=limit, 
         before_date=before_date
     )
+
+    # Auto-heal para conversas antigas/sincronizadas parcialmente: se a conversa
+    # existe mas ainda não há mensagens locais, tenta buscar o histórico na Evolution.
+    if not messages and before_date is None:
+        connection = db.query(Connection).filter(Connection.inbox_id == conversation.inbox_id).first()
+        contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
+        if connection and contact:
+            remote_jid = conversation.external_id or contact.phone
+            if remote_jid and "@" not in remote_jid:
+                remote_jid = f"{remote_jid}@s.whatsapp.net"
+
+            try:
+                from app.services.sync_service import sync_chat_record
+
+                await sync_chat_record(db, connection, {
+                    "id": remote_jid,
+                    "remoteJid": remote_jid,
+                    "pushName": contact.name,
+                    "name": contact.name,
+                })
+                messages = MessageService.get_messages_by_conversation(
+                    db,
+                    conversation_id,
+                    limit=limit,
+                    before_date=before_date,
+                )
+            except Exception as exc:
+                logger.warning("On-demand message sync failed for %s: %s", conversation_id, exc)
+
     return messages
 
 async def send_message_task(message_id: str, conversation_id: str, text: str, workspace_id: str, quoted_external_id: str = None):

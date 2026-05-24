@@ -67,6 +67,63 @@ def test_get_messages(client, auth_headers, message_setup):
     assert len(data) == 1
     assert data[0]["content"] == "hello"
 
+
+def test_get_messages_auto_syncs_empty_conversation(client, auth_headers, db_session, workspace_seed):
+    workspace_id = workspace_seed["workspace_id"]
+
+    inbox = Inbox(workspace_id=workspace_id, name="Sync Inbox", channel_type="whatsapp")
+    db_session.add(inbox)
+    db_session.flush()
+
+    connection = Connection(
+        workspace_id=workspace_id,
+        inbox_id=inbox.id,
+        name="Sync Conn",
+        provider="evolution_api",
+        instance_name="sync_inst",
+        base_url="http://localhost:8080",
+        api_key="key",
+        status="connected",
+    )
+    contact = Contact(
+        workspace_id=workspace_id,
+        name="Sync Customer",
+        phone="5511888888888",
+    )
+    db_session.add_all([connection, contact])
+    db_session.flush()
+
+    conversation = Conversation(
+        workspace_id=workspace_id,
+        inbox_id=inbox.id,
+        contact_id=contact.id,
+        external_id="5511888888888@s.whatsapp.net",
+        status="pending",
+    )
+    db_session.add(conversation)
+    db_session.commit()
+
+    async def fake_sync(sync_db, _connection, chat):
+        assert chat["remoteJid"] == "5511888888888@s.whatsapp.net"
+        sync_db.add(Message(
+            workspace_id=workspace_id,
+            conversation_id=conversation.id,
+            contact_id=contact.id,
+            direction="inbound",
+            message_type="text",
+            content="historico recuperado",
+        ))
+        sync_db.commit()
+        return True, 1
+
+    with patch("app.services.sync_service.sync_chat_record", new_callable=AsyncMock, side_effect=fake_sync) as mock_sync:
+        response = client.get(f"/api/conversations/{conversation.id}/messages", headers=auth_headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert [msg["content"] for msg in data] == ["historico recuperado"]
+    mock_sync.assert_awaited_once()
+
 def test_get_messages_not_found(client, auth_headers):
     response = client.get("/api/conversations/invalid-id/messages", headers=auth_headers)
     assert response.status_code == 404
