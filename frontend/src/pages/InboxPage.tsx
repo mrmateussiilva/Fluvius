@@ -15,7 +15,13 @@ import { useAgent } from '../context/AgentContext';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket, type WSEvent } from '../hooks/useWebSocket';
 import { CopilotPanel, type CopilotAlert } from '../components/CopilotPanel';
+import { AgentList } from '../components/Admin/AgentList';
+import { GlobalConversations } from '../components/Admin/GlobalConversations';
+import { KanbanBoard } from '../components/Admin/KanbanBoard';
+import { DashboardOverview } from '../components/Admin/DashboardOverview';
+import { GlobalSidebar, type GlobalTab } from '../components/GlobalSidebar';
 
+export type AdminTab = 'dashboard' | 'agents' | 'conversations' | 'kanban';
 
 type TabFilter = 'all' | 'pending' | 'mine' | 'resolved';
 
@@ -49,12 +55,13 @@ export const InboxPage: React.FC = () => {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState(false);
+  const [globalTab, setGlobalTab] = useState<GlobalTab>('chat');
   // Copilot alerts state
   const [copilotAlerts, setCopilotAlerts] = useState<CopilotAlert[]>([]);
   const [typingState, setTypingState] = useState<Record<string, boolean>>({});
 
   const { currentAgent } = useAgent();
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const navigate = useNavigate();
 
   const conversationsRef = useRef<Conversation[]>([]);
@@ -465,6 +472,7 @@ export const InboxPage: React.FC = () => {
     }
     setSelectedConversationId(id);
     setReplyingTo(null); // Clear reply state when changing conversation
+    setGlobalTab('chat'); // Sair do modo admin se selecionar uma conversa
     
     if (!id) {
       setSelectedConversation(null);
@@ -520,8 +528,24 @@ export const InboxPage: React.FC = () => {
       )}
 
       <div className="flex flex-1 overflow-hidden">
-        <ConversationList
-          conversations={conversations}
+        <GlobalSidebar 
+          currentTab={globalTab} 
+          onTabChange={(tab) => {
+            setGlobalTab(tab);
+            if (tab !== 'chat') {
+              setSelectedConversationId(null);
+              setSearchParams({});
+            }
+          }}
+          currentAgent={currentAgent}
+          onLogout={logout}
+          onSettings={() => navigate('/settings')}
+          unreadCount={conversations.reduce((acc, c) => acc + c.unread_count, 0)}
+        />
+
+        {globalTab === 'chat' && (
+          <ConversationList
+            conversations={conversations}
           selectedId={selectedConversationId}
           onSelect={handleSelectConversation}
           activeTab={activeTab}
@@ -533,11 +557,20 @@ export const InboxPage: React.FC = () => {
           onDismissCopilotAlert={(conversationId) => {
             setCopilotAlerts(prev => prev.filter(a => a.conversation_id !== conversationId));
           }}
-          onClearAllCopilotAlerts={() => setCopilotAlerts([])}
-          isLoading={isLoadingConversations}
-          typingState={typingState}
-        />
-      {selectedConversation ? (
+            onClearAllCopilotAlerts={() => setCopilotAlerts([])}
+            isLoading={isLoadingConversations}
+            typingState={typingState}
+          />
+        )}
+        
+      {globalTab !== 'chat' ? (
+        <div className={`flex-1 bg-slate-50 transition-all duration-300 ${globalTab === 'kanban' ? 'overflow-hidden flex flex-col h-screen' : 'overflow-y-auto'}`}>
+          {globalTab === 'dashboard' && <DashboardOverview />}
+          {globalTab === 'kanban' && <KanbanBoard />}
+          {globalTab === 'agents' && <AgentList />}
+          {globalTab === 'conversations' && <GlobalConversations />}
+        </div>
+      ) : selectedConversation ? (
         <MessagePanel
           messages={messages}
           onSendMessage={handleSendMessage}

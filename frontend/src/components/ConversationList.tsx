@@ -4,7 +4,7 @@ import type { Conversation } from '../api/client';
 import { 
   User, MessageCircle, Clock, Settings as SettingsIcon, 
   Inbox, CheckCircle, AlertCircle, LogOut, Shield, Search, 
-  ChevronRight, Filter, MoreHorizontal, ChevronLeft
+  ChevronRight, Filter, MoreHorizontal, ChevronLeft, MessageSquare
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -125,8 +125,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
         /* ==================== COLLAPSED VIEW (72px) ==================== */
         <>
           {/* Header */}
-          <div className="py-3 border-b border-slate-100 flex flex-col items-center gap-3 shrink-0">
-            <div className="w-6 h-6 rounded bg-slate-900 flex items-center justify-center overflow-hidden shrink-0">
+          <div className="py-3 border-b border-slate-100 flex flex-col items-center gap-3 shrink-0 bg-white">
+            <div className="w-7 h-7 rounded-lg bg-fluvius-gradient shadow-sm flex items-center justify-center overflow-hidden shrink-0">
                <img src="/logo.png" alt="Fluvius" className="w-4 h-4 object-contain brightness-0 invert" />
             </div>
             <button 
@@ -258,7 +258,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
           {/* Footer - Vertical Compact Agent Profile */}
           <div className="mt-auto border-t border-slate-100 bg-slate-50/50 py-3 flex flex-col items-center gap-3 shrink-0">
-            <div className="w-8 h-8 rounded bg-slate-800 flex items-center justify-center text-white font-extrabold text-[12px] shrink-0" title={currentAgent?.name}>
+            <div className="w-8 h-8 rounded-full bg-fluvius-gradient flex items-center justify-center text-white font-extrabold text-[13px] shrink-0 shadow-sm ring-2 ring-white" title={currentAgent?.name}>
               {currentAgent?.name.charAt(0).toUpperCase()}
             </div>
             
@@ -279,12 +279,9 @@ export const ConversationList: React.FC<ConversationListProps> = ({
               </Link>
               
               {currentAgent?.role === 'admin' && (
-                <Link to="/admin" className="p-1.5 text-slate-400 hover:text-slate-800 rounded transition-colors group relative">
+                <div className="p-1.5 text-slate-400 hover:text-slate-800 rounded transition-colors group relative">
                   <Shield size={16} />
-                  <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
-                    Painel Admin
-                  </div>
-                </Link>
+                </div>
               )}
 
               <button onClick={logout} className="p-1.5 text-slate-400 hover:text-rose-500 rounded transition-colors group relative">
@@ -303,7 +300,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
           <div className="px-4 py-3 shrink-0 border-b border-slate-100 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 group cursor-pointer">
-                <div className="w-6 h-6 rounded bg-slate-900 flex items-center justify-center overflow-hidden">
+                <div className="w-7 h-7 rounded-lg bg-fluvius-gradient shadow-sm flex items-center justify-center overflow-hidden">
                    <img src="/logo.png" alt="Fluvius" className="w-4 h-4 object-contain brightness-0 invert" />
                 </div>
                 <h1 className="text-[13px] font-bold tracking-tight text-slate-800">Fluvius</h1>
@@ -334,6 +331,13 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                   className="w-full bg-slate-50 border border-slate-100 rounded-md pl-8 pr-3 py-1.5 text-[12px] text-slate-700 placeholder:text-slate-400 focus:bg-white focus:border-blue-200 transition-all outline-none"
                 />
               </div>
+              <CopilotPanel
+                alerts={copilotAlerts}
+                onSelectConversation={onSelectCopilotConversation}
+                onDismissAlert={onDismissCopilotAlert}
+                onClearAll={onClearAllCopilotAlerts}
+                variant="compact"
+              />
               <button 
                 onClick={() => setIsNewChatModalOpen(true)}
                 className="w-8 h-8 flex items-center justify-center shrink-0 bg-fluvius-blue-main hover:bg-fluvius-blue-dark text-white rounded-md transition-colors"
@@ -344,9 +348,9 @@ export const ConversationList: React.FC<ConversationListProps> = ({
             </div>
           </div>
 
-          {/* Tabs - Minimalist Selectors */}
-          <div className="px-3 py-2 shrink-0 border-b border-slate-100 bg-white">
-            <div className="flex gap-1 overflow-x-auto scrollbar-none">
+          {/* Tabs - Pill Selectors */}
+          <div className="px-4 py-2.5 shrink-0 border-b border-slate-100 bg-slate-50/50">
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-none bg-slate-100/80 p-1 rounded-lg border border-slate-200/60 shadow-inner">
               {TABS.map(tab => {
                 const isSelected = activeTab === tab.key;
                 const hasPending = tab.key === 'pending' && conversations.filter(c => c.status === 'pending').length > 0;
@@ -355,15 +359,15 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                     key={tab.key}
                     onClick={() => onTabChange(tab.key)}
                     className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold rounded-md transition-all whitespace-nowrap relative shrink-0",
+                      "flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-md transition-all whitespace-nowrap relative shrink-0",
                       isSelected
-                        ? "text-slate-800 bg-slate-100"
-                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                        ? "text-fluvius-blue-deep bg-white shadow-sm border border-slate-200/50"
+                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
                     )}
                   >
                     {tab.label}
                     {hasPending && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-sm" />
                     )}
                   </button>
                 );
@@ -411,8 +415,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                       className={cn(
                         "group relative flex items-center gap-3 px-4 py-3 cursor-pointer transition-all border-b border-slate-50/50 mb-0.5",
                         isSelected 
-                          ? "bg-slate-100/70" 
-                          : "bg-transparent hover:bg-slate-50/60"
+                          ? "bg-fluvius-blue-50/60" 
+                          : "bg-transparent hover:bg-slate-50"
                       )}
                     >
                       {/* Active indicator bar */}
@@ -485,38 +489,11 @@ export const ConversationList: React.FC<ConversationListProps> = ({
           </div>
 
 
-          {/* Footer - Minimalist Identity */}
-          <div className="mt-auto border-t border-slate-100 bg-slate-50/50">
-            <div className="flex items-center justify-between px-3 py-2">
-              <div className="flex items-center gap-2">
-                 <div className="w-7 h-7 rounded bg-slate-800 flex items-center justify-center text-white font-bold text-[10px]">
-                   {currentAgent?.name.charAt(0).toUpperCase()}
-                 </div>
-                 <div className="flex flex-col">
-                    <span className="text-[11px] font-bold text-slate-700 leading-none">{currentAgent?.name}</span>
-                    <span className="text-[9px] font-medium text-slate-400 mt-0.5">Online</span>
-                 </div>
-              </div>
-              <div className="flex items-center gap-0.5">
-                 <CopilotPanel
-                   alerts={copilotAlerts}
-                   onSelectConversation={onSelectCopilotConversation}
-                   onDismissAlert={onDismissCopilotAlert}
-                   onClearAll={onClearAllCopilotAlerts}
-                   variant="compact"
-                 />
-                 <Link to="/settings" className="p-1.5 text-slate-400 hover:text-slate-600 rounded transition-colors">
-                    <SettingsIcon size={14} />
-                 </Link>
-                 <button onClick={logout} className="p-1.5 text-slate-400 hover:text-rose-500 rounded transition-colors">
-                    <LogOut size={16} />
-                 </button>
-              </div>
-            </div>
-            {/* Version badge */}
-            <div className="px-3 pb-2 flex items-center gap-1.5">
-              <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">v{APP_VERSION}</span>
+          {/* Footer - Version Only */}
+          <div className="mt-auto border-t border-slate-100 bg-slate-50/50 flex justify-center py-2 shrink-0">
+            <div className="flex items-center gap-1.5">
               <span className="w-1 h-1 rounded-full bg-emerald-400" title="Sistema online" />
+              <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">v{APP_VERSION}</span>
             </div>
 
             {/* Modals */}
@@ -527,23 +504,6 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 onSelect(convId);
               }}
             />
-
-            {currentAgent?.role === 'admin' && (
-              <div className="px-2 pb-2">
-                <Link
-                  to="/admin"
-                  className={cn(
-                    "flex items-center justify-center gap-2 w-full py-1.5 rounded text-[10px] font-bold uppercase tracking-widest transition-all",
-                    location.pathname.startsWith('/admin') 
-                      ? "bg-slate-800 text-white" 
-                      : "bg-white border border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700"
-                  )}
-                >
-                  <Shield size={12} />
-                  Admin
-                </Link>
-              </div>
-            )}
           </div>
         </>
       )}

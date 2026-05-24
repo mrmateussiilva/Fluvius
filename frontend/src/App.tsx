@@ -5,7 +5,6 @@ import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AgentProvider, useAgent } from './context/AgentContext';
-import { AdminPage } from './pages/AdminPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { fetchConnections } from './api/client';
 import { useState, useEffect } from 'react';
@@ -19,8 +18,19 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-fluvius-bg flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-fluvius-blue-main border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-slate-900 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col items-center justify-center relative overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-fluvius-blue-main/20 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-fluvius-green-water/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="relative z-10 flex flex-col items-center gap-4">
+           <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-md shadow-2xl flex items-center justify-center border border-white/20 animate-pulse">
+             <img src="/logo.png" alt="Loading" className="w-8 h-8 object-contain brightness-0 invert" />
+           </div>
+           <div className="flex gap-1.5 mt-2">
+             <span className="w-2 h-2 rounded-full bg-fluvius-blue-main animate-bounce" style={{ animationDelay: '0ms' }} />
+             <span className="w-2 h-2 rounded-full bg-fluvius-blue-main animate-bounce" style={{ animationDelay: '150ms' }} />
+             <span className="w-2 h-2 rounded-full bg-fluvius-blue-main animate-bounce" style={{ animationDelay: '300ms' }} />
+           </div>
+        </div>
       </div>
     );
   }
@@ -52,8 +62,19 @@ const OnboardingRedirect: React.FC<{ children: React.ReactNode }> = ({ children 
 
   if (hasConnection === null) {
     return (
-      <div className="min-h-screen bg-fluvius-bg flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-fluvius-blue-main border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-slate-900 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col items-center justify-center relative overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-fluvius-blue-main/20 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-fluvius-green-water/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="relative z-10 flex flex-col items-center gap-4">
+           <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-md shadow-2xl flex items-center justify-center border border-white/20 animate-pulse">
+             <img src="/logo.png" alt="Loading" className="w-8 h-8 object-contain brightness-0 invert" />
+           </div>
+           <div className="flex gap-1.5 mt-2">
+             <span className="w-2 h-2 rounded-full bg-fluvius-blue-main animate-bounce" style={{ animationDelay: '0ms' }} />
+             <span className="w-2 h-2 rounded-full bg-fluvius-blue-main animate-bounce" style={{ animationDelay: '150ms' }} />
+             <span className="w-2 h-2 rounded-full bg-fluvius-blue-main animate-bounce" style={{ animationDelay: '300ms' }} />
+           </div>
+        </div>
       </div>
     );
   }
@@ -113,13 +134,7 @@ const AppContent = () => {
             </ProtectedRoute>
           } />
 
-          <Route path="/admin" element={
-            <ProtectedRoute>
-              <AdminRoute>
-                <AdminPage />
-              </AdminRoute>
-            </ProtectedRoute>
-          } />
+          <Route path="/admin" element={<Navigate to="/" replace />} />
         </Routes>
       </AgentProvider>
     </BrowserRouter>
