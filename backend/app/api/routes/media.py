@@ -24,14 +24,58 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/media", tags=["media"])
 
 
-@router.get("/avatar/{contact_id}")
+async def fetch_and_download_avatar_task(
+    contact_id: str,
+    base_url: str,
+    api_key: str,
+    instance_name: str,
+    phone: str
+):
+    """Obtém a URL externa do avatar na API em background e faz o download da imagem."""
+    try:
+        avatar_url = await EvolutionService.fetch_profile_picture_url(
+            base_url=base_url,
+            api_key=api_key,
+            instance_name=instance_name,
+            number=phone
+        )
+        if avatar_url:
+            from app.core.database import SessionLocal
+            with SessionLocal() as temp_db:
+                temp_contact = temp_db.query(Contact).filter(Contact.id == contact_id).first()
+                if temp_contact:
+                    temp_contact.avatar_url = avatar_url
+                    temp_db.commit()
+            
+            # Executa o download da imagem do avatar localmente
+            await MediaDownloadService.download_contact_avatar(None, contact_id)
+        else:
+            # Registra no cache negativo para evitar consultas imediatas
+            no_avatar_path = Path(f"uploads/avatars/{contact_id}.no_avatar")
+            try:
+                no_avatar_path.parent.mkdir(parents=True, exist_ok=True)
+                no_avatar_path.touch()
+            except Exception:
+                pass
+    except Exception as e:
+        logger.error(f"[AvatarBackground] Erro ao obter/baixar avatar para {contact_id}: {e}")
+        no_avatar_path = Path(f"uploads/avatars/{contact_id}.no_avatar")
+        try:
+            no_avatar_path.parent.mkdir(parents=True, exist_ok=True)
+            no_avatar_path.touch()
+        except Exception:
+            pass
+
+
+@router.api_route("/avatar/{contact_id}", methods=["GET", "HEAD"])
 async def get_contact_avatar(
     contact_id: str,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
-    Retorna o avatar local do contato. Se não estiver baixado, tenta buscar
-    na Evolution API, baixa on-demand e serve.
+    Retorna o avatar local do contato. Se não estiver baixado, agenda a busca
+    na Evolution API e o download em background de forma assíncrona, retornando 404 imediatamente.
     """
     local_path = Path(f"uploads/avatars/{contact_id}.jpg")
     
@@ -46,7 +90,7 @@ async def get_contact_avatar(
         if time.time() - mtime < 3600:  # Cache negativo de 1 hora
             raise HTTPException(status_code=404, detail="Avatar não disponível (cached)")
 
-    # Se não existe localmente, vamos obter da Evolution API on-demand
+    # Se não existe localmente nem no cache negativo, vamos buscar na Evolution API em background
     contact = db.query(Contact).filter(Contact.id == contact_id).first()
     if not contact:
         raise HTTPException(status_code=404, detail="Contato não encontrado")
@@ -58,57 +102,27 @@ async def get_contact_avatar(
         if inbox:
             connection = db.query(Connection).filter(Connection.inbox_id == inbox.id).first()
             if connection:
-                # Extraímos as variáveis antes de fechar a sessão para evitar lazy loading errors
                 base_url = connection.base_url
                 api_key = connection.api_key
                 instance_name = connection.instance_name
                 phone = contact.phone
 
-                # LIBERA A CONEXÃO COM O BANCO DE DADOS AGORA (antes da chamada de rede lenta)
-                db.close()
-
-                # Tenta buscar a URL externa atual na Evolution API (pode demorar ou dar timeout)
-                avatar_url = await EvolutionService.fetch_profile_picture_url(
+                # Dispara a busca e download em background
+                background_tasks.add_task(
+                    fetch_and_download_avatar_task,
+                    contact_id=contact_id,
                     base_url=base_url,
                     api_key=api_key,
                     instance_name=instance_name,
-                    number=phone
+                    phone=phone
                 )
-                if avatar_url:
-                    # Usamos uma sessão curta local apenas para gravar a nova url
-                    from app.core.database import SessionLocal
-                    with SessionLocal() as temp_db:
-                        temp_contact = temp_db.query(Contact).filter(Contact.id == contact_id).first()
-                        if temp_contact:
-                            temp_contact.avatar_url = avatar_url
-                            temp_db.commit()
-                    
-                    # Baixa síncrono on-demand (passando None para que use uma SessionLocal isolada internamente)
-                    await MediaDownloadService.download_contact_avatar(None, contact_id)
-                    if local_path.exists():
-                        # Limpa qualquer marcador de cache negativo se agora deu certo
-                        try:
-                            if no_avatar_path.exists():
-                                no_avatar_path.unlink()
-                        except Exception:
-                            pass
-                        return FileResponse(str(local_path), media_type="image/jpeg")
 
-    # Se falhou e não temos o arquivo local, criamos o marcador de cache negativo
-    if not local_path.exists():
-        try:
-            no_avatar_path.parent.mkdir(parents=True, exist_ok=True)
-            no_avatar_path.touch()
-        except Exception:
-            pass
-
-    # Fallback se não encontrar avatar: retorna 404
-    raise HTTPException(status_code=404, detail="Avatar não disponível")
+    raise HTTPException(status_code=404, detail="Avatar carregando em segundo plano")
 
 
 from app.models.message import Message
 
-@router.get("/{media_id}")
+@router.api_route("/{media_id}", methods=["GET", "HEAD"])
 async def get_media_file(
     media_id: str,
     background_tasks: BackgroundTasks,
