@@ -73,31 +73,59 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
-  const [isLoading, setIsLoading] = useState(false); // false: preload=none, show play button immediately
+  const [isLoading, setIsLoading] = useState(true); // starts as loading while we preflight
   const [hasError, setHasError] = useState(false);
-  const [resolvedSrc, setResolvedSrc] = useState(src);
+  const [errorMsg, setErrorMsg] = useState<string>('');
+  const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
-  const retryCount = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
 
-  // Reset when src changes and clean up active network requests
+  // Preflight: verifica se a mídia existe antes de passar para o <audio>
   React.useEffect(() => {
-    setResolvedSrc(src);
+    // Cancela preflight anterior se src mudou
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setResolvedSrc(null);
     setHasError(false);
-    setIsLoading(false);
+    setErrorMsg('');
+    setIsLoading(true);
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
-    retryCount.current = 0;
+
+    fetch(src, { method: 'HEAD', signal: controller.signal })
+      .then(res => {
+        if (res.ok) {
+          setResolvedSrc(src);
+          setIsLoading(false);
+        } else if (res.status === 410 || res.status === 404) {
+          setErrorMsg('Expirado');
+          setHasError(true);
+          setIsLoading(false);
+        } else {
+          // 502 ou outro erro de servidor — tenta direto (pode estar sendo processado)
+          setResolvedSrc(src);
+          setIsLoading(false);
+        }
+      })
+      .catch(err => {
+        if (err.name !== 'AbortError') {
+          // Erro de rede — tenta mesmo assim
+          setResolvedSrc(src);
+          setIsLoading(false);
+        }
+      });
 
     return () => {
+      controller.abort();
       if (audioRef.current) {
         try {
           audioRef.current.pause();
-          audioRef.current.src = "";
-          audioRef.current.load(); // Forces browser to abort any active downloads
-        } catch (e) {
-          // Ignore
-        }
+          audioRef.current.src = '';
+          audioRef.current.load();
+        } catch (_) {}
       }
     };
   }, [src]);
@@ -117,13 +145,12 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
   }, [src]);
 
   const togglePlay = async () => {
-    if (!audioRef.current || hasError) return;
+    if (!audioRef.current || hasError || !resolvedSrc) return;
     try {
       if (isPlaying) {
         audioRef.current.pause();
         setIsPlaying(false);
       } else {
-        // Show brief loading spinner while browser buffers
         if (audioRef.current.readyState < 3) {
           setIsLoading(true);
         }
@@ -147,9 +174,7 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
   };
 
   const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-    }
+    if (audioRef.current) setCurrentTime(audioRef.current.currentTime);
   };
 
   const handleLoadedMetadata = () => {
@@ -166,24 +191,11 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
   };
 
   const handleError = () => {
-    // If the media fails to load (e.g. backend is downloading it in background),
-    // we retry loading a couple of times before giving up.
-    if (retryCount.current < 3) {
-      retryCount.current += 1;
-      console.warn(`[AudioPlayer] Playback error, retrying (${retryCount.current}/3) in 2 seconds...`);
-      setTimeout(() => {
-        if (audioRef.current) {
-          audioRef.current.load();
-          if (isPlaying) {
-            audioRef.current.play().catch(() => {});
-          }
-        }
-      }, 2000);
-    } else {
-      setHasError(true);
-      setIsLoading(false);
-      setIsPlaying(false);
-    }
+    // Falha durante reprodução — pode ser erro de rede pontual, mas não fazemos retry infinito
+    setHasError(true);
+    setErrorMsg('Erro');
+    setIsLoading(false);
+    setIsPlaying(false);
   };
 
   const formatTime = (time: number) => {
@@ -197,34 +209,37 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
 
   return (
     <div className="min-w-[260px] py-2 flex items-center gap-3">
-      {/* Single audio element with direct src — avoids multi-source abort issue */}
-      <audio
-        key={resolvedSrc}
-        ref={audioRef}
-        src={resolvedSrc}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onCanPlay={handleCanPlay}
-        onEnded={() => { setIsPlaying(false); setCurrentTime(0); }}
-        onError={handleError}
-        className="hidden"
-        preload="none"
-      />
+      {/* Elemento audio — só montado se resolvedSrc não for null */}
+      {resolvedSrc && (
+        <audio
+          key={resolvedSrc}
+          ref={audioRef}
+          src={resolvedSrc}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onCanPlay={handleCanPlay}
+          onEnded={() => { setIsPlaying(false); setCurrentTime(0); }}
+          onError={handleError}
+          className="hidden"
+          preload="none"
+        />
+      )}
       <button
         onClick={togglePlay}
-        disabled={isLoading && !hasError}
+        disabled={isLoading || !resolvedSrc}
         className={cn(
           "w-10 h-10 text-white rounded-full flex items-center justify-center transition-colors shadow-sm shrink-0",
           hasError
             ? "bg-rose-400 cursor-not-allowed"
-            : isLoading
+            : isLoading || !resolvedSrc
             ? "bg-slate-300 cursor-wait"
             : "bg-fluvius-blue-main hover:bg-blue-700"
         )}
+        title={hasError ? (errorMsg || 'Mídia indisponível') : undefined}
       >
         {hasError ? (
-          <span className="text-[10px] font-bold">!</span>
-        ) : isLoading ? (
+          <span className="text-[9px] font-bold leading-tight text-center px-0.5">{errorMsg || '!'}</span>
+        ) : isLoading || !resolvedSrc ? (
           <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin block" />
         ) : isPlaying ? (
           <Pause size={18} fill="currentColor" />
@@ -249,6 +264,7 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
                 key={i} 
                 className={cn(
                   "flex-1 rounded-full transition-all duration-100",
+                  hasError ? "bg-rose-200" :
                   isPlayed ? "bg-fluvius-blue-main" : "bg-slate-200 group-hover:bg-slate-300"
                 )} 
                 style={{ height: `${height}%`, minHeight: '4px' }} 
@@ -258,14 +274,16 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
         </div>
         
         <div className="flex justify-between items-center text-[10px] text-slate-500 font-bold tracking-wider mt-1">
-          <span className="tabular-nums">{formatTime(currentTime)}</span>
+          <span className="tabular-nums">{hasError ? (errorMsg || 'Indisponível') : formatTime(currentTime)}</span>
           <div className="flex items-center gap-2">
-            <button 
-              onClick={cyclePlaybackRate}
-              className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-[9px] transition-colors"
-            >
-              {playbackRate}x
-            </button>
+            {!hasError && (
+              <button 
+                onClick={cyclePlaybackRate}
+                className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-[9px] transition-colors"
+              >
+                {playbackRate}x
+              </button>
+            )}
             <span className="tabular-nums opacity-60">{formatTime(duration)}</span>
           </div>
         </div>

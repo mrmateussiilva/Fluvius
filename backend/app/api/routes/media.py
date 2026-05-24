@@ -147,7 +147,32 @@ async def get_media_file(
             mime = media.mime_type or "application/octet-stream"
             return FileResponse(str(local_path), media_type=mime)
 
-    # Se o download ainda não foi feito ou falhou, tenta baixar de forma síncrona on-demand
+    # Negative cache em disco: se já tentamos e falhamos, retorna 410 Gone imediatamente
+    # sem bater na Evolution API novamente (URLs do WhatsApp expiram em ~72h)
+    import time
+    no_media_path = Path(f"uploads/.no_media_{media_id}")
+    if no_media_path.exists():
+        mtime = no_media_path.stat().st_mtime
+        # Cache negativo de 6 horas — depois tenta novamente caso a URL tenha sido renovada
+        if time.time() - mtime < 21600:
+            raise HTTPException(status_code=410, detail="Mídia expirada ou indisponível")
+        else:
+            # Expirou o cache negativo, remove e tenta novamente
+            try:
+                no_media_path.unlink()
+            except Exception:
+                pass
+
+    # Se já está marcado como failed no banco, cria o cache negativo e retorna 410
+    if media.failed:
+        try:
+            Path("uploads").mkdir(parents=True, exist_ok=True)
+            no_media_path.touch()
+        except Exception:
+            pass
+        raise HTTPException(status_code=410, detail="Mídia expirada ou indisponível")
+
+    # Se o download ainda não foi feito, tenta baixar on-demand
     if media.message_id:
         message_id = media.message_id
         media_uuid = media.id
@@ -167,8 +192,15 @@ async def get_media_file(
                 if local_path.exists():
                     mime = temp_media.mime_type or "application/octet-stream"
                     return FileResponse(str(local_path), media_type=mime)
+            
+            # Download falhou — grava cache negativo para evitar retry imediato
+            try:
+                Path("uploads").mkdir(parents=True, exist_ok=True)
+                no_media_path.touch()
+            except Exception:
+                pass
 
     raise HTTPException(
-        status_code=502,
-        detail="Mídia indisponível (não foi possível baixar do WhatsApp/Evolution API)"
+        status_code=410,
+        detail="Mídia expirada ou indisponível (URL do WhatsApp expirou)"
     )
