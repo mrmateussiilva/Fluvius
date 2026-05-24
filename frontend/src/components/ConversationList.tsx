@@ -22,6 +22,23 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+const SafeAvatar = ({ src, alt, size = 16 }: { src?: string; alt: string; size?: number }) => {
+  const [hasError, setHasError] = useState(false);
+  
+  if (!src || hasError) {
+    return <User size={size} className="opacity-40" />;
+  }
+  
+  return (
+    <img 
+      src={src} 
+      alt={alt} 
+      className="w-full h-full object-cover" 
+      onError={() => setHasError(true)} 
+    />
+  );
+}
+
 type TabFilter = 'all' | 'pending' | 'mine' | 'resolved';
 
 const TABS: { key: TabFilter; label: string; icon: React.ReactNode }[] = [
@@ -217,11 +234,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                       {/* Compact Avatar with status indicator */}
                       <div className="relative shrink-0 w-9 h-9">
                         <div className="w-full h-full rounded-full bg-slate-100 flex items-center justify-center text-slate-400 overflow-hidden border border-slate-200/60 shadow-sm">
-                          {conv.contact?.avatar_url ? (
-                            <img src={conv.contact.avatar_url} alt={contactName} className="w-full h-full object-cover" />
-                          ) : (
-                            <User size={16} className="opacity-40" />
-                          )}
+                          <SafeAvatar src={conv.contact?.avatar_url} alt={contactName} size={16} />
                         </div>
                         <span className={cn(
                           "absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm",
@@ -425,11 +438,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                       {/* Compact Avatar */}
                       <div className="relative shrink-0">
                         <div className="w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 overflow-hidden border border-slate-200/60 shadow-sm">
-                          {conv.contact?.avatar_url ? (
-                            <img src={conv.contact.avatar_url} alt={contactName} className="w-full h-full object-cover" />
-                          ) : (
-                            <User size={18} className="opacity-45" />
-                          )}
+                          <SafeAvatar src={conv.contact?.avatar_url} alt={contactName} size={18} />
                         </div>
                         <span className={cn(
                           "absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white shadow-sm",

@@ -39,6 +39,23 @@ function formatDateLabel(dateStr: string): string {
   return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', ...(sameYear ? {} : { year: 'numeric' }) });
 }
 
+const SafeAvatar = ({ src, alt, size = 20, fallback }: { src?: string; alt: string; size?: number; fallback?: React.ReactNode }) => {
+  const [hasError, setHasError] = useState(false);
+  
+  if (!src || hasError) {
+    return fallback !== undefined ? <>{fallback}</> : <User size={size} className="opacity-50" />;
+  }
+  
+  return (
+    <img 
+      src={src} 
+      alt={alt} 
+      className="w-full h-full object-cover" 
+      onError={() => setHasError(true)} 
+    />
+  );
+}
+
 /** Verifica se duas datas ISO são do mesmo dia */
 function isSameDay(a: string, b: string): boolean {
   const da = new Date(a), db = new Date(b);
@@ -676,11 +693,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
               className="relative shrink-0 group"
             >
               <div className="w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 overflow-hidden ring-2 ring-transparent group-hover:ring-fluvius-blue-main/30 shadow-sm transition-all">
-                {conversation.contact?.avatar_url ? (
-                  <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover" />
-                ) : (
-                  <User size={20} className="opacity-50" />
-                )}
+                <SafeAvatar src={conversation.contact?.avatar_url} alt={contactName} size={20} />
               </div>
             </button>
 
@@ -1024,15 +1037,17 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
                   'ring-slate-200/60',
                   "bg-white"
                 )}>
-                  {conversation.contact?.avatar_url ? (
-                    <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-fluvius-blue-100 to-fluvius-blue-200 flex items-center justify-center">
-                      <span className="text-[28px] font-bold text-fluvius-blue-deep">
-                        {contactName.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                  )}
+                  <SafeAvatar 
+                    src={conversation.contact?.avatar_url} 
+                    alt={contactName} 
+                    fallback={
+                      <div className="w-full h-full bg-gradient-to-br from-fluvius-blue-100 to-fluvius-blue-200 flex items-center justify-center">
+                        <span className="text-[28px] font-bold text-fluvius-blue-deep">
+                          {contactName.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    } 
+                  />
                 </div>
                 {/* Bolinha de status */}
                 {(() => {
@@ -1266,11 +1281,7 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
               onClick={() => setIsSidebarOpen(true)}
               className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-slate-400 border border-slate-200/80 shadow-sm relative group hover:border-blue-400 transition-colors shrink-0 overflow-hidden"
             >
-              {conversation.contact?.avatar_url ? (
-                <img src={conversation.contact.avatar_url} alt={contactName} className="w-full h-full object-cover" />
-              ) : (
-                <User size={18} className="opacity-40" />
-              )}
+              <SafeAvatar src={conversation.contact?.avatar_url} alt={contactName} size={18} />
               {/* Tooltip */}
               <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
                 {contactName}
