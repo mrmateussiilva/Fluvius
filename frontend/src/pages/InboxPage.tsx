@@ -25,6 +25,7 @@ import { GlobalSidebar, type GlobalTab } from '../components/GlobalSidebar';
 export type AdminTab = 'dashboard' | 'agents' | 'conversations' | 'kanban';
 
 type TabFilter = 'all' | 'pending' | 'mine' | 'resolved';
+const EMPTY_MESSAGES: Message[] = [];
 
 function mergeConversations(conversations: Conversation[]): Conversation[] {
   const map = new Map<string, Conversation>();
@@ -58,7 +59,7 @@ export const InboxPage: React.FC = () => {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(searchParams.get('c'));
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
 
-  const messages = useConversationStore(state => state.messages[selectedConversationId || ''] || []);
+  const messages = useConversationStore(state => state.messages[selectedConversationId || ''] ?? EMPTY_MESSAGES);
   const hasMoreMessages = useConversationStore(state => state.hasMoreMessages[selectedConversationId || ''] ?? true);
 
   const [isLoadingMore, setIsLoadingMore] = useState(false);
