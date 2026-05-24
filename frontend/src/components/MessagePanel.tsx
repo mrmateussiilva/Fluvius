@@ -56,9 +56,22 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const [resolvedSrc, setResolvedSrc] = useState(src);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Generate some deterministic random heights for the waveform based on src
+  // Reset when src changes
+  React.useEffect(() => {
+    setResolvedSrc(src);
+    setHasError(false);
+    setIsLoading(true);
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+  }, [src]);
+
+  // Generate deterministic waveform bars from src string
   const waveformBars = React.useMemo(() => {
     let seed = 0;
     for (let i = 0; i < src.length; i++) {
@@ -72,11 +85,19 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
     return bars;
   }, [src]);
 
-  const togglePlay = () => {
-    if (audioRef.current) {
-      if (isPlaying) audioRef.current.pause();
-      else audioRef.current.play();
-      setIsPlaying(!isPlaying);
+  const togglePlay = async () => {
+    if (!audioRef.current || hasError) return;
+    try {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        await audioRef.current.play();
+        setIsPlaying(true);
+      }
+    } catch (err) {
+      console.warn('[AudioPlayer] play() failed:', err);
+      setIsPlaying(false);
     }
   };
 
@@ -97,11 +118,32 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
       setDuration(audioRef.current.duration);
+      setIsLoading(false);
+      setHasError(false);
+    }
+  };
+
+  const handleCanPlay = () => {
+    setIsLoading(false);
+    setHasError(false);
+  };
+
+  const handleError = () => {
+    // If the direct URL failed and it is an external URL, try the backend proxy
+    if (resolvedSrc === src && (src.startsWith('http://') || src.startsWith('https://'))) {
+      const proxyUrl = `${API_BASE_URL}/media/proxy?url=${encodeURIComponent(src)}`;
+      console.warn('[AudioPlayer] Direct URL failed, trying backend proxy:', proxyUrl);
+      setResolvedSrc(proxyUrl);
+      setIsLoading(true);
+    } else {
+      setHasError(true);
+      setIsLoading(false);
+      setIsPlaying(false);
     }
   };
 
   const formatTime = (time: number) => {
-    if (isNaN(time)) return '0:00';
+    if (!isFinite(time) || isNaN(time)) return '0:00';
     const mins = Math.floor(time / 60);
     const secs = Math.floor(time % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -111,27 +153,40 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
 
   return (
     <div className="min-w-[260px] py-2 flex items-center gap-3">
+      {/* Single audio element with direct src — avoids multi-source abort issue */}
       <audio
+        key={resolvedSrc}
         ref={audioRef}
+        src={resolvedSrc}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        onEnded={() => setIsPlaying(false)}
-        onError={() => { setIsPlaying(false); }}
+        onCanPlay={handleCanPlay}
+        onEnded={() => { setIsPlaying(false); setCurrentTime(0); }}
+        onError={handleError}
         className="hidden"
-        preload="metadata"
-      >
-        {/* Múltiplos formatos para compatibilidade com WhatsApp (ogg/opus) e outros */}
-        <source src={src} type="audio/ogg; codecs=opus" />
-        <source src={src} type="audio/ogg" />
-        <source src={src} type="audio/mpeg" />
-        <source src={src} type="audio/mp4" />
-        <source src={src} />
-      </audio>
-      <button 
+        preload="none"
+      />
+      <button
         onClick={togglePlay}
-        className="w-10 h-10 bg-fluvius-blue-main text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors shadow-sm shrink-0"
+        disabled={isLoading && !hasError}
+        className={cn(
+          "w-10 h-10 text-white rounded-full flex items-center justify-center transition-colors shadow-sm shrink-0",
+          hasError
+            ? "bg-rose-400 cursor-not-allowed"
+            : isLoading
+            ? "bg-slate-300 cursor-wait"
+            : "bg-fluvius-blue-main hover:bg-blue-700"
+        )}
       >
-        {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
+        {hasError ? (
+          <span className="text-[10px] font-bold">!</span>
+        ) : isLoading ? (
+          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin block" />
+        ) : isPlaying ? (
+          <Pause size={18} fill="currentColor" />
+        ) : (
+          <Play size={18} fill="currentColor" className="ml-0.5" />
+        )}
       </button>
       
       <div className="flex-1 flex flex-col gap-1">
