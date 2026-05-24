@@ -232,9 +232,29 @@ class MediaDownloadService:
                 
                 # Atualiza o avatar_url do contato para apontar para a rota local do Fluvius
                 contact.avatar_url = f"/api/media/avatar/{contact_id}"
+                
+                # Se existia cache negativo antigo, limpa agora
+                no_avatar_path = UPLOADS_DIR / "avatars" / f"{contact_id}.no_avatar"
+                try:
+                    if no_avatar_path.exists():
+                        no_avatar_path.unlink()
+                except Exception:
+                    pass
+                
                 session.commit()
             else:
                 media.failed = True
+                # Reseta o avatar_url para None para forçar a busca de uma nova URL na API posteriormente
+                contact.avatar_url = None
+                
+                # Grava cache negativo para evitar retentar imediatamente
+                no_avatar_path = UPLOADS_DIR / "avatars" / f"{contact_id}.no_avatar"
+                try:
+                    no_avatar_path.parent.mkdir(parents=True, exist_ok=True)
+                    no_avatar_path.touch()
+                except Exception:
+                    pass
+                
                 session.commit()
         finally:
             if not db_provided:

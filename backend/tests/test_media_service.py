@@ -79,3 +79,88 @@ async def test_get_media_file_autocure(client, db_session):
     assert media is not None
     assert media.media_type == "image"
     assert media.downloaded is False
+
+
+def test_get_contact_avatar_redirect(client, db_session):
+    from app.models.contact import Contact
+    
+    # Cria um contato com avatar_url externo
+    contact = Contact(
+        id="contact-avatar-redirect-test",
+        workspace_id="ws-123",
+        name="Test Contact Avatar",
+        phone="5511999999999",
+        avatar_url="http://whatsapp-cdn.net/profile.jpg"
+    )
+    db_session.add(contact)
+    db_session.commit()
+
+    # Mocka o método de download para evitar rede
+    with patch("app.api.routes.media.MediaDownloadService.download_contact_avatar", new_callable=AsyncMock) as mock_download:
+        response = client.get("/api/media/avatar/contact-avatar-redirect-test", follow_redirects=False)
+        
+        # Deve retornar status code de redirecionamento (307)
+        assert response.status_code == 307
+        assert response.headers["location"] == "http://whatsapp-cdn.net/profile.jpg"
+        
+        # Deve disparar a tarefa de download em background
+        mock_download.assert_called_once()
+
+
+def test_get_contact_avatar_not_found_triggers_bg_task(client, db_session):
+    from app.models.contact import Contact
+    from app.models.conversation import Conversation
+    from app.models.inbox import Inbox
+    from app.models.connection import Connection
+
+    # Configura banco com os dados necessários
+    contact = Contact(
+        id="contact-avatar-bg-test",
+        workspace_id="ws-123",
+        name="Test Contact Avatar BG",
+        phone="5511999999998",
+        avatar_url=None
+    )
+    db_session.add(contact)
+    
+    inbox = Inbox(
+        id="inbox-avatar-test",
+        workspace_id="ws-123",
+        name="Test Inbox",
+        channel_type="whatsapp"
+    )
+    db_session.add(inbox)
+    db_session.flush()
+    
+    conversation = Conversation(
+        id="conv-avatar-test",
+        workspace_id="ws-123",
+        contact_id=contact.id,
+        inbox_id=inbox.id,
+        status="open"
+    )
+    db_session.add(conversation)
+    
+    connection = Connection(
+        id="conn-avatar-test",
+        workspace_id="ws-123",
+        inbox_id=inbox.id,
+        name="Test Conn",
+        provider="evolution",
+        status="connected",
+        base_url="http://evolution-api",
+        api_key="api-key-123",
+        instance_name="instance-123"
+    )
+    db_session.add(connection)
+    db_session.commit()
+
+    with patch("app.api.routes.media.fetch_and_download_avatar_task", new_callable=AsyncMock) as mock_fetch_task:
+        response = client.get("/api/media/avatar/contact-avatar-bg-test")
+        
+        # Como o arquivo físico não existe e não há avatar_url externo, deve retornar 404
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Avatar carregando em segundo plano"
+        
+        # Deve ter agendado a busca/download em background
+        mock_fetch_task.assert_called_once()

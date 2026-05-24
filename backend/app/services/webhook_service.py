@@ -10,7 +10,7 @@ from app.services.evolution_service import EvolutionService
 from app.services.sync_service import SyncService
 from app.services.visibility_service import ConversationVisibilityService
 from app.services.copilot_service import CopilotService
-from app.utils.media import get_message_preview
+from app.utils.media import get_message_preview, get_serialized_avatar_url
 import logging
 import asyncio
 
@@ -349,7 +349,7 @@ class WebhookService:
                         "id": contact.id,
                         "name": contact.name,
                         "phone": contact.phone,
-                        "avatar_url": contact.avatar_url
+                        "avatar_url": get_serialized_avatar_url(contact.avatar_url, contact.id)
                     },
                     "unread_count": 0,
                     "last_message_at": None

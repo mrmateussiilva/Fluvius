@@ -20,6 +20,7 @@ from app.core.socket_manager import socket_manager
 from app.services.visibility_service import ConversationVisibilityService
 from app.services.evolution_service import EvolutionService
 from app.models.message import Message
+from app.utils.media import get_serialized_avatar_url
 
 class StartConversationRequest(BaseModel):
     phone: str
@@ -73,7 +74,7 @@ def build_conversation_ws_payload(db: Session, conversation: Conversation) -> di
             "id": contact.id,
             "name": contact.name,
             "phone": contact.phone,
-            "avatar_url": contact.avatar_url
+            "avatar_url": get_serialized_avatar_url(contact.avatar_url, contact.id)
         } if contact else None,
         "assignee": {
             "id": assignee.id,
@@ -373,7 +374,7 @@ async def start_conversation(
                     "id": contact.id,
                     "name": contact.name,
                     "phone": contact.phone,
-                    "avatar_url": contact.avatar_url
+                    "avatar_url": get_serialized_avatar_url(contact.avatar_url, contact.id)
                 },
                 "unread_count": 0,
                 "last_message_at": None

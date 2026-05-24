@@ -67,3 +67,12 @@ def get_message_preview(message_type: str, content: str | None, is_internal: boo
         return f"📄 Documento{': ' + content if content else ''}"
     return content or ""
 
+
+def get_serialized_avatar_url(avatar_url: str | None, contact_id: str) -> str | None:
+    if not avatar_url:
+        return None
+    if avatar_url.startswith("http"):
+        return f"/api/media/avatar/{contact_id}"
+    return avatar_url
+
+

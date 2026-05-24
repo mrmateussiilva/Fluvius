@@ -7,7 +7,7 @@ Suporta downloads on-demand resilientes e Range Requests nativos para players de
 import logging
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -67,20 +67,31 @@ async def fetch_and_download_avatar_task(
             pass
 
 
-@router.api_route("/avatar/{contact_id}", methods=["GET", "HEAD"])
+@router.get("/avatar/{contact_id}")
 async def get_contact_avatar(
     contact_id: str,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
-    Retorna o avatar local do contato. Se não estiver baixado, agenda a busca
-    na Evolution API e o download em background de forma assíncrona, retornando 404 imediatamente.
+    Retorna o avatar local do contato. Se já estiver baixado, serve diretamente.
+    Se o contato tem um avatar_url externo (HTTP) no banco, inicia o download em background
+    e redireciona temporariamente para a URL externa para exibição imediata.
+    Caso contrário, agenda a busca na Evolution API e download em background.
     """
     local_path = Path(f"uploads/avatars/{contact_id}.jpg")
     
     if local_path.exists():
         return FileResponse(str(local_path), media_type="image/jpeg")
+
+    contact = db.query(Contact).filter(Contact.id == contact_id).first()
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contato não encontrado")
+
+    # Redireciona para o avatar externo (se disponível no banco) e inicia download local em background
+    if contact.avatar_url and contact.avatar_url.startswith("http"):
+        background_tasks.add_task(MediaDownloadService.download_contact_avatar, None, contact_id)
+        return RedirectResponse(contact.avatar_url)
 
     # Cache negativo: evita bater na API caso já tenhamos tentado recentemente e falhado
     no_avatar_path = Path(f"uploads/avatars/{contact_id}.no_avatar")
@@ -91,11 +102,6 @@ async def get_contact_avatar(
             raise HTTPException(status_code=404, detail="Avatar não disponível (cached)")
 
     # Se não existe localmente nem no cache negativo, vamos buscar na Evolution API em background
-    contact = db.query(Contact).filter(Contact.id == contact_id).first()
-    if not contact:
-        raise HTTPException(status_code=404, detail="Contato não encontrado")
-
-    # Buscar conexão WhatsApp ativa para a inbox
     conversation = db.query(Conversation).filter(Conversation.contact_id == contact.id).first()
     if conversation:
         inbox = db.query(Inbox).filter(Inbox.id == conversation.inbox_id).first()
@@ -117,12 +123,15 @@ async def get_contact_avatar(
                     phone=phone
                 )
 
-    raise HTTPException(status_code=404, detail="Avatar carregando em segundo plano")
+    return JSONResponse(
+        status_code=404,
+        content={"detail": "Avatar carregando em segundo plano"}
+    )
 
 
 from app.models.message import Message
 
-@router.api_route("/{media_id}", methods=["GET", "HEAD"])
+@router.get("/{media_id}")
 async def get_media_file(
     media_id: str,
     background_tasks: BackgroundTasks,

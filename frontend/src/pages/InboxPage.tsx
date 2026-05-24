@@ -8,6 +8,7 @@ import {
   fetchConversations, fetchMessages, sendMessage, sendMediaMessage, sendInternalNote,
   assignConversation, resolveConversation, pendingConversation, markAsRead
 } from '../api/client';
+import { useConversationStore } from '../stores/conversationStore';
 import type { Conversation, Message } from '../api/client';
 import type { Contact } from '../api/client';
 import { MessageSquare, Lock } from 'lucide-react';
@@ -42,15 +43,25 @@ function sortConversations(conversations: Conversation[]): Conversation[] {
 }
 
 export const InboxPage: React.FC = () => {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const conversations = useConversationStore(state => state.conversations);
+  const isLoadingConversations = useConversationStore(state => state.isLoadingConversations);
+  const storeLoadConversations = useConversationStore(state => state.loadConversations);
+  const storeLoadMessages = useConversationStore(state => state.loadMessages);
+  const storeLoadMoreMessages = useConversationStore(state => state.loadMoreMessages);
+  const addMessageToStore = useConversationStore(state => state.addMessage);
+  const updateConversationInStore = useConversationStore(state => state.updateConversation);
+  const updateMessageStatusInStore = useConversationStore(state => state.updateMessageStatus);
+  const markConversationAsReadLocal = useConversationStore(state => state.markConversationAsReadLocal);
+
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(searchParams.get('c'));
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+
+  const messages = useConversationStore(state => state.messages[selectedConversationId || ''] || []);
+  const hasMoreMessages = useConversationStore(state => state.hasMoreMessages[selectedConversationId || ''] ?? true);
+
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [activeTab, setActiveTab] = useState<TabFilter>('pending');
-  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string>('connecting');
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
@@ -82,8 +93,7 @@ export const InboxPage: React.FC = () => {
     }
   }, []);
 
-  const loadConversations = useCallback(async () => {
-    setIsLoadingConversations(true);
+  const loadConversations = useCallback(async (force = false) => {
     try {
       const statusMap: Record<TabFilter, string | undefined> = {
         all: undefined,
@@ -91,55 +101,42 @@ export const InboxPage: React.FC = () => {
         mine: 'open',
         resolved: 'resolved',
       };
-      const data = await fetchConversations(statusMap[activeTab]);
-      // For "mine", filter client-side by assignee
-      const filtered = activeTab === 'mine' && currentAgent
-        ? data.filter(c => c.assignee_id === currentAgent.id)
-        : data;
-      setConversations(sortConversations(mergeConversations(filtered)));
+      await storeLoadConversations(statusMap[activeTab], activeTab, force);
+      
+      // Sync selectedConversation from the loaded data
       if (selectedConversationIdRef.current) {
-        const selected = data.find(c => c.id === selectedConversationIdRef.current);
+        const freshConversations = useConversationStore.getState().conversations;
+        const selected = freshConversations.find(c => c.id === selectedConversationIdRef.current);
         if (selected) {
           setSelectedConversation(selected);
         }
       }
     } catch (err) {
       console.error(err);
-    } finally {
-      setIsLoadingConversations(false);
     }
-  }, [activeTab, currentAgent]);
+  }, [activeTab, storeLoadConversations]);
 
-  const loadMessages = useCallback(async () => {
+  const loadMessages = useCallback(async (force = false) => {
     if (!selectedConversationId) return;
     try {
-      const data = await fetchMessages(selectedConversationId);
-      setMessages(data);
-      setHasMoreMessages(data.length === 50);
+      await storeLoadMessages(selectedConversationId, force);
     } catch (err) {
       console.error(err);
     }
-  }, [selectedConversationId]);
+  }, [selectedConversationId, storeLoadMessages]);
 
   const handleLoadMoreMessages = useCallback(async () => {
-    if (!selectedConversationId || isLoadingMore || !hasMoreMessages || messages.length === 0) return;
+    if (!selectedConversationId || isLoadingMore || !hasMoreMessages) return;
     
     setIsLoadingMore(true);
     try {
-      const oldestMessage = messages[0];
-      const data = await fetchMessages(selectedConversationId, oldestMessage.created_at);
-      if (data.length > 0) {
-        setMessages(prev => [...data, ...prev]);
-        setHasMoreMessages(data.length === 50);
-      } else {
-        setHasMoreMessages(false);
-      }
+      await storeLoadMoreMessages(selectedConversationId);
     } catch (err) {
       console.error('Failed to load older messages:', err);
     } finally {
       setIsLoadingMore(false);
     }
-  }, [selectedConversationId, messages, isLoadingMore, hasMoreMessages]);
+  }, [selectedConversationId, isLoadingMore, hasMoreMessages, storeLoadMoreMessages]);
 
   // Initial loads
   useEffect(() => { loadConversations(); }, [loadConversations]);
@@ -195,125 +192,36 @@ export const InboxPage: React.FC = () => {
           }
         }
 
-        // If this message belongs to the open conversation, add it directly.
-        // Do NOT call loadMessages() here — it creates a race condition where
-        // the fetch can return before the DB transaction commits, wiping the new message.
+        // If this message belongs to the open conversation, mark as read immediately if it's inbound
         if (newMsg.conversation_id === selectedConversationId) {
-          setMessages(prev => {
-            if (prev.some(m => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg as Message];
-          });
-          // Mark as read immediately if it's inbound
           if (newMsg.direction === 'inbound') {
             markAsRead(newMsg.conversation_id).catch(console.error);
           }
         }
 
-        // Update local conversations state optimistically and sort
-        setConversations(prev => {
-          const conversationExists = prev.some(c => c.id === newMsg.conversation_id);
-          if (!conversationExists) {
-            // Se a conversa não existe localmente (por exemplo, nova conversa), faz um fetch
-            loadConversations();
-            return prev;
-          }
-          const updated = prev.map(c => {
-            if (c.id === newMsg.conversation_id) {
-              const isCurrentlySelected = selectedConversationIdRef.current === newMsg.conversation_id;
-              const incrementUnread = newMsg.direction === 'inbound' && !isCurrentlySelected;
-              
-              let preview = '';
-              if (newMsg.is_internal) {
-                preview = `📝 Nota: ${newMsg.content || ''}`;
-              } else if (newMsg.message_type === 'text') {
-                preview = newMsg.content || '';
-              } else if (newMsg.message_type === 'image') {
-                preview = `📷 Foto${newMsg.content ? ': ' + newMsg.content : ''}`;
-              } else if (newMsg.message_type === 'video') {
-                preview = `🎥 Vídeo${newMsg.content ? ': ' + newMsg.content : ''}`;
-              } else if (newMsg.message_type === 'audio') {
-                preview = '🎤 Áudio';
-              } else if (newMsg.message_type === 'document') {
-                preview = `📄 Documento${newMsg.content ? ': ' + newMsg.content : ''}`;
-              } else {
-                preview = newMsg.content || '';
-              }
+        // Add message to store
+        addMessageToStore(newMsg);
 
-              return {
-                ...c,
-                last_message_at: newMsg.created_at,
-                last_message_preview: preview,
-                unread_count: incrementUnread ? c.unread_count + 1 : c.unread_count
-              };
-            }
-            return c;
-          });
-          return sortConversations(updated);
-        });
+        // If conversation doesn't exist locally, force load conversations to fetch it
+        const exists = conversationsRef.current.some(c => c.id === newMsg.conversation_id);
+        if (!exists) {
+          loadConversations(true);
+        }
         break;
 
       case 'NEW_CONVERSATION':
-        // Adiciona a conversa nova no state e reordena
-        setConversations(prev => {
-          if (prev.some(c => c.id === event.data.id)) return prev;
-          
-          const conv = event.data as Conversation;
-          const statusMap: Record<TabFilter, string | undefined> = {
-            all: undefined,
-            pending: 'pending',
-            mine: 'open',
-            resolved: 'resolved',
-          };
-          const activeStatus = statusMap[activeTab];
-          if (activeStatus && conv.status !== activeStatus) return prev;
-          if (activeTab === 'mine' && currentAgent && conv.assignee_id !== currentAgent.id) return prev;
-
-          return sortConversations([conv, ...prev]);
-        });
+        updateConversationInStore(event.data as Conversation);
         break;
 
       case 'CONVERSATION_UPDATED':
-        // Someone assigned, resolved or re-queued a conversation
-        setConversations(prev => {
-          const statusMap: Record<TabFilter, string | undefined> = {
-            all: undefined,
-            pending: 'pending',
-            mine: 'open',
-            resolved: 'resolved',
-          };
-          const activeStatus = statusMap[activeTab];
-          
-          const updated = prev.map(c => {
-            if (c.id === event.data.id) {
-              return { ...c, ...event.data };
-            }
-            return c;
-          });
-
-          // Filtra conversas que mudaram para status que não pertence à aba atual
-          const filtered = updated.filter(c => {
-            if (c.id === event.data.id) {
-              if (activeStatus && c.status !== activeStatus) return false;
-              if (activeTab === 'mine' && currentAgent && c.assignee_id !== currentAgent.id) return false;
-            }
-            return true;
-          });
-
-          return sortConversations(filtered);
-        });
-
-        // If the updated conversation is the one we have open, we might need to refresh it
+        updateConversationInStore(event.data);
         if (event.data.id === selectedConversationId) {
           setSelectedConversation(prev => prev ? { ...prev, ...event.data } : prev);
         }
         break;
 
       case 'MESSAGE_STATUS_UPDATED':
-        if (event.data.conversation_id === selectedConversationId) {
-          setMessages(prev => prev.map(m =>
-            m.id === event.data.id ? { ...m, status: event.data.status } : m
-          ));
-        }
+        updateMessageStatusInStore(event.data.conversation_id, event.data.id, event.data.status);
         break;
 
       case 'CONNECTION_STATUS_UPDATED':
@@ -322,7 +230,6 @@ export const InboxPage: React.FC = () => {
 
       case 'COPILOT_ALERT':
         setCopilotAlerts(prev => {
-          // Deduplicar por conversation_id — substitui alerta anterior da mesma conversa
           const filtered = prev.filter(a => a.conversation_id !== event.data.conversation_id);
           return [...filtered, { ...event.data, timestamp: Date.now() }];
         });
@@ -334,7 +241,6 @@ export const InboxPage: React.FC = () => {
           [event.data.conversation_id]: event.data.is_typing
         }));
         
-        // Auto-clear typing status after 5 seconds
         if (event.data.is_typing) {
            setTimeout(() => {
               setTypingState(current => {
@@ -347,7 +253,7 @@ export const InboxPage: React.FC = () => {
         }
         break;
     }
-  }, [selectedConversationId, activeTab, currentAgent, loadConversations, loadMessages]);
+  }, [selectedConversationId, storeLoadConversations, loadConversations, addMessageToStore, updateConversationInStore, updateMessageStatusInStore]);
 
   // Connect WebSocket — captura o estado de reconexão
   const wsStatus = useWebSocket(token, handleWSEvent);

@@ -89,7 +89,7 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
     abortRef.current = controller;
 
     const checkMedia = () => {
-      fetch(src, { method: 'HEAD', signal: controller.signal })
+      fetch(src, { method: 'GET', signal: controller.signal })
         .then(res => {
           if (res.status === 202) {
             // Ainda baixando no backend. Mostra spinner de carregamento e agenda nova verificação
@@ -97,7 +97,10 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
             setErrorMsg('Baixando...');
             timeoutId = setTimeout(checkMedia, 4000);
           } else if (res.ok) {
-            // Mídia pronta e disponível localmente
+            // Mídia pronta e disponível localmente. Cancela o stream do corpo para economizar banda.
+            if (res.body) {
+              res.body.cancel().catch(() => {});
+            }
             setResolvedSrc(src);
             setIsLoading(false);
             setHasError(false);
