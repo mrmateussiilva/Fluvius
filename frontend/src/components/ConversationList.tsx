@@ -116,12 +116,15 @@ interface ConversationListProps {
   onDismissCopilotAlert: (conversationId: string) => void;
   onClearAllCopilotAlerts: () => void;
   isLoading?: boolean;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
   typingState?: Record<string, boolean>;
 }
 
 export const ConversationList: React.FC<ConversationListProps> = ({
   conversations, selectedId, onSelect, activeTab, onTabChange, isCollapsed = false, onToggleCollapse,
   copilotAlerts, onSelectCopilotConversation, onDismissCopilotAlert, onClearAllCopilotAlerts, isLoading = false,
+  hasMore = false, onLoadMore,
   typingState = {}
 }) => {
   const location = useLocation();
@@ -134,6 +137,15 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     const contactName = conv.contact?.name || conv.contact?.phone || '';
     return contactName.toLowerCase().includes(searchQuery.toLowerCase());
   });
+
+  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    if (!hasMore || isLoading || !onLoadMore) return;
+    const target = event.currentTarget;
+    const distanceFromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    if (distanceFromBottom < 160) {
+      onLoadMore();
+    }
+  };
 
   return (
     <div 
@@ -203,7 +215,10 @@ export const ConversationList: React.FC<ConversationListProps> = ({
           </div>
 
           {/* Collapsed Conversation List */}
-          <div className="flex-1 overflow-y-auto fluvius-scroll pb-4 flex flex-col items-center py-2 gap-2">
+          <div
+            className="flex-1 overflow-y-auto fluvius-scroll pb-4 flex flex-col items-center py-2 gap-2"
+            onScroll={handleScroll}
+          >
             <AnimatePresence mode="popLayout">
               {filteredConversations.length === 0 ? (
                 <div className="py-8 text-center text-slate-300">
@@ -271,6 +286,9 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 })
               )}
             </AnimatePresence>
+            {hasMore && (
+              <div className="w-5 h-5 border-2 border-slate-200 border-t-fluvius-blue-main rounded-full animate-spin my-2" />
+            )}
           </div>
 
           {/* Footer - Vertical Compact Agent Profile */}
@@ -393,7 +411,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
           </div>
 
           {/* Conversation List - High Density */}
-          <div className="flex-1 overflow-y-auto fluvius-scroll pb-4">
+          <div className="flex-1 overflow-y-auto fluvius-scroll pb-4" onScroll={handleScroll}>
             {isLoading ? (
               <div className="flex flex-col">
                 <ConversationSkeleton />
@@ -498,6 +516,11 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 })
               )}
             </AnimatePresence>
+            )}
+            {hasMore && !isLoading && (
+              <div className="py-3 flex justify-center">
+                <div className="w-5 h-5 border-2 border-slate-200 border-t-fluvius-blue-main rounded-full animate-spin" />
+              </div>
             )}
           </div>
 

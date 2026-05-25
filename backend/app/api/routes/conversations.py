@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from typing import List, Optional
 from pydantic import BaseModel
+from datetime import datetime, timezone
+import base64
+import json
 import re
 from app.core.database import get_db
 from app.core.auth import get_current_agent
-from app.schemas.conversation import ConversationResponse, KanbanResponse, AgentKanbanData, TransferRequest
+from app.schemas.conversation import ConversationResponse, ConversationPageResponse, KanbanResponse, AgentKanbanData, TransferRequest
 from app.services.conversation_service import ConversationService
 from app.services.ai_service import AIService
 from app.schemas.agent import AgentRead
@@ -15,6 +18,7 @@ from app.models.agent import Agent
 from app.models.connection import Connection
 from app.models.conversation import Conversation
 from app.models.inbox import Inbox
+from app.models.conversation_audit_log import ConversationAuditLog
 from app.models.workspace import utcnow
 from app.core.socket_manager import socket_manager
 from app.services.visibility_service import ConversationVisibilityService
@@ -28,6 +32,8 @@ class StartConversationRequest(BaseModel):
     inbox_id: Optional[str] = None
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
+
+NULL_LAST_MESSAGE_CURSOR = "0001-01-01T00:00:00+00:00"
 
 
 def is_valid_whatsapp_destination(destination: str | None) -> bool:
@@ -54,6 +60,45 @@ def attach_contact_and_assignee(db: Session, conversation: Conversation, assigne
         conversation.assignee = None
 
     return True
+
+
+def _normalize_dt(dt: datetime | None) -> datetime:
+    if dt is None:
+        return datetime(1, 1, 1, tzinfo=timezone.utc)
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def encode_conversation_cursor(conversation: Conversation) -> str:
+    payload = {
+        "last_message_at": (
+            NULL_LAST_MESSAGE_CURSOR
+            if conversation.last_message_at is None
+            else _normalize_dt(conversation.last_message_at).isoformat()
+        ),
+        "id": conversation.id,
+    }
+    raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def decode_conversation_cursor(cursor: str) -> tuple[datetime | None, str]:
+    try:
+        padding = "=" * (-len(cursor) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(f"{cursor}{padding}").decode("utf-8"))
+        raw_dt = payload.get("last_message_at")
+        conversation_id = payload.get("id")
+        if not raw_dt or not conversation_id:
+            raise ValueError("missing cursor fields")
+
+        if raw_dt == NULL_LAST_MESSAGE_CURSOR:
+            return None, conversation_id
+
+        dt = datetime.fromisoformat(raw_dt.replace("Z", "+00:00"))
+        return _normalize_dt(dt), conversation_id
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid conversation cursor") from exc
 
 
 def build_conversation_ws_payload(db: Session, conversation: Conversation) -> dict:
@@ -84,9 +129,13 @@ def build_conversation_ws_payload(db: Session, conversation: Conversation) -> di
     }
 
 
-@router.get("", response_model=List[ConversationResponse])
+@router.get("", response_model=List[ConversationResponse] | ConversationPageResponse)
 def get_conversations(
-    status: Optional[str] = None, 
+    status: Optional[str] = None,
+    limit: Optional[int] = Query(default=None, ge=1, le=100),
+    cursor: Optional[str] = None,
+    updated_after: Optional[datetime] = None,
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     current_agent: Agent = Depends(get_current_agent)
 ):
@@ -96,24 +145,80 @@ def get_conversations(
         Conversation.workspace_id == current_agent.workspace_id
     )
     
-    # Role-based visibility: Non-admins only see pending or their own conversations
+    # Role-based visibility: Non-admins see unqueued pending, their assigned conversations,
+    # and pending conversations from queues they belong to.
     if current_agent.role != "admin":
-        query = query.filter(
-            or_(
+        agent_queue_ids = [queue.id for queue in current_agent.queues]
+        visibility_filters = [
+            Conversation.assignee_id == current_agent.id,
+            and_(
                 Conversation.status == "pending",
-                Conversation.assignee_id == current_agent.id
+                Conversation.queue_id == None,
+            ),
+        ]
+        if agent_queue_ids:
+            visibility_filters.append(
+                and_(
+                    Conversation.status == "pending",
+                    Conversation.queue_id.in_(agent_queue_ids),
+                )
             )
+
+        query = query.filter(
+            or_(*visibility_filters)
         )
 
     if status:
         query = query.filter(Conversation.status == status)
+
+    if updated_after:
+        query = query.filter(Conversation.updated_at > _normalize_dt(updated_after))
+
+    if cursor:
+        cursor_last_message_at, cursor_id = decode_conversation_cursor(cursor)
+        if cursor_last_message_at is None:
+            query = query.filter(
+                Conversation.last_message_at.is_(None),
+                Conversation.id < cursor_id,
+            )
+        else:
+            query = query.filter(
+                or_(
+                    Conversation.last_message_at < cursor_last_message_at,
+                    Conversation.last_message_at.is_(None),
+                    and_(
+                        Conversation.last_message_at == cursor_last_message_at,
+                        Conversation.id < cursor_id,
+                    ),
+                )
+            )
     
-    conversations = query.order_by(Conversation.last_message_at.desc().nullslast()).all()
+    query = query.order_by(Conversation.last_message_at.desc().nullslast(), Conversation.id.desc())
+
+    if limit is not None:
+        if offset and not cursor:
+            query = query.offset(offset)
+        conversations = query.limit(limit + 1).all()
+        has_more = len(conversations) > limit
+        conversations = conversations[:limit]
+    else:
+        conversations = query.all()
+        has_more = False
 
     results = []
     for conv in conversations:
         if attach_contact_and_assignee(db, conv):
             results.append(conv)
+
+    if limit is not None:
+        return {
+            "items": results,
+            "limit": limit,
+            "offset": offset,
+            "next_offset": offset + len(results) if has_more else None,
+            "next_cursor": encode_conversation_cursor(conversations[-1]) if has_more and conversations else None,
+            "has_more": has_more,
+        }
 
     return results
 
@@ -187,6 +292,32 @@ class AssignRequest(BaseModel):
     agent_id: str
 
 
+def conversation_audit_snapshot(conversation: Conversation) -> dict:
+    return {
+        "status": conversation.status,
+        "assignee_id": conversation.assignee_id,
+        "queue_id": conversation.queue_id,
+        "unread_count": conversation.unread_count,
+    }
+
+
+def add_conversation_audit_log(
+    db: Session,
+    conversation: Conversation,
+    actor: Agent,
+    action: str,
+    before: dict | None,
+):
+    db.add(ConversationAuditLog(
+        workspace_id=conversation.workspace_id,
+        conversation_id=conversation.id,
+        actor_agent_id=actor.id,
+        action=action,
+        before=before,
+        after=conversation_audit_snapshot(conversation),
+    ))
+
+
 @router.patch("/{conversation_id}/assign", response_model=ConversationResponse)
 async def assign_conversation(
     conversation_id: str, 
@@ -211,18 +342,75 @@ async def assign_conversation(
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found in your workspace")
 
-    conversation.assignee_id = body.agent_id
-    conversation.status = "open"
-    conversation.assigned_at = utcnow()
-    conversation.updated_at = utcnow()
-    db.commit()
-    db.refresh(conversation)
+    if current_agent.role != "admin":
+        if not ConversationVisibilityService.can_access_conversation(db, conversation, current_agent):
+            raise HTTPException(status_code=403, detail="You cannot access this conversation")
+
+        if body.agent_id != current_agent.id:
+            raise HTTPException(status_code=403, detail="Operators can only assign conversations to themselves")
+
+        if conversation.status == "open" and conversation.assignee_id and conversation.assignee_id != current_agent.id:
+            raise HTTPException(status_code=409, detail="Conversation is already assigned to another agent")
+
+        if conversation.status not in ("pending", "open", "bot"):
+            raise HTTPException(status_code=409, detail="Conversation cannot be assigned from its current status")
+
+    previous_status = conversation.status
+    before = conversation_audit_snapshot(conversation)
+    now = utcnow()
+
+    if current_agent.role == "admin":
+        conversation.assignee_id = body.agent_id
+        conversation.status = "open"
+        conversation.assigned_at = now
+        conversation.updated_at = now
+        add_conversation_audit_log(db, conversation, current_agent, "assigned", before)
+        db.commit()
+        db.refresh(conversation)
+    else:
+        updated_rows = db.query(Conversation).filter(
+            Conversation.id == conversation_id,
+            Conversation.workspace_id == current_agent.workspace_id,
+            or_(
+                Conversation.status.in_(["pending", "bot"]),
+                and_(
+                    Conversation.status == "open",
+                    Conversation.assignee_id == current_agent.id,
+                ),
+            ),
+        ).update(
+            {
+                "assignee_id": body.agent_id,
+                "status": "open",
+                "assigned_at": now,
+                "updated_at": now,
+            },
+            synchronize_session=False,
+        )
+        if updated_rows != 1:
+            db.rollback()
+            raise HTTPException(status_code=409, detail="Conversation is no longer available for assignment")
+
+        db.flush()
+        conversation = db.query(Conversation).filter(
+            Conversation.id == conversation_id,
+            Conversation.workspace_id == current_agent.workspace_id,
+        ).first()
+        add_conversation_audit_log(db, conversation, current_agent, "assigned", before)
+        db.commit()
 
     await ConversationVisibilityService.broadcast_to_allowed_agents(db, conversation, {
         "type": "CONVERSATION_UPDATED",
         "workspace_id": current_agent.workspace_id,
         "data": build_conversation_ws_payload(db, conversation)
     })
+
+    if previous_status == "pending":
+        await socket_manager.broadcast({
+            "type": "CONVERSATION_UPDATED",
+            "workspace_id": current_agent.workspace_id,
+            "data": build_conversation_ws_payload(db, conversation)
+        })
 
     conversation.contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
     conversation.assignee = agent
@@ -243,7 +431,12 @@ async def transfer_conversation(
     
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
-        
+
+    if not ConversationVisibilityService.can_act_on_conversation(db, conversation, current_agent):
+        raise HTTPException(status_code=403, detail="You cannot transfer this conversation")
+
+    before = conversation_audit_snapshot(conversation)
+
     if body.queue_id:
         from app.models.queue import Queue
         queue = db.query(Queue).filter(Queue.id == body.queue_id, Queue.workspace_id == current_agent.workspace_id).first()
@@ -258,6 +451,7 @@ async def transfer_conversation(
         conversation.assignee_id = agent.id
         
     conversation.updated_at = utcnow()
+    add_conversation_audit_log(db, conversation, current_agent, "transferred", before)
     db.commit()
     db.refresh(conversation)
 
@@ -284,9 +478,14 @@ async def resolve_conversation(
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
+    if not ConversationVisibilityService.can_act_on_conversation(db, conversation, current_agent):
+        raise HTTPException(status_code=403, detail="You cannot resolve this conversation")
+
+    before = conversation_audit_snapshot(conversation)
     conversation.status = "resolved"
     conversation.resolved_at = utcnow()
     conversation.updated_at = utcnow()
+    add_conversation_audit_log(db, conversation, current_agent, "resolved", before)
     db.commit()
     db.refresh(conversation)
 
@@ -402,6 +601,9 @@ async def mark_as_read(
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
+    if not ConversationVisibilityService.can_access_conversation(db, conversation, current_agent):
+        raise HTTPException(status_code=403, detail="You cannot access this conversation")
+
     conversation.unread_count = 0
     db.commit()
     db.refresh(conversation)
@@ -454,10 +656,15 @@ async def pending_conversation(
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
+    if not ConversationVisibilityService.can_act_on_conversation(db, conversation, current_agent):
+        raise HTTPException(status_code=403, detail="You cannot move this conversation to pending")
+
+    before = conversation_audit_snapshot(conversation)
     conversation.status = "pending"
     conversation.assignee_id = None
     conversation.assigned_at = None
     conversation.updated_at = utcnow()
+    add_conversation_audit_log(db, conversation, current_agent, "moved_to_pending", before)
     db.commit()
     db.refresh(conversation)
 

@@ -14,7 +14,7 @@ export const GlobalConversations: React.FC = () => {
     try {
       // By not passing a status, the backend will return all conversations for admins
       const data = await fetchConversations();
-      setConversations(data);
+      setConversations(Array.isArray(data) ? data : data.items);
     } catch (error) {
       console.error('Failed to load conversations:', error);
     } finally {

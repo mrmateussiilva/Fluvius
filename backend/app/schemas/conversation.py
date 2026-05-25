@@ -53,6 +53,15 @@ class ConversationResponse(ConversationBase):
         return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+class ConversationPageResponse(BaseModel):
+    items: list[ConversationResponse]
+    limit: int
+    offset: int
+    next_offset: Optional[int] = None
+    next_cursor: Optional[str] = None
+    has_more: bool
+
+
 class TransferRequest(BaseModel):
     agent_id: Optional[str] = None
     queue_id: Optional[str] = None

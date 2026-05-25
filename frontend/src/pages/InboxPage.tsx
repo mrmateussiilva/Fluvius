@@ -27,6 +27,13 @@ export type AdminTab = 'dashboard' | 'agents' | 'conversations' | 'kanban';
 type TabFilter = 'all' | 'pending' | 'mine' | 'resolved';
 const EMPTY_MESSAGES: Message[] = [];
 
+const getStatusFilter = (tab: TabFilter): string | undefined => ({
+  all: undefined,
+  pending: 'pending',
+  mine: 'open',
+  resolved: 'resolved',
+})[tab];
+
 function mergeConversations(conversations: Conversation[]): Conversation[] {
   const map = new Map<string, Conversation>();
   conversations.forEach(c => {
@@ -43,17 +50,34 @@ function sortConversations(conversations: Conversation[]): Conversation[] {
   });
 }
 
+function getConversationActionErrorMessage(err: unknown): string {
+  const message = err instanceof Error ? err.message : '';
+  if (message.includes('already assigned') || message.includes('no longer available')) {
+    return 'Essa conversa já foi assumida por outro atendente.';
+  }
+  if (message.includes('cannot access') || message.includes('cannot assign') || message.includes('cannot resolve') || message.includes('cannot transfer') || message.includes('cannot move')) {
+    return 'Você não tem permissão para executar essa ação nessa conversa.';
+  }
+  if (message.includes('current status')) {
+    return 'Essa conversa não está em um status válido para essa ação.';
+  }
+  return 'Não foi possível atualizar a conversa.';
+}
+
 export const InboxPage: React.FC = () => {
-  const conversations = useConversationStore(state => state.conversations);
+  const [activeTab, setActiveTab] = useState<TabFilter>('pending');
+  const conversations = useConversationStore(state => state.conversationsByTab[activeTab] ?? state.conversations);
   const isLoadingConversations = useConversationStore(state => state.isLoadingConversations);
   const setConversations = useConversationStore(state => state.setConversations);
   const storeLoadConversations = useConversationStore(state => state.loadConversations);
+  const storeLoadMoreConversations = useConversationStore(state => state.loadMoreConversations);
   const storeLoadMessages = useConversationStore(state => state.loadMessages);
   const storeLoadMoreMessages = useConversationStore(state => state.loadMoreMessages);
   const addMessageToStore = useConversationStore(state => state.addMessage);
   const updateConversationInStore = useConversationStore(state => state.updateConversation);
   const updateMessageStatusInStore = useConversationStore(state => state.updateMessageStatus);
   const markConversationAsReadLocal = useConversationStore(state => state.markConversationAsReadLocal);
+  const setCurrentAgentIdInStore = useConversationStore(state => state.setCurrentAgentId);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(searchParams.get('c'));
@@ -63,7 +87,7 @@ export const InboxPage: React.FC = () => {
   const hasMoreMessages = useConversationStore(state => state.hasMoreMessages[selectedConversationId || ''] ?? true);
 
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabFilter>('pending');
+  const hasMoreConversations = useConversationStore(state => state.hasMoreConversations[activeTab] ?? false);
   const [connectionStatus, setConnectionStatus] = useState<string>('connecting');
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
@@ -88,6 +112,10 @@ export const InboxPage: React.FC = () => {
     selectedConversationIdRef.current = selectedConversationId;
   }, [selectedConversationId]);
 
+  useEffect(() => {
+    setCurrentAgentIdInStore(currentAgent?.id || null);
+  }, [currentAgent?.id, setCurrentAgentIdInStore]);
+
   // Request notification permissions on mount
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -97,17 +125,12 @@ export const InboxPage: React.FC = () => {
 
   const loadConversations = useCallback(async (force = false) => {
     try {
-      const statusMap: Record<TabFilter, string | undefined> = {
-        all: undefined,
-        pending: 'pending',
-        mine: 'open',
-        resolved: 'resolved',
-      };
-      await storeLoadConversations(statusMap[activeTab], activeTab, force);
+      await storeLoadConversations(getStatusFilter(activeTab), activeTab, force);
       
       // Sync selectedConversation from the loaded data
       if (selectedConversationIdRef.current) {
-        const freshConversations = useConversationStore.getState().conversations;
+        const state = useConversationStore.getState();
+        const freshConversations = state.conversationsByTab[activeTab] ?? state.conversations;
         const selected = freshConversations.find(c => c.id === selectedConversationIdRef.current);
         if (selected) {
           setSelectedConversation(selected);
@@ -117,6 +140,14 @@ export const InboxPage: React.FC = () => {
       console.error(err);
     }
   }, [activeTab, storeLoadConversations]);
+
+  const loadMoreConversations = useCallback(async () => {
+    try {
+      await storeLoadMoreConversations(getStatusFilter(activeTab), activeTab);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [activeTab, storeLoadMoreConversations]);
 
   const loadMessages = useCallback(async (force = false) => {
     if (!selectedConversationId) return;
@@ -314,12 +345,17 @@ export const InboxPage: React.FC = () => {
           }
           return true;
         }));
-      });
+      }, activeTab);
       if (selectedConversationId === conversationId) {
         setSelectedConversation(prev => prev ? { ...prev, ...updated } : prev);
       }
     } catch (err) {
       console.error(err);
+      toast.error(getConversationActionErrorMessage(err));
+      if (selectedConversationId === conversationId) {
+        handleSelectConversation(null);
+      }
+      await loadConversations(true);
     }
   };
 
@@ -342,9 +378,11 @@ export const InboxPage: React.FC = () => {
           }
           return true;
         }));
-      });
+      }, activeTab);
     } catch (err) {
       console.error(err);
+      toast.error(getConversationActionErrorMessage(err));
+      await loadConversations(true);
     }
   };
 
@@ -366,9 +404,11 @@ export const InboxPage: React.FC = () => {
           }
           return true;
         }));
-      });
+      }, activeTab);
     } catch (err) {
       console.error(err);
+      toast.error(getConversationActionErrorMessage(err));
+      await loadConversations(true);
     }
   };
 
@@ -397,7 +437,7 @@ export const InboxPage: React.FC = () => {
       try {
         await markAsRead(id);
         // Optimistic update
-        setConversations(prev => prev.map(c => c.id === id ? { ...c, unread_count: 0 } : c));
+        setConversations(prev => prev.map(c => c.id === id ? { ...c, unread_count: 0 } : c), activeTab);
       } catch (err) {
         console.error(err);
       }
@@ -410,7 +450,7 @@ export const InboxPage: React.FC = () => {
     ));
     setConversations(prev => prev.map(conversation => (
       conversation.contact_id === contact.id ? { ...conversation, contact } : conversation
-    )));
+    )), activeTab);
   };
 
   return (
@@ -467,6 +507,8 @@ export const InboxPage: React.FC = () => {
           }}
             onClearAllCopilotAlerts={() => setCopilotAlerts([])}
             isLoading={isLoadingConversations}
+            hasMore={hasMoreConversations}
+            onLoadMore={loadMoreConversations}
             typingState={typingState}
           />
         )}
@@ -561,7 +603,7 @@ export const InboxPage: React.FC = () => {
                 }
                 return true;
               }));
-            });
+            }, activeTab);
           }}
         />
       )}

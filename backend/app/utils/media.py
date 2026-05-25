@@ -79,3 +79,15 @@ def get_serialized_avatar_url(avatar_url: str | None, contact_id: str) -> str | 
         # direct WhatsApp CDN requests.
         return f"/api/media/avatar/{contact_id}"
     return avatar_url
+
+
+def unwrap_message(message: dict) -> dict:
+    if not message:
+        return {}
+    wrappers = ["ephemeralMessage", "viewOnceMessage", "viewOnceMessageV2", "documentWithCaptionMessage"]
+    for wrapper in wrappers:
+        if wrapper in message:
+            nested = message[wrapper].get("message")
+            if isinstance(nested, dict):
+                return unwrap_message(nested)
+    return message

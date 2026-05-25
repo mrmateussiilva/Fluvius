@@ -18,6 +18,17 @@ export const TransferModal: React.FC<TransferModalProps> = ({ conversationId, on
   const [selectedQueueId, setSelectedQueueId] = useState<string>('');
   const [selectedAgentId, setSelectedAgentId] = useState<string>('');
 
+  const getTransferErrorMessage = (err: unknown): string => {
+    const message = err instanceof Error ? err.message : '';
+    if (message.includes('cannot transfer') || message.includes('cannot access')) {
+      return 'Você não tem permissão para transferir essa conversa.';
+    }
+    if (message.includes('not found')) {
+      return 'A conversa, fila ou atendente não foi encontrado.';
+    }
+    return 'Erro ao transferir conversa';
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -48,7 +59,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({ conversationId, on
       }
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao transferir conversa');
+      toast.error(getTransferErrorMessage(err));
     } finally {
       setTransferring(false);
     }

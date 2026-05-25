@@ -46,6 +46,9 @@ async def get_messages(
     conversation = ConversationService.get_conversation_by_id(db, conversation_id)
     if not conversation or conversation.workspace_id != current_agent.workspace_id:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+    if not ConversationVisibilityService.can_access_conversation(db, conversation, current_agent):
+        raise HTTPException(status_code=403, detail="You cannot access this conversation")
         
     messages = MessageService.get_messages_by_conversation(
         db, 
@@ -164,6 +167,9 @@ async def create_message(
     
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+    if not ConversationVisibilityService.can_act_on_conversation(db, conversation, current_agent):
+        raise HTTPException(status_code=403, detail="You cannot send messages in this conversation")
 
     # Notas internas nunca são enviadas ao WhatsApp — não precisam de número válido
     if not message_in.is_internal:
@@ -314,6 +320,9 @@ async def create_media_message(
     
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+    if not ConversationVisibilityService.can_act_on_conversation(db, conversation, current_agent):
+        raise HTTPException(status_code=403, detail="You cannot send media in this conversation")
 
     contact = db.query(Contact).filter(Contact.id == conversation.contact_id).first()
     if not contact or not is_valid_whatsapp_destination(contact.phone):

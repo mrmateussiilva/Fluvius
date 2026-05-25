@@ -142,6 +142,15 @@ export interface Conversation {
   assignee?: Agent | null;
 }
 
+export interface ConversationPage {
+  items: Conversation[];
+  limit: number;
+  offset: number;
+  next_offset: number | null;
+  next_cursor: string | null;
+  has_more: boolean;
+}
+
 export interface Message {
   id: string;
   workspace_id: string;
@@ -249,13 +258,24 @@ export const transferConversation = async (
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!response.ok) throw new Error('Failed to transfer conversation');
+  if (!response.ok) throw new Error(await getErrorMessage(response, 'Failed to transfer conversation'));
   return response.json();
 };
 
-export const fetchConversations = async (status?: string): Promise<Conversation[]> => {
-  const url = status
-    ? `${API_BASE_URL}/conversations?status=${status}`
+export const fetchConversations = async (
+  status?: string,
+  options?: { limit?: number; offset?: number; cursor?: string | null; updatedAfter?: string | null }
+): Promise<Conversation[] | ConversationPage> => {
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  if (options?.limit !== undefined) params.set('limit', String(options.limit));
+  if (options?.offset !== undefined) params.set('offset', String(options.offset));
+  if (options?.cursor) params.set('cursor', options.cursor);
+  if (options?.updatedAfter) params.set('updated_after', options.updatedAfter);
+
+  const query = params.toString();
+  const url = query
+    ? `${API_BASE_URL}/conversations?${query}`
     : `${API_BASE_URL}/conversations`;
   const response = await fetchWithAuth(url);
   if (!response.ok) {
@@ -329,7 +349,7 @@ export const assignConversation = async (conversationId: string, agentId: string
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ agent_id: agentId }),
   });
-  if (!response.ok) throw new Error('Failed to assign conversation');
+  if (!response.ok) throw new Error(await getErrorMessage(response, 'Failed to assign conversation'));
   return response.json();
 };
 
@@ -337,7 +357,7 @@ export const resolveConversation = async (conversationId: string): Promise<Conve
   const response = await fetchWithAuth(`${API_BASE_URL}/conversations/${conversationId}/resolve`, {
     method: 'PATCH',
   });
-  if (!response.ok) throw new Error('Failed to resolve conversation');
+  if (!response.ok) throw new Error(await getErrorMessage(response, 'Failed to resolve conversation'));
   return response.json();
 };
 
@@ -380,7 +400,7 @@ export const pendingConversation = async (conversationId: string): Promise<Conve
   const response = await fetchWithAuth(`${API_BASE_URL}/conversations/${conversationId}/pending`, {
     method: 'PATCH',
   });
-  if (!response.ok) throw new Error('Failed to requeue conversation');
+  if (!response.ok) throw new Error(await getErrorMessage(response, 'Failed to requeue conversation'));
   return response.json();
 };
 
@@ -388,7 +408,7 @@ export const markAsRead = async (conversationId: string): Promise<Conversation> 
   const response = await fetchWithAuth(`${API_BASE_URL}/conversations/${conversationId}/read`, {
     method: 'PATCH',
   });
-  if (!response.ok) throw new Error('Failed to mark conversation as read');
+  if (!response.ok) throw new Error(await getErrorMessage(response, 'Failed to mark conversation as read'));
   return response.json();
 };
 

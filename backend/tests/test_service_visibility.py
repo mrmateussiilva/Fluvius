@@ -22,6 +22,35 @@ def test_resolve_agents_no_assignee(db_session, workspace_seed):
     assert len(agents) == 1
     assert agents[0].id == workspace_seed["agent_id"]
 
+
+def test_resolve_agents_pending_includes_workspace_operators(db_session, workspace_seed):
+    workspace_id = workspace_seed["workspace_id"]
+
+    operator = Agent(
+        id=generate_uuid(),
+        workspace_id=workspace_id,
+        name="Pending Op",
+        email="pending-op@test.com",
+        role="operator",
+        hashed_password="hash"
+    )
+    db_session.add(operator)
+    db_session.commit()
+
+    conv = Conversation(
+        id=generate_uuid(),
+        workspace_id=workspace_id,
+        inbox_id=generate_uuid(),
+        contact_id=generate_uuid(),
+        status="pending",
+    )
+
+    agents = ConversationVisibilityService.resolve_agents(db_session, conv)
+    agent_ids = [a.id for a in agents]
+
+    assert workspace_seed["agent_id"] in agent_ids
+    assert operator.id in agent_ids
+
 def test_resolve_agents_with_operator_assignee(db_session, workspace_seed):
     workspace_id = workspace_seed["workspace_id"]
     

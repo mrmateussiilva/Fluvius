@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, JSON, Boolean
+from sqlalchemy import Column, String, DateTime, ForeignKey, JSON, Boolean, Index
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 from app.models.workspace import generate_uuid, utcnow
@@ -33,3 +33,13 @@ class Message(Base):
     workspace = relationship("Workspace")
     conversation = relationship("Conversation", back_populates="messages")
     contact = relationship("Contact")
+
+
+Index(
+    "uq_messages_conversation_external_message_id",
+    Message.conversation_id,
+    Message.external_message_id,
+    unique=True,
+    sqlite_where=Message.external_message_id.isnot(None),
+    postgresql_where=Message.external_message_id.isnot(None),
+)

@@ -10,9 +10,10 @@ from app.services.evolution_service import EvolutionService
 from app.services.sync_service import SyncService
 from app.services.visibility_service import ConversationVisibilityService
 from app.services.copilot_service import CopilotService
-from app.utils.media import get_message_preview, get_serialized_avatar_url
+from app.utils.media import get_message_preview, get_serialized_avatar_url, unwrap_message
 import logging
 import asyncio
+from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,28 @@ def contact_phone_from_remote_jid(remote_jid: str) -> str:
     phone_part = remote_jid.split("@")[0]
     return phone_part.split(":")[0]
 
+
+def normalize_evolution_event(event_type: str | None) -> str:
+    if not event_type:
+        return "unknown"
+
+    event = str(event_type).strip()
+    aliases = {
+        "MESSAGES_UPSERT": "messages.upsert",
+        "MESSAGES_UPDATE": "messages.update",
+        "MESSAGES_DELETE": "messages.delete",
+        "SEND_MESSAGE": "send.message",
+        "CONNECTION_UPDATE": "connection.update",
+        "PRESENCE_UPDATE": "presence.update",
+    }
+    if event in aliases:
+        return aliases[event]
+
+    normalized = event.lower()
+    if "." in normalized:
+        return normalized
+    return aliases.get(event.upper(), normalized.replace("_", "."))
+
 class WebhookService:
     @staticmethod
     async def _send_conversation_event(db: Session, conversation: Conversation, message: dict):
@@ -33,11 +56,12 @@ class WebhookService:
 
     @staticmethod
     async def process_webhook(db: Session, connection_id: str, payload: dict) -> WebhookEvent:
+        event_type = normalize_evolution_event(payload.get("event"))
         # Save raw payload
         event = WebhookEvent(
             connection_id=connection_id,
             provider="evolution_api",
-            event_type=payload.get("event", "unknown"),
+            event_type=event_type,
             payload=payload
         )
         db.add(event)
@@ -125,7 +149,7 @@ class WebhookService:
             return
             
         data = payload.get("data", {})
-        message_info = data.get("message", {})
+        message_info = unwrap_message(data.get("message", {}))
         key = data.get("key", {})
         
         external_id = key.get("id", "")
@@ -207,6 +231,11 @@ class WebhookService:
             message_type = "image"
             mime_type = img.get("mimetype", "image/jpeg")
             media_url = data.get("mediaUrl") or img.get("url")
+        elif "stickerMessage" in message_info:
+            stk = message_info["stickerMessage"]
+            message_type = "image"
+            mime_type = stk.get("mimetype", "image/webp")
+            media_url = data.get("mediaUrl") or stk.get("url")
         elif "audioMessage" in message_info:
             aud = message_info["audioMessage"]
             message_type = "audio"
@@ -224,6 +253,39 @@ class WebhookService:
             message_type = "document"
             mime_type = doc.get("mimetype", "application/pdf")
             media_url = data.get("mediaUrl") or doc.get("url")
+        elif "templateMessage" in message_info:
+            template = message_info["templateMessage"]
+            message_type = "text"
+            if "hydratedTemplate" in template:
+                content = template["hydratedTemplate"].get("hydratedContentText", "")
+            elif "hydratedFourRowTemplate" in template:
+                content = template["hydratedFourRowTemplate"].get("hydratedContentText", "")
+        elif "interactiveMessage" in message_info:
+            message_type = "text"
+            content = message_info["interactiveMessage"].get("body", {}).get("text", "")
+        elif "buttonsMessage" in message_info:
+            message_type = "text"
+            content = message_info["buttonsMessage"].get("contentText", "")
+        elif "buttonsResponseMessage" in message_info:
+            message_type = "text"
+            content = message_info["buttonsResponseMessage"].get("selectedButtonId", "")
+            content = message_info["buttonsResponseMessage"].get("selectedDisplayText", content)
+        elif "listResponseMessage" in message_info:
+            message_type = "text"
+            content = message_info["listResponseMessage"].get("title", "")
+            description = message_info["listResponseMessage"].get("description", "")
+            if description:
+                content = f"{content} - {description}"
+        elif "contactMessage" in message_info:
+            message_type = "text"
+            content = f"👤 Contato: {message_info['contactMessage'].get('displayName', '')}"
+        elif "contactsArrayMessage" in message_info:
+            message_type = "text"
+            names = [c.get("displayName", "") for c in message_info["contactsArrayMessage"].get("contacts", [])]
+            content = f"👥 Contatos: {', '.join(filter(None, names))}"
+        elif "locationMessage" in message_info:
+            message_type = "text"
+            content = f"📍 Localização: {message_info['locationMessage'].get('name', '') or message_info['locationMessage'].get('address', 'Localização')}"
             
         # Generate local media_id if it's a media message
         if message_type in ["image", "audio", "video", "document"]:
@@ -413,9 +475,16 @@ class WebhookService:
                 conversation.status = "pending"
                 conversation.assignee_id = None
 
-        db.commit()
-        db.refresh(msg)
-        db.refresh(conversation)
+        try:
+            db.commit()
+            db.refresh(msg)
+            db.refresh(conversation)
+        except IntegrityError:
+            db.rollback()
+            logger.info(
+                f"[Webhook] Mensagem duplicada {external_id} ignorada por constraint de idempotência"
+            )
+            return
 
         # Handle Background Media Downloading
         if message_type in ["image", "audio", "video", "document"]:

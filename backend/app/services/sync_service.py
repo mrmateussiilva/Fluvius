@@ -6,6 +6,7 @@ from app.models.contact import Contact
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.services.evolution_service import EvolutionService
+from app.utils.media import unwrap_message
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +150,8 @@ async def sync_chat_record(db: Session, connection: Connection, chat: dict) -> t
         if not message_info and "message" in msg_data:
             message_info = msg_data["message"]
 
+        message_info = unwrap_message(message_info)
+
         content = ""
         media_url = None
         mime_type = None
@@ -166,6 +169,11 @@ async def sync_chat_record(db: Session, connection: Connection, chat: dict) -> t
             message_type = "image"
             mime_type = img.get("mimetype", "image/jpeg")
             media_url = msg_data.get("mediaUrl") or img.get("url")
+        elif "stickerMessage" in message_info:
+            stk = message_info["stickerMessage"]
+            message_type = "image"
+            mime_type = stk.get("mimetype", "image/webp")
+            media_url = msg_data.get("mediaUrl") or stk.get("url")
         elif "audioMessage" in message_info:
             aud = message_info["audioMessage"]
             message_type = "audio"
@@ -183,6 +191,39 @@ async def sync_chat_record(db: Session, connection: Connection, chat: dict) -> t
             message_type = "document"
             mime_type = doc.get("mimetype", "application/pdf")
             media_url = msg_data.get("mediaUrl") or doc.get("url")
+        elif "templateMessage" in message_info:
+            template = message_info["templateMessage"]
+            message_type = "text"
+            if "hydratedTemplate" in template:
+                content = template["hydratedTemplate"].get("hydratedContentText", "")
+            elif "hydratedFourRowTemplate" in template:
+                content = template["hydratedFourRowTemplate"].get("hydratedContentText", "")
+        elif "interactiveMessage" in message_info:
+            message_type = "text"
+            content = message_info["interactiveMessage"].get("body", {}).get("text", "")
+        elif "buttonsMessage" in message_info:
+            message_type = "text"
+            content = message_info["buttonsMessage"].get("contentText", "")
+        elif "buttonsResponseMessage" in message_info:
+            message_type = "text"
+            content = message_info["buttonsResponseMessage"].get("selectedButtonId", "")
+            content = message_info["buttonsResponseMessage"].get("selectedDisplayText", content)
+        elif "listResponseMessage" in message_info:
+            message_type = "text"
+            content = message_info["listResponseMessage"].get("title", "")
+            description = message_info["listResponseMessage"].get("description", "")
+            if description:
+                content = f"{content} - {description}"
+        elif "contactMessage" in message_info:
+            message_type = "text"
+            content = f"👤 Contato: {message_info['contactMessage'].get('displayName', '')}"
+        elif "contactsArrayMessage" in message_info:
+            message_type = "text"
+            names = [c.get("displayName", "") for c in message_info["contactsArrayMessage"].get("contacts", [])]
+            content = f"👥 Contatos: {', '.join(filter(None, names))}"
+        elif "locationMessage" in message_info:
+            message_type = "text"
+            content = f"📍 Localização: {message_info['locationMessage'].get('name', '') or message_info['locationMessage'].get('address', 'Localização')}"
         else:
             message_type = "unknown"
 
