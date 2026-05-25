@@ -11,6 +11,12 @@ class ContactResponse(BaseModel):
     name: Optional[str]
     avatar_url: Optional[str]
     tags: list[str] = []
+    email: Optional[str] = None
+    company: Optional[str] = None
+    lead_source: Optional[str] = None
+    lifecycle_stage: Optional[str] = None
+    estimated_value: Optional[float] = None
+    crm_notes: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

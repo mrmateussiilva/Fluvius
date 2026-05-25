@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { updateContactTags, suggestReply, summarizeConversation, analyzeSentiment, type Message, type Conversation, type Contact } from '../api/client';
+import { updateContactTags, updateContactCrm, suggestReply, summarizeConversation, analyzeSentiment, type Message, type Conversation, type Contact } from '../api/client';
 import { MessageInput } from './MessageInput';
 import { 
   User, Check, CheckCheck, Clock, UserCheck, CheckCircle2, 
@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { API_BASE_URL } from '../api/client';
+import toast from 'react-hot-toast';
 
 // Normaliza a base URL para servir arquivos de upload sem double-slash
 const _rawBase = API_BASE_URL.replace('/api', '');
@@ -71,6 +72,14 @@ function isSameDay(a: string, b: string): boolean {
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+const CRM_STAGES = [
+  { value: '', label: 'Sem etapa' },
+  { value: 'lead', label: 'Lead' },
+  { value: 'opportunity', label: 'Oportunidade' },
+  { value: 'customer', label: 'Cliente' },
+  { value: 'lost', label: 'Perdido' },
+];
 
 const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -377,25 +386,38 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
   const [isLoadingSentiment, setIsLoadingSentiment] = useState(false);
   const [sentimentError, setSentimentError] = useState<string | null>(null);
 
-  // Contact Notepad state
-  const [contactNotes, setContactNotes] = useState('');
+  const [crmDraft, setCrmDraft] = useState({
+    name: '',
+    email: '',
+    company: '',
+    lead_source: '',
+    lifecycle_stage: '',
+    estimated_value: '',
+    crm_notes: '',
+  });
+  const [isSavingCrm, setIsSavingCrm] = useState(false);
 
-  // Load local contact notes
   useEffect(() => {
-    if (conversation.contact?.id) {
-      const savedNotes = localStorage.getItem(`notes_${conversation.contact.id}`) || '';
-      setContactNotes(savedNotes);
-    } else {
-      setContactNotes('');
-    }
-  }, [conversation.contact?.id]);
-
-  const handleSaveNotes = (val: string) => {
-    setContactNotes(val);
-    if (conversation.contact?.id) {
-      localStorage.setItem(`notes_${conversation.contact.id}`, val);
-    }
-  };
+    const contact = conversation.contact;
+    setCrmDraft({
+      name: contact?.name || '',
+      email: contact?.email || '',
+      company: contact?.company || '',
+      lead_source: contact?.lead_source || '',
+      lifecycle_stage: contact?.lifecycle_stage || '',
+      estimated_value: contact?.estimated_value != null ? String(contact.estimated_value) : '',
+      crm_notes: contact?.crm_notes || '',
+    });
+  }, [
+    conversation.contact?.id,
+    conversation.contact?.name,
+    conversation.contact?.email,
+    conversation.contact?.company,
+    conversation.contact?.lead_source,
+    conversation.contact?.lifecycle_stage,
+    conversation.contact?.estimated_value,
+    conversation.contact?.crm_notes,
+  ]);
 
   const handleAnalyzeSentiment = async () => {
     setIsLoadingSentiment(true);
@@ -576,6 +598,42 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
       console.error(err);
     } finally {
       setIsUpdatingTags(false);
+    }
+  };
+
+  const updateCrmDraft = (field: keyof typeof crmDraft, value: string) => {
+    setCrmDraft((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleSaveCrm = async () => {
+    if (!conversation.contact) return;
+
+    const estimatedValue = crmDraft.estimated_value.trim()
+      ? Number(crmDraft.estimated_value)
+      : null;
+
+    if (estimatedValue !== null && (!Number.isFinite(estimatedValue) || estimatedValue < 0)) {
+      toast.error('Informe um valor estimado valido.');
+      return;
+    }
+
+    setIsSavingCrm(true);
+    try {
+      const updatedContact = await updateContactCrm(conversation.contact.id, {
+        name: crmDraft.name,
+        email: crmDraft.email,
+        company: crmDraft.company,
+        lead_source: crmDraft.lead_source,
+        lifecycle_stage: crmDraft.lifecycle_stage,
+        estimated_value: estimatedValue,
+        crm_notes: crmDraft.crm_notes,
+      });
+      onContactUpdated?.(updatedContact);
+      toast.success('CRM do contato atualizado.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao salvar CRM do contato.');
+    } finally {
+      setIsSavingCrm(false);
     }
   };
 
@@ -1237,17 +1295,82 @@ export const MessagePanel: React.FC<MessagePanelProps> = ({
               )}
             </div>
 
-            {/* Contact Notepad (Obsidian-Style Anotações Rápidas) */}
-            <div className="p-3.5 border-b border-slate-100/60 flex flex-col">
+            {/* CRM Section */}
+            <div className="p-3.5 border-b border-slate-100/60 flex flex-col gap-2.5">
               <span className="text-[10px] font-bold text-slate-400/90 tracking-widest uppercase flex items-center gap-1.5 mb-2">
-                <FileText size={11} className="text-slate-400" /> Anotações do Contato
+                <FileText size={11} className="text-slate-400" /> CRM do Contato
               </span>
+              <div className="grid grid-cols-1 gap-2">
+                <input
+                  type="text"
+                  value={crmDraft.name}
+                  onChange={(e) => updateCrmDraft('name', e.target.value)}
+                  placeholder="Nome"
+                  disabled={!conversation.contact || isSavingCrm}
+                  className="w-full px-3 py-1.5 bg-white/60 border border-slate-200/60 rounded-xl text-[11px] placeholder:text-slate-400 outline-none focus:border-blue-400 focus:bg-white transition-all font-medium disabled:opacity-60"
+                />
+                <input
+                  type="email"
+                  value={crmDraft.email}
+                  onChange={(e) => updateCrmDraft('email', e.target.value)}
+                  placeholder="E-mail"
+                  disabled={!conversation.contact || isSavingCrm}
+                  className="w-full px-3 py-1.5 bg-white/60 border border-slate-200/60 rounded-xl text-[11px] placeholder:text-slate-400 outline-none focus:border-blue-400 focus:bg-white transition-all font-medium disabled:opacity-60"
+                />
+                <input
+                  type="text"
+                  value={crmDraft.company}
+                  onChange={(e) => updateCrmDraft('company', e.target.value)}
+                  placeholder="Empresa"
+                  disabled={!conversation.contact || isSavingCrm}
+                  className="w-full px-3 py-1.5 bg-white/60 border border-slate-200/60 rounded-xl text-[11px] placeholder:text-slate-400 outline-none focus:border-blue-400 focus:bg-white transition-all font-medium disabled:opacity-60"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={crmDraft.lead_source}
+                    onChange={(e) => updateCrmDraft('lead_source', e.target.value)}
+                    placeholder="Origem"
+                    disabled={!conversation.contact || isSavingCrm}
+                    className="min-w-0 px-3 py-1.5 bg-white/60 border border-slate-200/60 rounded-xl text-[11px] placeholder:text-slate-400 outline-none focus:border-blue-400 focus:bg-white transition-all font-medium disabled:opacity-60"
+                  />
+                  <select
+                    value={crmDraft.lifecycle_stage}
+                    onChange={(e) => updateCrmDraft('lifecycle_stage', e.target.value)}
+                    disabled={!conversation.contact || isSavingCrm}
+                    className="min-w-0 px-2 py-1.5 bg-white/60 border border-slate-200/60 rounded-xl text-[11px] text-slate-600 outline-none focus:border-blue-400 focus:bg-white transition-all font-medium disabled:opacity-60"
+                  >
+                    {CRM_STAGES.map((stage) => (
+                      <option key={stage.value} value={stage.value}>{stage.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={crmDraft.estimated_value}
+                  onChange={(e) => updateCrmDraft('estimated_value', e.target.value)}
+                  placeholder="Valor estimado"
+                  disabled={!conversation.contact || isSavingCrm}
+                  className="w-full px-3 py-1.5 bg-white/60 border border-slate-200/60 rounded-xl text-[11px] placeholder:text-slate-400 outline-none focus:border-blue-400 focus:bg-white transition-all font-medium disabled:opacity-60"
+                />
+              </div>
               <textarea
-                value={contactNotes}
-                onChange={(e) => handleSaveNotes(e.target.value)}
-                placeholder="Notas internas sobre o contato (salvas automaticamente)..."
-                className="w-full h-20 bg-white/50 border border-slate-200/50 hover:border-slate-300 focus:border-blue-400 focus:bg-white rounded-xl p-2.5 text-[11.5px] text-slate-750 placeholder:text-slate-400 outline-none resize-none transition-all duration-200 shadow-sm"
+                value={crmDraft.crm_notes}
+                onChange={(e) => updateCrmDraft('crm_notes', e.target.value)}
+                placeholder="Notas comerciais do contato..."
+                disabled={!conversation.contact || isSavingCrm}
+                className="w-full h-20 bg-white/50 border border-slate-200/50 hover:border-slate-300 focus:border-blue-400 focus:bg-white rounded-xl p-2.5 text-[11.5px] text-slate-750 placeholder:text-slate-400 outline-none resize-none transition-all duration-200 shadow-sm disabled:opacity-60"
               />
+              <button
+                onClick={handleSaveCrm}
+                disabled={!conversation.contact || isSavingCrm}
+                className="w-full py-1.5 bg-fluvius-blue-main hover:bg-fluvius-blue-dark text-white rounded-xl text-[11px] font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isSavingCrm ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                Salvar CRM
+              </button>
             </div>
 
             {/* Tags / Marcadores Section */}

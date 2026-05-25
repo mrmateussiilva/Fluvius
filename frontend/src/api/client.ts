@@ -121,6 +121,12 @@ export interface Contact {
   name: string | null;
   avatar_url: string | null;
   tags: string[];
+  email?: string | null;
+  company?: string | null;
+  lead_source?: string | null;
+  lifecycle_stage?: string | null;
+  estimated_value?: number | null;
+  crm_notes?: string | null;
 }
 
 export interface Conversation {
@@ -419,6 +425,19 @@ export const updateContactTags = async (contactId: string, tags: string[]): Prom
     body: JSON.stringify({ tags }),
   });
   if (!response.ok) throw new Error('Failed to update contact tags');
+  return response.json();
+};
+
+export const updateContactCrm = async (
+  contactId: string,
+  data: Partial<Pick<Contact, 'name' | 'email' | 'company' | 'lead_source' | 'lifecycle_stage' | 'estimated_value' | 'crm_notes'>>
+): Promise<Contact> => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/contacts/${contactId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error(await getErrorMessage(response, 'Failed to update contact'));
   return response.json();
 };
 
