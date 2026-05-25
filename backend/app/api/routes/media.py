@@ -5,6 +5,7 @@ Garante que o frontend nunca bata nas URLs do WhatsApp diretamente.
 Suporta downloads on-demand resilientes e Range Requests nativos para players de áudio/vídeo.
 """
 import logging
+import time
 from pathlib import Path
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Response
@@ -35,6 +36,18 @@ MISSING_MEDIA_HEADERS = {
     "Cache-Control": "public, max-age=21600",
 }
 AVATAR_PROXY_TIMEOUT = 4.0
+
+
+def _has_fresh_no_avatar_cache(no_avatar_path: Path) -> bool:
+    if not no_avatar_path.exists():
+        return False
+    if time.time() - no_avatar_path.stat().st_mtime < 3600:
+        return True
+    try:
+        no_avatar_path.unlink()
+    except Exception:
+        pass
+    return False
 
 
 async def fetch_and_download_avatar_task(
@@ -101,6 +114,14 @@ async def get_contact_avatar(
             headers=AVATAR_CACHE_HEADERS,
         )
 
+    no_avatar_path = Path(f"uploads/avatars/{contact_id}.no_avatar")
+    if _has_fresh_no_avatar_cache(no_avatar_path):
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Avatar não disponível"},
+            headers=MISSING_AVATAR_HEADERS,
+        )
+
     contact = db.query(Contact).filter(Contact.id == contact_id).first()
     if not contact:
         return JSONResponse(
@@ -109,9 +130,11 @@ async def get_contact_avatar(
             headers=MISSING_AVATAR_HEADERS,
         )
 
-    no_avatar_path = Path(f"uploads/avatars/{contact_id}.no_avatar")
+    avatar_url = contact.avatar_url
+    # Não segure conexão/sessão do banco enquanto espera rede externa do WhatsApp/CDN.
+    db.close()
 
-    if contact.avatar_url and contact.avatar_url.startswith("http"):
+    if avatar_url and avatar_url.startswith("http"):
         try:
             async with httpx.AsyncClient(
                 timeout=httpx.Timeout(
@@ -122,7 +145,7 @@ async def get_contact_avatar(
                 ),
                 follow_redirects=True,
             ) as client:
-                upstream = await client.get(contact.avatar_url)
+                upstream = await client.get(avatar_url)
 
             content_type = upstream.headers.get("content-type", "image/jpeg").split(";")[0]
             if upstream.status_code == 200 and content_type.startswith("image/"):
@@ -157,17 +180,6 @@ async def get_contact_avatar(
             content={"detail": "Avatar não disponível"},
             headers=MISSING_AVATAR_HEADERS,
         )
-
-    # Cache negativo: evita bater na API caso já tenhamos tentado recentemente e falhado
-    if no_avatar_path.exists():
-        mtime = no_avatar_path.stat().st_mtime
-        import time
-        if time.time() - mtime < 3600:  # Cache negativo de 1 hora
-            return JSONResponse(
-                status_code=404,
-                content={"detail": "Avatar não disponível"},
-                headers=MISSING_AVATAR_HEADERS,
-            )
 
     return JSONResponse(
         status_code=404,
